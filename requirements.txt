@@ -12,6 +12,7 @@ alembic==1.12.1
 
 # Telegram
 telethon==1.33.1
+python-telegram-bot==21.0.1
 
 # AI & Content Processing
 httpx==0.25.2

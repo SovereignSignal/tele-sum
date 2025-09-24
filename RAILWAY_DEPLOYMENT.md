@@ -74,7 +74,11 @@ DATABASE_URL=...             # Auto-configured when you add PostgreSQL
 SECRET_KEY=your-secure-random-string-here
 ```
 
-#### Telegram Configuration (for import features)
+#### Choose Your Import Method
+
+##### Option A: Hybrid Mode (Recommended) - Historical Import + Bot Monitoring
+
+**Step 1: Phone Auth for Historical Import (One-time)**
 ```bash
 TELEGRAM_API_ID=your_api_id
 TELEGRAM_API_HASH=your_api_hash
@@ -88,6 +92,36 @@ To get Telegram credentials:
 3. Go to "API development tools"
 4. Create a new application
 5. Copy the `api_id` and `api_hash`
+
+**Step 2: Bot Tokens for Ongoing Monitoring**
+```bash
+TELEGRAM_BOT_TOKENS=bot1_token,bot2_token  # Can add multiple bots
+ENABLE_BOT_MODE=true                       # Enable bot monitoring
+```
+
+To create a Telegram bot:
+1. Open Telegram and search for @BotFather
+2. Send `/newbot` command
+3. Follow the prompts to name your bot
+4. Copy the bot token
+5. Add the bot as admin to your channel/group
+
+##### Option B: Bot-Only Mode (No Phone Required)
+```bash
+TELEGRAM_BOT_TOKENS=your_bot_token
+ENABLE_BOT_MODE=true
+ENABLE_PHONE_IMPORT=false  # Disable phone import
+```
+Note: Bot-only mode can only capture messages from when the bot joins forward
+
+##### Option C: Phone-Only Mode (Traditional)
+```bash
+TELEGRAM_API_ID=your_api_id
+TELEGRAM_API_HASH=your_api_hash
+TELEGRAM_PHONE=+1234567890
+TELEGRAM_CHANNEL_USERNAME=channelname
+ENABLE_BOT_MODE=false  # Disable bot mode
+```
 
 #### Grok AI Configuration (for AI summaries)
 ```bash
@@ -105,6 +139,7 @@ APP_ENV=production                    # Default: production
 SYNC_INTERVAL_HOURS=6                 # Default: 6
 MAX_GROK_REQUESTS_PER_HOUR=100       # Default: 100
 GROK_API_URL=https://api.x.ai/v1     # Default: https://api.x.ai/v1
+BOT_POLLING_INTERVAL=2                # Bot polling interval in seconds
 ```
 
 ### 3. Check Configuration Status
@@ -200,18 +235,27 @@ GET /api/config/status
 | PORT | Auto | Server port (Railway provides) | 8080 |
 | DATABASE_URL | Auto* | PostgreSQL connection string | Auto from Railway |
 | SECRET_KEY | Yes | Session security key | Auto-generated |
+| **Phone Auth (Historical Import)** | | | |
 | TELEGRAM_API_ID | No** | Telegram API ID | None |
 | TELEGRAM_API_HASH | No** | Telegram API Hash | None |
 | TELEGRAM_PHONE | No** | Your phone number | None |
 | TELEGRAM_CHANNEL_USERNAME | No** | Channel to import | None |
-| GROK_API_KEY | No*** | Grok AI API key | None |
+| **Bot Mode (Ongoing Monitoring)** | | | |
+| TELEGRAM_BOT_TOKENS | No*** | Comma-separated bot tokens | None |
+| ENABLE_BOT_MODE | No | Enable bot monitoring | true |
+| ENABLE_PHONE_IMPORT | No | Enable phone import | true |
+| BOT_POLLING_INTERVAL | No | Bot polling interval (seconds) | 2 |
+| WEBHOOK_BASE_URL | No | Base URL for webhooks | None |
+| **AI & Processing** | | | |
+| GROK_API_KEY | No**** | Grok AI API key | None |
 | APP_ENV | No | Environment mode | production |
 | SYNC_INTERVAL_HOURS | No | Hours between syncs | 6 |
 | MAX_GROK_REQUESTS_PER_HOUR | No | API rate limit | 100 |
 
 \* Automatically configured when PostgreSQL service is added
-\** Required for Telegram import features
-\*** Required for AI summary features
+\** Required for historical import via phone authentication
+\*** Required for bot-based ongoing monitoring
+\**** Required for AI summary features
 
 ## Progressive Deployment Strategy
 
