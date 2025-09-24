@@ -1,9 +1,10 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Dict, Optional, Any
 import os
 
 from src.config import settings
+from src.models.database import check_database_health
 
 router = APIRouter()
 
@@ -134,3 +135,25 @@ async def get_required_vars():
             settings.is_grok_configured()
         ])
     }
+
+@router.get("/health/db")
+async def get_database_health():
+    """
+    Check database connectivity and health status.
+    Returns detailed information about the database connection and pool status.
+    """
+    if not settings.is_database_configured():
+        raise HTTPException(
+            status_code=503, 
+            detail="Database not configured. Please set DATABASE_URL in Railway environment variables."
+        )
+    
+    health = check_database_health()
+    
+    if health["status"] == "unhealthy":
+        raise HTTPException(
+            status_code=503,
+            detail=f"Database is unhealthy: {health.get('error', 'Unknown error')}"
+        )
+    
+    return health

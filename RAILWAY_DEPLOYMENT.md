@@ -70,8 +70,9 @@ In your Railway service settings, go to the "Variables" tab and add:
 PORT=8080                    # Railway sets this automatically
 DATABASE_URL=...             # Auto-configured when you add PostgreSQL
 
-# Security (generate a random string)
-SECRET_KEY=your-secure-random-string-here
+# Security (REQUIRED - generate a secure random string)
+SECRET_KEY=your-secure-random-string-here  # At least 32 characters for production
+# Generate with: python -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
 #### Choose Your Import Method
@@ -156,6 +157,14 @@ Once PostgreSQL is connected:
 
 1. The database tables are automatically created on first startup
 2. Check the deployment logs to confirm: "✅ Database tables created/verified"
+3. The app includes connection retry logic for Railway cold starts
+4. Database health can be monitored at `/api/config/health/db`
+
+Database Features:
+- **Connection pooling**: Optimized with pool_size=10, max_overflow=20
+- **Retry logic**: 5 attempts with exponential backoff for cold starts
+- **Performance indexes**: Composite indexes on frequently queried columns
+- **Health monitoring**: Real-time database status and pool metrics
 
 If you need to run migrations manually:
 ```bash

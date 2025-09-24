@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON, Boolean, Float, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON, Boolean, Float, Enum as SQLEnum, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from datetime import datetime
@@ -56,6 +56,12 @@ class Message(Base):
     
     summary = relationship("Summary", back_populates="message", uselist=False, cascade="all, delete-orphan")
     bot = relationship("TelegramBot")
+    
+    # Composite indexes for common query patterns
+    __table_args__ = (
+        Index('ix_messages_channel_timestamp', 'channel_id', 'timestamp'),
+        Index('ix_messages_bot_timestamp', 'bot_id', 'timestamp'),
+    )
 
 class Summary(Base):
     __tablename__ = "summaries"
@@ -75,6 +81,12 @@ class Summary(Base):
     
     message = relationship("Message", back_populates="summary")
     category = relationship("Category", back_populates="summaries")
+    
+    # Composite indexes for retry and processing queries
+    __table_args__ = (
+        Index('ix_summaries_status_processed', 'processing_status', 'last_processed_at'),
+        Index('ix_summaries_category_created', 'category_id', 'created_at'),
+    )
 
 class TelegramBot(Base):
     __tablename__ = "telegram_bots"

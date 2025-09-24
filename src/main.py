@@ -19,8 +19,12 @@ async def lifespan(app: FastAPI):
     # Only create tables if database is properly configured
     if settings.is_database_configured():
         try:
+            # Create tables if they don't exist (for initial setup)
             Base.metadata.create_all(bind=engine)
             logger.info("✅ Database tables created/verified")
+            
+            # Note: In production, consider using Alembic migrations instead
+            logger.info("💡 For production deployments, use: alembic upgrade head")
         except Exception as e:
             logger.error(f"❌ Failed to create database tables: {e}")
             logger.warning("App will start but database operations will fail")

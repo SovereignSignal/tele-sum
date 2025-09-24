@@ -46,7 +46,10 @@ class Settings(BaseSettings):
         if v is None or v == '':
             generated_key = secrets.token_urlsafe(32)
             logger.warning("⚠️  No SECRET_KEY provided. Generated temporary key. Please set SECRET_KEY in production!")
+            logger.warning("Add SECRET_KEY to Railway environment variables for production security!")
             return generated_key
+        elif len(v) < 32:
+            logger.warning(f"⚠️  SECRET_KEY is too short ({len(v)} chars). Should be at least 32 characters for production.")
         return v
     
     @field_validator('database_url', mode='before')
@@ -119,6 +122,7 @@ class Settings(BaseSettings):
         logger.info(f"📍 Environment: {self.app_env}")
         logger.info(f"🔌 Port: {self.port}")
         logger.info(f"🗄️  Database: {'✅ Configured' if self.is_database_configured() else '❌ Not configured (using dummy URL)'}")
+        logger.info(f"🔐 Security: {'✅ SECRET_KEY set' if self.secret_key and not self.secret_key.startswith('_') else '⚠️  Using temporary SECRET_KEY - Set in production!'}")
         logger.info(f"📱 Telegram Phone: {'✅ Configured' if self.is_telegram_configured() else '⚠️  Not configured (historical import disabled)'}")
         logger.info(f"🤖 Telegram Bots: {'✅ Configured' if self.is_bot_configured() else '⚠️  Not configured (bot monitoring disabled)'}")
         if self.is_bot_configured():
