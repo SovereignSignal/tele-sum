@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings
-from pydantic import Field, validator
+from pydantic import Field, field_validator
 from typing import Optional
 import secrets
 import logging
@@ -10,30 +10,31 @@ logger = logging.getLogger(__name__)
 
 class Settings(BaseSettings):
     # Railway/deployment settings - PORT env var from Railway
-    port: int = Field(default=8000, validation_alias='PORT')
+    port: int = Field(default=8000, alias='PORT')
     
     # Database - Required but with fallback
-    database_url: Optional[str] = Field(default=None, validation_alias='DATABASE_URL')
+    database_url: Optional[str] = Field(default=None, alias='DATABASE_URL')
     
     # Telegram API - Optional for initial deployment
-    telegram_api_id: Optional[int] = Field(default=None, validation_alias='TELEGRAM_API_ID')
-    telegram_api_hash: Optional[str] = Field(default=None, validation_alias='TELEGRAM_API_HASH')
-    telegram_phone: Optional[str] = Field(default=None, validation_alias='TELEGRAM_PHONE')
-    telegram_channel_username: Optional[str] = Field(default=None, validation_alias='TELEGRAM_CHANNEL_USERNAME')
+    telegram_api_id: Optional[int] = Field(default=None, alias='TELEGRAM_API_ID')
+    telegram_api_hash: Optional[str] = Field(default=None, alias='TELEGRAM_API_HASH')
+    telegram_phone: Optional[str] = Field(default=None, alias='TELEGRAM_PHONE')
+    telegram_channel_username: Optional[str] = Field(default=None, alias='TELEGRAM_CHANNEL_USERNAME')
     
     # Grok AI - Optional (graceful degradation supported)
-    grok_api_key: Optional[str] = Field(default=None, validation_alias='GROK_API_KEY')
-    grok_api_url: str = Field(default="https://api.x.ai/v1", validation_alias='GROK_API_URL')
+    grok_api_key: Optional[str] = Field(default=None, alias='GROK_API_KEY')
+    grok_api_url: str = Field(default="https://api.x.ai/v1", alias='GROK_API_URL')
     
     # App Settings
-    app_env: str = Field(default="production", validation_alias='APP_ENV')
-    secret_key: Optional[str] = Field(default=None, validation_alias='SECRET_KEY')
+    app_env: str = Field(default="production", alias='APP_ENV')
+    secret_key: Optional[str] = Field(default=None, alias='SECRET_KEY')
     
     # Sync settings
-    sync_interval_hours: int = Field(default=6, validation_alias='SYNC_INTERVAL_HOURS')
-    max_grok_requests_per_hour: int = Field(default=100, validation_alias='MAX_GROK_REQUESTS_PER_HOUR')
+    sync_interval_hours: int = Field(default=6, alias='SYNC_INTERVAL_HOURS')
+    max_grok_requests_per_hour: int = Field(default=100, alias='MAX_GROK_REQUESTS_PER_HOUR')
     
-    @validator('secret_key', pre=True, always=True)
+    @field_validator('secret_key', mode='before')
+    @classmethod
     def generate_secret_key(cls, v):
         if not v:
             generated_key = secrets.token_urlsafe(32)
@@ -41,7 +42,8 @@ class Settings(BaseSettings):
             return generated_key
         return v
     
-    @validator('database_url', pre=True)
+    @field_validator('database_url', mode='before')
+    @classmethod
     def validate_database_url(cls, v):
         if not v:
             # Check for common Railway PostgreSQL pattern
@@ -78,11 +80,15 @@ class Settings(BaseSettings):
         """Check if database is properly configured"""
         return self.database_url and 'localhost' not in self.database_url
     
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
-        # Allow both uppercase and lowercase env vars
-        populate_by_name = True
+    model_config = {
+        'env_file': '.env',
+        'env_file_encoding': 'utf-8',
+        'case_sensitive': False,
+        'populate_by_name': True,
+        'use_enum_values': True,
+        'validate_default': True,
+        'extra': 'ignore',
+    }
 
     def log_configuration_status(self):
         """Log configuration status for debugging"""
@@ -103,16 +109,6 @@ class Settings(BaseSettings):
         if not self.is_grok_configured():
             logger.warning("⚠️  Grok AI features disabled. Add GROK_API_KEY to enable AI summaries.")
 
-# Create settings instance with error handling
-try:
-    settings = Settings()
-    settings.log_configuration_status()
-except Exception as e:
-    logger.error(f"Failed to load settings: {e}")
-    # Create minimal settings to allow app to start
-    settings = Settings(
-        port=int(os.getenv('PORT', '8000')),
-        database_url="postgresql://user:password@localhost:5432/telesum",
-        app_env=os.getenv('APP_ENV', 'production')
-    )
-    logger.warning("Using minimal fallback configuration")
+# Create settings instance
+settings = Settings()
+settings.log_configuration_status()
