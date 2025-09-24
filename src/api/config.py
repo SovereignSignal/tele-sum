@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 import os
 
 from src.config import settings
@@ -8,10 +8,10 @@ from src.config import settings
 router = APIRouter()
 
 class ConfigStatus(BaseModel):
-    database: Dict[str, any]
-    telegram: Dict[str, any]
-    grok: Dict[str, any]
-    app: Dict[str, any]
+    database: Dict[str, Any]
+    telegram: Dict[str, Any]
+    grok: Dict[str, Any]
+    app: Dict[str, Any]
     environment_hints: Dict[str, str]
 
 @router.get("/status", response_model=ConfigStatus)
