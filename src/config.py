@@ -10,28 +10,28 @@ logger = logging.getLogger(__name__)
 
 class Settings(BaseSettings):
     # Railway/deployment settings - PORT env var from Railway
-    port: int = Field(default=8000, validation_alias='PORT')
+    port: int = Field(default=8000, alias='PORT')
     
     # Database - Optional with fallback
-    database_url: Optional[str] = Field(default=None, validation_alias='DATABASE_URL')
+    database_url: Optional[str] = Field(default=None, alias='DATABASE_URL')
     
     # Telegram API - Optional for initial deployment
-    telegram_api_id: Optional[int] = Field(default=None, validation_alias='TELEGRAM_API_ID')
-    telegram_api_hash: Optional[str] = Field(default=None, validation_alias='TELEGRAM_API_HASH')
-    telegram_phone: Optional[str] = Field(default=None, validation_alias='TELEGRAM_PHONE')
-    telegram_channel_username: Optional[str] = Field(default=None, validation_alias='TELEGRAM_CHANNEL_USERNAME')
+    telegram_api_id: Optional[int] = Field(default=None, alias='TELEGRAM_API_ID')
+    telegram_api_hash: Optional[str] = Field(default=None, alias='TELEGRAM_API_HASH')
+    telegram_phone: Optional[str] = Field(default=None, alias='TELEGRAM_PHONE')
+    telegram_channel_username: Optional[str] = Field(default=None, alias='TELEGRAM_CHANNEL_USERNAME')
     
     # Grok AI - Optional (graceful degradation supported)
-    grok_api_key: Optional[str] = Field(default=None, validation_alias='GROK_API_KEY')
-    grok_api_url: str = Field(default="https://api.x.ai/v1", validation_alias='GROK_API_URL')
+    grok_api_key: Optional[str] = Field(default=None, alias='GROK_API_KEY')
+    grok_api_url: str = Field(default="https://api.x.ai/v1", alias='GROK_API_URL')
     
     # App Settings
-    app_env: str = Field(default="production", validation_alias='APP_ENV')
-    secret_key: Optional[str] = Field(default=None, validation_alias='SECRET_KEY')
+    app_env: str = Field(default="production", alias='APP_ENV')
+    secret_key: Optional[str] = Field(default=None, alias='SECRET_KEY')
     
     # Sync settings
-    sync_interval_hours: int = Field(default=6, validation_alias='SYNC_INTERVAL_HOURS')
-    max_grok_requests_per_hour: int = Field(default=100, validation_alias='MAX_GROK_REQUESTS_PER_HOUR')
+    sync_interval_hours: int = Field(default=6, alias='SYNC_INTERVAL_HOURS')
+    max_grok_requests_per_hour: int = Field(default=100, alias='MAX_GROK_REQUESTS_PER_HOUR')
     
     @field_validator('secret_key', mode='before')
     @classmethod
@@ -81,13 +81,12 @@ class Settings(BaseSettings):
         return self.database_url and 'localhost' not in self.database_url
     
     model_config = SettingsConfigDict(
-        env_file='.env' if not os.getenv('RAILWAY_ENVIRONMENT') else None,
+        env_file='.env' if os.path.exists('.env') else None,
         env_file_encoding='utf-8',
         case_sensitive=False,
         use_enum_values=True,
         validate_default=True,
         extra='ignore',
-        env_ignore_empty=True,
         populate_by_name=True
     )
 
@@ -110,29 +109,41 @@ class Settings(BaseSettings):
         if not self.is_grok_configured():
             logger.warning("⚠️  Grok AI features disabled. Add GROK_API_KEY to enable AI summaries.")
 
-# Create settings instance with error handling
+# Create settings instance with better error handling
+logger.info("Initializing Tele-Sum settings...")
+logger.info(f"Environment variables available: {list(os.environ.keys())}")
+
 try:
-    # In Railway, we don't want to load .env file
     settings = Settings()
     settings.log_configuration_status()
 except Exception as e:
     logger.error(f"Failed to initialize settings: {e}")
-    logger.error("Attempting to create settings with only PORT environment variable")
-    # Try to create minimal settings with just PORT
-    try:
-        port_value = int(os.getenv('PORT', '8000'))
-        settings = Settings(
-            port=port_value,
-            database_url=None,
-            telegram_api_id=None,
-            telegram_api_hash=None,
-            telegram_phone=None,
-            telegram_channel_username=None,
-            grok_api_key=None,
-            secret_key=None
-        )
-        logger.warning("Settings created with minimal configuration - only PORT is set")
-        settings.log_configuration_status()
-    except Exception as e2:
-        logger.error(f"Failed to create even minimal settings: {e2}")
-        raise
+    logger.error(f"Error type: {type(e).__name__}")
+    
+    # Log environment variables for debugging
+    logger.info("Environment variables:")
+    for key in ['PORT', 'DATABASE_URL', 'TELEGRAM_API_ID', 'TELEGRAM_API_HASH', 
+                'TELEGRAM_PHONE', 'TELEGRAM_CHANNEL_USERNAME', 'GROK_API_KEY', 'SECRET_KEY']:
+        value = os.getenv(key)
+        if value:
+            logger.info(f"  {key}: {'***' if 'SECRET' in key or 'KEY' in key or 'HASH' in key else value[:20] + '...' if len(value) > 20 else value}")
+        else:
+            logger.info(f"  {key}: Not set")
+    
+    # Create minimal fallback settings
+    logger.info("Creating fallback settings with defaults...")
+    settings = Settings(
+        port=int(os.getenv('PORT', '8000')),
+        database_url=os.getenv('DATABASE_URL'),
+        telegram_api_id=int(os.getenv('TELEGRAM_API_ID')) if os.getenv('TELEGRAM_API_ID') else None,
+        telegram_api_hash=os.getenv('TELEGRAM_API_HASH'),
+        telegram_phone=os.getenv('TELEGRAM_PHONE'),
+        telegram_channel_username=os.getenv('TELEGRAM_CHANNEL_USERNAME'),
+        grok_api_key=os.getenv('GROK_API_KEY'),
+        secret_key=os.getenv('SECRET_KEY'),
+        app_env=os.getenv('APP_ENV', 'production'),
+        grok_api_url=os.getenv('GROK_API_URL', 'https://api.x.ai/v1'),
+        sync_interval_hours=int(os.getenv('SYNC_INTERVAL_HOURS', '6')),
+        max_grok_requests_per_hour=int(os.getenv('MAX_GROK_REQUESTS_PER_HOUR', '100'))
+    )
+    settings.log_configuration_status()
