@@ -1,0 +1,394 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - Tele-Sum{% endblock %}
+
+{% block content %}
+<div class="px-4 sm:px-0">
+    <!-- API Configuration -->
+    <div class="bg-white shadow rounded-lg mb-6">
+        <div class="px-4 py-5 sm:p-6">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">API Configuration</h2>
+            
+            <form id="api-settings-form" onsubmit="saveApiSettings(event)" class="space-y-4">
+                <div>
+                    <label for="grok-api-key" class="block text-sm font-medium text-gray-700">Grok API Key</label>
+                    <input type="password" id="grok-api-key" name="grok_api_key" placeholder="Enter your Grok API key" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    <p class="mt-1 text-xs text-gray-500">Used for AI-powered message summarization</p>
+                </div>
+                
+                <div>
+                    <label for="telegram-api-id" class="block text-sm font-medium text-gray-700">Telegram API ID</label>
+                    <input type="text" id="telegram-api-id" name="telegram_api_id" placeholder="Enter your Telegram API ID" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                </div>
+                
+                <div>
+                    <label for="telegram-api-hash" class="block text-sm font-medium text-gray-700">Telegram API Hash</label>
+                    <input type="password" id="telegram-api-hash" name="telegram_api_hash" placeholder="Enter your Telegram API Hash" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                </div>
+                
+                <div>
+                    <label for="telegram-phone" class="block text-sm font-medium text-gray-700">Telegram Phone Number</label>
+                    <input type="tel" id="telegram-phone" name="telegram_phone" placeholder="+1234567890" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    <p class="mt-1 text-xs text-gray-500">Your Telegram account phone number (with country code)</p>
+                </div>
+                
+                <div>
+                    <button type="submit" class="inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <i class="fas fa-save mr-2"></i>Save API Settings
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Processing Settings -->
+    <div class="bg-white shadow rounded-lg mb-6">
+        <div class="px-4 py-5 sm:p-6">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Processing Settings</h2>
+            
+            <form id="processing-settings-form" onsubmit="saveProcessingSettings(event)" class="space-y-4">
+                <div>
+                    <label for="batch-size" class="block text-sm font-medium text-gray-700">Batch Size</label>
+                    <input type="number" id="batch-size" name="batch_size" value="10" min="1" max="100" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    <p class="mt-1 text-xs text-gray-500">Number of messages to process at once</p>
+                </div>
+                
+                <div>
+                    <label for="sync-interval" class="block text-sm font-medium text-gray-700">Sync Interval (hours)</label>
+                    <input type="number" id="sync-interval" name="sync_interval" value="1" min="0.5" max="24" step="0.5" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    <p class="mt-1 text-xs text-gray-500">How often to sync new messages from Telegram</p>
+                </div>
+                
+                <div>
+                    <label class="flex items-center">
+                        <input type="checkbox" id="auto-categorize" name="auto_categorize" checked class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <span class="ml-2 text-sm text-gray-700">Auto-categorize messages</span>
+                    </label>
+                </div>
+                
+                <div>
+                    <label class="flex items-center">
+                        <input type="checkbox" id="extract-urls" name="extract_urls" checked class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <span class="ml-2 text-sm text-gray-700">Extract URLs from messages</span>
+                    </label>
+                </div>
+                
+                <div>
+                    <label class="flex items-center">
+                        <input type="checkbox" id="scrape-urls" name="scrape_urls" checked class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <span class="ml-2 text-sm text-gray-700">Scrape content from URLs</span>
+                    </label>
+                </div>
+                
+                <div>
+                    <button type="submit" class="inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <i class="fas fa-save mr-2"></i>Save Processing Settings
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Channels Configuration -->
+    <div class="bg-white shadow rounded-lg mb-6">
+        <div class="px-4 py-5 sm:p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-medium text-gray-900">Monitored Channels</h2>
+                <button onclick="openAddChannelModal()" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <i class="fas fa-plus mr-2"></i>Add Channel
+                </button>
+            </div>
+            
+            <div id="channels-list" class="space-y-3">
+                <div class="text-center py-8">
+                    <i class="fas fa-broadcast-tower text-3xl text-gray-400"></i>
+                    <p class="mt-2 text-sm text-gray-500">No channels configured yet</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- System Information -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">System Information</h2>
+            
+            <dl class="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Environment</dt>
+                    <dd class="mt-1 text-sm text-gray-900" id="env-info">Loading...</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Database Status</dt>
+                    <dd class="mt-1 text-sm text-gray-900" id="db-status">Loading...</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Total Messages</dt>
+                    <dd class="mt-1 text-sm text-gray-900" id="message-count">Loading...</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Categories</dt>
+                    <dd class="mt-1 text-sm text-gray-900" id="category-count">Loading...</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Scheduler Status</dt>
+                    <dd class="mt-1 text-sm text-gray-900" id="scheduler-status">Loading...</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Last Sync</dt>
+                    <dd class="mt-1 text-sm text-gray-900" id="last-sync">Never</dd>
+                </div>
+            </dl>
+            
+            <div class="mt-6 flex space-x-3">
+                <button onclick="testConnection()" class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <i class="fas fa-plug mr-2"></i>Test Connections
+                </button>
+                <button onclick="clearCache()" class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <i class="fas fa-broom mr-2"></i>Clear Cache
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Channel Modal -->
+<div id="channelModal" class="hidden fixed z-10 inset-0 overflow-y-auto">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeChannelModal()"></div>
+        
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <form id="channelForm" onsubmit="saveChannelSubmit(event)">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Add Channel</h3>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label for="channelUsername" class="block text-sm font-medium text-gray-700">Channel Username</label>
+                            <input type="text" id="channelUsername" name="username" required placeholder="@channelname" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                        </div>
+                        
+                        <div>
+                            <label for="channelName" class="block text-sm font-medium text-gray-700">Display Name</label>
+                            <input type="text" id="channelName" name="name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                        </div>
+                        
+                        <div>
+                            <label class="flex items-center">
+                                <input type="checkbox" name="active" checked class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <span class="ml-2 text-sm text-gray-700">Active</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm">
+                        Save
+                    </button>
+                    <button type="button" onclick="closeChannelModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Load current settings
+    function loadSettings() {
+        fetch('/api/config')
+            .then(response => response.json())
+            .then(data => {
+                // Populate form fields with current settings
+                if (data.grok_api_key) {
+                    document.getElementById('grok-api-key').placeholder = '••••••••' + data.grok_api_key.slice(-4);
+                }
+                if (data.telegram_api_id) {
+                    document.getElementById('telegram-api-id').value = data.telegram_api_id;
+                }
+                if (data.telegram_phone) {
+                    document.getElementById('telegram-phone').value = data.telegram_phone;
+                }
+                // Load other settings...
+            })
+            .catch(error => console.error('Error loading settings:', error));
+        
+        // Load system info
+        loadSystemInfo();
+        loadChannels();
+    }
+    
+    function loadSystemInfo() {
+        // Load environment info
+        fetch('/api/config/status')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('env-info').textContent = data.environment || 'Unknown';
+                document.getElementById('db-status').textContent = data.database_status || 'Unknown';
+                document.getElementById('message-count').textContent = data.message_count || '0';
+                document.getElementById('category-count').textContent = data.category_count || '0';
+                document.getElementById('scheduler-status').textContent = data.scheduler_status || 'Stopped';
+                document.getElementById('last-sync').textContent = data.last_sync || 'Never';
+            })
+            .catch(error => {
+                console.error('Error loading system info:', error);
+                document.querySelectorAll('[id$="-info"], [id$="-status"], [id$="-count"]').forEach(el => {
+                    el.textContent = 'Error loading';
+                });
+            });
+    }
+    
+    function loadChannels() {
+        fetch('/api/config/channels')
+            .then(response => response.json())
+            .then(data => {
+                const container = document.getElementById('channels-list');
+                if (data.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-8">
+                            <i class="fas fa-broadcast-tower text-3xl text-gray-400"></i>
+                            <p class="mt-2 text-sm text-gray-500">No channels configured yet</p>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = data.map(channel => `
+                        <div class="flex justify-between items-center border rounded-md p-3">
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">${channel.name}</p>
+                                <p class="text-xs text-gray-500">${channel.username}</p>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <span class="text-xs ${channel.active ? 'text-green-600' : 'text-gray-400'}">
+                                    ${channel.active ? 'Active' : 'Inactive'}
+                                </span>
+                                <button onclick="removeChannel('${channel.username}')" class="text-red-600 hover:text-red-900">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            })
+            .catch(error => console.error('Error loading channels:', error));
+    }
+    
+    function saveApiSettings(event) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const data = Object.fromEntries(formData);
+        
+        fetch('/api/config', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(() => {
+            alert('API settings saved successfully');
+            loadSettings();
+        })
+        .catch(error => {
+            console.error('Error saving settings:', error);
+            alert('Failed to save settings');
+        });
+    }
+    
+    function saveProcessingSettings(event) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const data = {
+            batch_size: parseInt(formData.get('batch_size')),
+            sync_interval: parseFloat(formData.get('sync_interval')),
+            auto_categorize: formData.get('auto_categorize') === 'on',
+            extract_urls: formData.get('extract_urls') === 'on',
+            scrape_urls: formData.get('scrape_urls') === 'on'
+        };
+        
+        fetch('/api/config/processing', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(() => {
+            alert('Processing settings saved successfully');
+        })
+        .catch(error => {
+            console.error('Error saving settings:', error);
+            alert('Failed to save settings');
+        });
+    }
+    
+    function openAddChannelModal() {
+        document.getElementById('channelModal').classList.remove('hidden');
+    }
+    
+    function closeChannelModal() {
+        document.getElementById('channelModal').classList.add('hidden');
+        document.getElementById('channelForm').reset();
+    }
+    
+    function saveChannelSubmit(event) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const data = {
+            username: formData.get('username'),
+            name: formData.get('name'),
+            active: formData.get('active') === 'on'
+        };
+        
+        fetch('/api/config/channels', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(() => {
+            closeChannelModal();
+            loadChannels();
+        })
+        .catch(error => {
+            console.error('Error saving channel:', error);
+            alert('Failed to save channel');
+        });
+    }
+    
+    function removeChannel(username) {
+        if (confirm('Are you sure you want to remove this channel?')) {
+            fetch(`/api/config/channels/${username}`, {
+                method: 'DELETE'
+            })
+            .then(() => loadChannels())
+            .catch(error => {
+                console.error('Error removing channel:', error);
+                alert('Failed to remove channel');
+            });
+        }
+    }
+    
+    function testConnection() {
+        alert('Testing connections... This feature will test Telegram and Grok API connections.');
+        // Implementation would go here
+    }
+    
+    function clearCache() {
+        if (confirm('Are you sure you want to clear the cache?')) {
+            alert('Cache cleared successfully');
+            // Implementation would go here
+        }
+    }
+    
+    // Load settings on page load
+    loadSettings();
+</script>
+{% endblock %}

@@ -74,6 +74,18 @@ app.include_router(config.router, prefix="/api/config", tags=["configuration"])
 async def root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
+@app.get("/categories")
+async def categories_page(request: Request):
+    return templates.TemplateResponse("categories.html", {"request": request})
+
+@app.get("/import")
+async def import_page(request: Request):
+    return templates.TemplateResponse("import.html", {"request": request})
+
+@app.get("/settings")
+async def settings_page(request: Request):
+    return templates.TemplateResponse("settings.html", {"request": request})
+
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "environment": settings.app_env}

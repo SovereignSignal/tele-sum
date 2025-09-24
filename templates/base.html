@@ -22,21 +22,40 @@
                             <i class="fab fa-telegram text-blue-500 mr-2"></i>Tele-Sum
                         </h1>
                     </div>
-                    <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
-                        <a href="/" class="border-indigo-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                    <div class="hidden sm:ml-6 sm:flex sm:space-x-8" id="nav-links">
+                        <a href="/" class="nav-link inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium" data-page="dashboard">
                             Dashboard
                         </a>
-                        <a href="/categories" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                        <a href="/categories" class="nav-link inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium" data-page="categories">
                             Categories
                         </a>
-                        <a href="/import" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                        <a href="/import" class="nav-link inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium" data-page="import">
                             Import
                         </a>
-                        <a href="/settings" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                        <a href="/settings" class="nav-link inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium" data-page="settings">
                             Settings
                         </a>
                     </div>
                 </div>
+                <!-- Mobile menu button -->
+                <div class="sm:hidden flex items-center">
+                    <button type="button" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500" onclick="toggleMobileMenu()">
+                        <span class="sr-only">Open main menu</span>
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Mobile menu -->
+        <div class="sm:hidden hidden" id="mobile-menu">
+            <div class="pt-2 pb-3 space-y-1">
+                <a href="/" class="mobile-nav-link block pl-3 pr-4 py-2 border-l-4 text-base font-medium">Dashboard</a>
+                <a href="/categories" class="mobile-nav-link block pl-3 pr-4 py-2 border-l-4 text-base font-medium">Categories</a>
+                <a href="/import" class="mobile-nav-link block pl-3 pr-4 py-2 border-l-4 text-base font-medium">Import</a>
+                <a href="/settings" class="mobile-nav-link block pl-3 pr-4 py-2 border-l-4 text-base font-medium">Settings</a>
             </div>
         </div>
     </nav>
@@ -49,6 +68,53 @@
         document.body.addEventListener('htmx:configRequest', (event) => {
             event.detail.headers['X-Requested-With'] = 'XMLHttpRequest';
         });
+        
+        // Handle active navigation highlighting
+        document.addEventListener('DOMContentLoaded', function() {
+            const navLinks = document.querySelectorAll('.nav-link');
+            const mobileNavLinks = document.querySelectorAll('.mobile-nav-link');
+            const currentPath = window.location.pathname;
+            
+            // Desktop navigation
+            navLinks.forEach(link => {
+                const href = link.getAttribute('href');
+                
+                // Reset all links to inactive state
+                link.classList.remove('border-indigo-500', 'text-gray-900');
+                link.classList.add('border-transparent', 'text-gray-500', 'hover:border-gray-300', 'hover:text-gray-700');
+                
+                // Check if this is the active page
+                if ((currentPath === '/' && href === '/') || 
+                    (currentPath !== '/' && href !== '/' && currentPath.startsWith(href))) {
+                    // Set active state
+                    link.classList.remove('border-transparent', 'text-gray-500', 'hover:border-gray-300', 'hover:text-gray-700');
+                    link.classList.add('border-indigo-500', 'text-gray-900');
+                }
+            });
+            
+            // Mobile navigation
+            mobileNavLinks.forEach(link => {
+                const href = link.getAttribute('href');
+                
+                // Reset all links to inactive state
+                link.classList.remove('border-indigo-500', 'text-indigo-700', 'bg-indigo-50');
+                link.classList.add('border-transparent', 'text-gray-600', 'hover:bg-gray-50', 'hover:border-gray-300', 'hover:text-gray-800');
+                
+                // Check if this is the active page
+                if ((currentPath === '/' && href === '/') || 
+                    (currentPath !== '/' && href !== '/' && currentPath.startsWith(href))) {
+                    // Set active state
+                    link.classList.remove('border-transparent', 'text-gray-600', 'hover:bg-gray-50', 'hover:border-gray-300', 'hover:text-gray-800');
+                    link.classList.add('border-indigo-500', 'text-indigo-700', 'bg-indigo-50');
+                }
+            });
+        });
+        
+        // Mobile menu toggle
+        function toggleMobileMenu() {
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenu.classList.toggle('hidden');
+        }
     </script>
     {% block scripts %}{% endblock %}
 </body>
