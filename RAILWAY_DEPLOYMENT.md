@@ -1,6 +1,35 @@
 # Railway Deployment Guide for Tele-Sum
 
-This guide walks you through deploying Tele-Sum on Railway with proper configuration.
+[![Deployed on Railway](https://railway.app/button.svg)](https://railway.app)
+
+## 🚀 Current Deployment Status
+
+✅ **Tele-Sum is currently deployed and running on Railway**
+
+This production deployment includes:
+- **Live URL**: Accessible via Railway-provided domain
+- **Database**: PostgreSQL fully provisioned and connected
+- **Health Monitoring**: Active at `/health` endpoint
+- **Auto-sync**: Running every 6 hours for new messages
+- **Graceful Degradation**: System remains functional even when external APIs are unavailable
+
+---
+
+## About This Guide
+
+This guide walks you through deploying your own instance of Tele-Sum on Railway or understanding the current deployment architecture. **Tele-Sum is designed specifically for Railway's platform**, leveraging its managed infrastructure for optimal performance and reliability.
+
+## 🎯 Why Railway?
+
+Tele-Sum leverages Railway's unique advantages:
+
+- **Zero-Config PostgreSQL**: Database automatically provisioned and connected
+- **Environment Management**: Secure handling of API keys and secrets
+- **Automatic HTTPS**: SSL certificates managed automatically
+- **Built-in Monitoring**: Health checks and metrics out of the box
+- **One-Click Deploys**: Deploy from GitHub with automatic CI/CD
+- **Cost Efficiency**: Pay only for what you use with transparent pricing
+- **Graceful Scaling**: Automatic scaling based on load
 
 ## Quick Start
 
@@ -201,18 +230,34 @@ GET /api/config/status
    - Test summary generation
    - Monitor API usage
 
-## Monitoring
+## Monitoring & Production Status
 
-Railway provides:
-- Deployment logs
-- Metrics dashboard
-- Custom domain support
-- Automatic HTTPS
+### 🟢 Live Production Monitoring
+
+The deployed Tele-Sum instance on Railway provides real-time monitoring:
+
+- **Health Check**: `https://your-app.railway.app/health`
+- **Configuration Status**: `https://your-app.railway.app/api/config/status`
+- **Metrics Dashboard**: `https://your-app.railway.app/metrics`
+- **Import Status**: `https://your-app.railway.app/api/import/status`
+
+### Railway Platform Monitoring
+
+Railway provides comprehensive monitoring tools:
+- **Deployment Logs**: Real-time application logs
+- **Metrics Dashboard**: CPU, memory, and request metrics
+- **Custom Domain Support**: Use your own domain
+- **Automatic HTTPS**: SSL certificates managed by Railway
+- **Incident Alerts**: Automatic notifications for issues
+
+### Application Logs
 
 Check your app logs for:
-- Configuration status on startup
-- Warning messages for missing configs
-- Error details if features fail
+- ✅ Configuration status on startup
+- ⚠️ Warning messages for missing configs
+- ❌ Error details if features fail
+- 📊 Grok API usage and success rates
+- 🔄 Sync job execution status
 
 ## Support
 
