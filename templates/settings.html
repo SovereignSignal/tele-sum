@@ -4,43 +4,6 @@
 
 {% block content %}
 <div class="px-4 sm:px-0">
-    <!-- API Configuration -->
-    <div class="bg-white shadow rounded-lg mb-6">
-        <div class="px-4 py-5 sm:p-6">
-            <h2 class="text-lg font-medium text-gray-900 mb-4">API Configuration</h2>
-            
-            <form id="api-settings-form" onsubmit="saveApiSettings(event)" class="space-y-4">
-                <div>
-                    <label for="grok-api-key" class="block text-sm font-medium text-gray-700">Grok API Key</label>
-                    <input type="password" id="grok-api-key" name="grok_api_key" placeholder="Enter your Grok API key" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                    <p class="mt-1 text-xs text-gray-500">Used for AI-powered message summarization</p>
-                </div>
-                
-                <div>
-                    <label for="telegram-api-id" class="block text-sm font-medium text-gray-700">Telegram API ID</label>
-                    <input type="text" id="telegram-api-id" name="telegram_api_id" placeholder="Enter your Telegram API ID" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                </div>
-                
-                <div>
-                    <label for="telegram-api-hash" class="block text-sm font-medium text-gray-700">Telegram API Hash</label>
-                    <input type="password" id="telegram-api-hash" name="telegram_api_hash" placeholder="Enter your Telegram API Hash" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                </div>
-                
-                <div>
-                    <label for="telegram-phone" class="block text-sm font-medium text-gray-700">Telegram Phone Number</label>
-                    <input type="tel" id="telegram-phone" name="telegram_phone" placeholder="+1234567890" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                    <p class="mt-1 text-xs text-gray-500">Your Telegram account phone number (with country code)</p>
-                </div>
-                
-                <div>
-                    <button type="submit" class="inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                        <i class="fas fa-save mr-2"></i>Save API Settings
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-    
     <!-- Processing Settings -->
     <div class="bg-white shadow rounded-lg mb-6">
         <div class="px-4 py-5 sm:p-6">
@@ -200,24 +163,7 @@
 <script>
     // Load current settings
     function loadSettings() {
-        fetch('/api/config')
-            .then(response => response.json())
-            .then(data => {
-                // Populate form fields with current settings
-                if (data.grok_api_key) {
-                    document.getElementById('grok-api-key').placeholder = '••••••••' + data.grok_api_key.slice(-4);
-                }
-                if (data.telegram_api_id) {
-                    document.getElementById('telegram-api-id').value = data.telegram_api_id;
-                }
-                if (data.telegram_phone) {
-                    document.getElementById('telegram-phone').value = data.telegram_phone;
-                }
-                // Load other settings...
-            })
-            .catch(error => console.error('Error loading settings:', error));
-        
-        // Load system info
+        // Load system info and channels
         loadSystemInfo();
         loadChannels();
     }
@@ -274,29 +220,6 @@
                 }
             })
             .catch(error => console.error('Error loading channels:', error));
-    }
-    
-    function saveApiSettings(event) {
-        event.preventDefault();
-        const formData = new FormData(event.target);
-        const data = Object.fromEntries(formData);
-        
-        fetch('/api/config', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data)
-        })
-        .then(response => response.json())
-        .then(() => {
-            alert('API settings saved successfully');
-            loadSettings();
-        })
-        .catch(error => {
-            console.error('Error saving settings:', error);
-            alert('Failed to save settings');
-        });
     }
     
     function saveProcessingSettings(event) {
