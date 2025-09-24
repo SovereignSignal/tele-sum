@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from contextlib import asynccontextmanager
 import logging
+import os
 
 from src.api import messages, categories, imports, exports, config
 from src.models.database import engine, Base
@@ -54,7 +55,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# Mount static files only if directory exists
+if os.path.exists("static"):
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+    logger.info("✅ Static files directory mounted")
+else:
+    logger.warning("⚠️  Static directory not found, skipping static files mount")
+
 templates = Jinja2Templates(directory="templates")
 
 app.include_router(messages.router, prefix="/api/messages", tags=["messages"])
