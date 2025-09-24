@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Tele-Sum{% endblock %}
+
+{% block content %}
+<div class="px-4 sm:px-0">
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Search and Filter Messages</h2>
+            
+            <form hx-get="/api/messages" hx-target="#messages-list" hx-trigger="submit, change from:select delay:500ms, keyup from:input[type='text'] delay:500ms" class="space-y-4">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <div>
+                        <label for="search" class="block text-sm font-medium text-gray-700">Search</label>
+                        <input type="text" name="q" id="search" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="Search messages...">
+                    </div>
+                    
+                    <div>
+                        <label for="category" class="block text-sm font-medium text-gray-700">Category</label>
+                        <select name="category_id" id="category" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                            <option value="">All Categories</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="confidence" class="block text-sm font-medium text-gray-700">Confidence</label>
+                        <select name="confidence" id="confidence" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                            <option value="">All</option>
+                            <option value="confident">Confident</option>
+                            <option value="uncertain">Uncertain</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="status" class="block text-sm font-medium text-gray-700">Status</label>
+                        <select name="status" id="status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                            <option value="">All</option>
+                            <option value="success">Processed</option>
+                            <option value="pending">Pending</option>
+                            <option value="failed">Failed</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="flex justify-between items-center">
+                    <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <i class="fas fa-search mr-2"></i>Search
+                    </button>
+                    
+                    <div class="space-x-2">
+                        <button type="button" onclick="exportData('csv')" class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <i class="fas fa-file-csv mr-2"></i>Export CSV
+                        </button>
+                        <button type="button" onclick="exportData('json')" class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <i class="fas fa-file-code mr-2"></i>Export JSON
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="mt-6">
+        <div id="messages-list" class="space-y-4">
+            <div class="text-center py-12">
+                <i class="fas fa-spinner fa-spin text-4xl text-gray-400"></i>
+                <p class="mt-2 text-sm text-gray-500">Loading messages...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<template id="message-template">
+    <div class="bg-white shadow rounded-lg p-6">
+        <div class="flex justify-between items-start">
+            <div class="flex-1">
+                <div class="flex items-center space-x-2 mb-2">
+                    <span class="text-xs text-gray-500">ID: {telegram_id}</span>
+                    <span class="text-xs text-gray-500">•</span>
+                    <span class="text-xs text-gray-500">{timestamp}</span>
+                    {category_badge}
+                    {confidence_badge}
+                    {status_badge}
+                </div>
+                
+                <div class="text-sm text-gray-900 mb-3">{raw_content}</div>
+                
+                {summary_section}
+                
+                {urls_section}
+                
+                {entities_section}
+            </div>
+            
+            <div class="flex space-x-2 ml-4">
+                <button onclick="viewMessage({id})" class="text-indigo-600 hover:text-indigo-900">
+                    <i class="fas fa-eye"></i>
+                </button>
+                {reprocess_button}
+            </div>
+        </div>
+    </div>
+</template>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Load categories
+    fetch('/api/categories')
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('category');
+            data.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.id;
+                option.textContent = cat.name;
+                select.appendChild(option);
+            });
+        });
+    
+    // Initial load
+    htmx.ajax('GET', '/api/messages', {target: '#messages-list'});
+    
+    function exportData(format) {
+        const form = document.querySelector('form');
+        const params = new URLSearchParams(new FormData(form));
+        window.location.href = `/api/export/${format}?${params.toString()}`;
+    }
+    
+    function viewMessage(id) {
+        // Implement view modal or navigate to detail page
+        console.log('View message:', id);
+    }
+    
+    function reprocessMessage(id) {
+        fetch(`/api/messages/${id}/reprocess`, { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                htmx.ajax('GET', '/api/messages', {target: '#messages-list'});
+            });
+    }
+    
+    // Handle htmx response
+    document.body.addEventListener('htmx:afterSwap', (event) => {
+        if (event.detail.target.id === 'messages-list') {
+            // Response will be handled by message partial
+        }
+    });
+</script>
+{% endblock %}
