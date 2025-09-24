@@ -8,6 +8,7 @@ from src.models.database import get_db
 from src.models.models import SyncStatus, ProcessingStatus, Summary
 from src.services.telegram import TelegramService
 from src.services.processor import MessageProcessor
+from src.config import settings
 
 router = APIRouter()
 
@@ -90,6 +91,17 @@ async def start_import(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
+    # Check if Telegram is configured
+    if not settings.is_telegram_configured():
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "Telegram not configured",
+                "message": "Telegram API credentials are not configured. Please set the following environment variables: TELEGRAM_API_ID, TELEGRAM_API_HASH, TELEGRAM_PHONE, TELEGRAM_CHANNEL_USERNAME",
+                "required_vars": ["TELEGRAM_API_ID", "TELEGRAM_API_HASH", "TELEGRAM_PHONE", "TELEGRAM_CHANNEL_USERNAME"]
+            }
+        )
+    
     sync_status = db.query(SyncStatus).first()
     
     if sync_status and sync_status.is_initial_import_complete:

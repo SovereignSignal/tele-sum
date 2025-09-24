@@ -14,10 +14,16 @@ class GrokService:
     def __init__(self):
         self.api_key = settings.grok_api_key
         self.api_url = settings.grok_api_url
-        self.headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
-        }
+        self.is_configured = settings.is_grok_configured()
+        
+        if self.is_configured:
+            self.headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            }
+        else:
+            self.headers = {}
+            logger.warning("⚠️  Grok API not configured. AI features will be disabled.")
         
     def build_prompt(
         self,
@@ -75,6 +81,10 @@ class GrokService:
         url_contents: Dict[str, str],
         categories: List[Category]
     ) -> Optional[Dict]:
+        if not self.is_configured:
+            logger.info("Grok API not configured, skipping content analysis")
+            return None
+            
         prompt = self.build_prompt(message_content, urls, url_contents, categories)
         
         payload = {
