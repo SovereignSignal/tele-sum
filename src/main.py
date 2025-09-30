@@ -7,7 +7,7 @@ import logging
 import os
 
 from src.api import messages, categories, imports, exports, config, hybrid
-from src.models.database import engine, Base
+from src.models.database import get_engine, Base
 from src.services.scheduler import start_scheduler, shutdown_scheduler
 from src.config import settings
 
@@ -19,10 +19,12 @@ async def lifespan(app: FastAPI):
     # Only create tables if database is properly configured
     if settings.is_database_configured():
         try:
+            # Get or create the database engine
+            db_engine = get_engine()
             # Create tables if they don't exist (for initial setup)
-            Base.metadata.create_all(bind=engine)
+            Base.metadata.create_all(bind=db_engine)
             logger.info("✅ Database tables created/verified")
-            
+
             # Note: In production, consider using Alembic migrations instead
             logger.info("💡 For production deployments, use: alembic upgrade head")
         except Exception as e:

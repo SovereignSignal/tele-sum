@@ -48,17 +48,32 @@ def create_db_engine(max_retries=5, initial_wait=1):
     
     raise OperationalError("Could not establish database connection", None, None)
 
-# Create engine with retry logic
-try:
-    engine = create_db_engine()
-except Exception as e:
-    logger.error(f"❌ Critical database error: {e}")
-    logger.error("Please ensure PostgreSQL is provisioned in Railway and DATABASE_URL is set correctly")
-    raise
-
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
+# Lazy engine creation - only create when database is configured
+engine = None
+SessionLocal = None
 Base = declarative_base()
+
+def get_engine():
+    """
+    Get or create database engine lazily.
+    Only creates the engine when actually needed and database is configured.
+    """
+    global engine, SessionLocal
+
+    if engine is None:
+        if not settings.is_database_configured():
+            raise ValueError("Database not configured. Please set DATABASE_URL in Railway environment variables.")
+
+        try:
+            engine = create_db_engine()
+            SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+            logger.info("✅ Database engine created successfully")
+        except Exception as e:
+            logger.error(f"❌ Critical database error: {e}")
+            logger.error("Please ensure PostgreSQL is provisioned in Railway and DATABASE_URL is set correctly")
+            raise
+
+    return engine
 
 def get_db():
     """
@@ -68,7 +83,10 @@ def get_db():
     if not settings.is_database_configured():
         logger.error("Database not configured. Please set DATABASE_URL environment variable.")
         raise OperationalError("Database not configured", None, None)
-    
+
+    # Ensure engine is created
+    get_engine()
+
     db = SessionLocal()
     try:
         yield db
@@ -84,24 +102,32 @@ def check_database_health():
     Check database connectivity and health.
     Returns a dictionary with health status information.
     """
+    if not settings.is_database_configured():
+        return {
+            "status": "not_configured",
+            "error": "DATABASE_URL not configured",
+            "connected": False
+        }
+
     try:
-        with engine.connect() as conn:
+        db_engine = get_engine()
+        with db_engine.connect() as conn:
             # Check basic connectivity
             result = conn.execute(text("SELECT 1"))
             result.fetchone()
-            
+
             # Get PostgreSQL version
             version_result = conn.execute(text("SELECT version()"))
             pg_version = version_result.fetchone()[0]
-            
+
             # Get connection pool stats
             pool_status = {
-                "size": engine.pool.size(),
-                "checked_in": engine.pool.checkedin(),
-                "overflow": engine.pool.overflow(),
-                "total": engine.pool.checkedout()
+                "size": db_engine.pool.size(),
+                "checked_in": db_engine.pool.checkedin(),
+                "overflow": db_engine.pool.overflow(),
+                "total": db_engine.pool.checkedout()
             }
-            
+
             return {
                 "status": "healthy",
                 "database": "PostgreSQL",
