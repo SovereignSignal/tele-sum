@@ -34,6 +34,7 @@ class Category(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     name = Column(String(100), nullable=False)
     description = Column(Text, nullable=True)
+    keywords = Column(JSON, default=list)  # List of keywords for AI classification hints
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
@@ -47,7 +48,7 @@ class Message(Base):
     telegram_id = Column(Integer, unique=True, index=True)
     channel_id = Column(String(255), index=True)
     bot_id = Column(Integer, ForeignKey("telegram_bots.id"), nullable=True, index=True)  # Track which bot imported
-    import_method = Column(String(20), default="phone")  # "phone" or "bot"
+    import_method = Column(String(20), default="phone")  # "phone", "bot", or "file"
     timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
     raw_content = Column(Text, nullable=False)
     extracted_urls = Column(JSON, default=list)
@@ -144,3 +145,72 @@ class SyncStatus(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     channel_config = relationship("ChannelConfig", back_populates="sync_status")
+
+class GrokUsage(Base):
+    """Track Grok API usage for rate limiting and cost monitoring"""
+    __tablename__ = "grok_usage"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    tokens_used = Column(Integer, default=0)
+    request_type = Column(String(50), default="analysis")  # analysis, retry, etc.
+    success = Column(Boolean, default=True)
+    error_message = Column(Text, nullable=True)
+    
+    __table_args__ = (
+        Index('ix_grok_usage_timestamp_success', 'timestamp', 'success'),
+    )
+
+# Default categories to seed for new users
+DEFAULT_CATEGORIES = [
+    {
+        "name": "Announcements",
+        "description": "Official announcements, launches, and major updates",
+        "keywords": ["announcement", "launch", "release", "update", "news"]
+    },
+    {
+        "name": "Funding & Grants",
+        "description": "Funding rounds, grants, investments, and financial news",
+        "keywords": ["funding", "grant", "investment", "raise", "seed", "series", "million", "billion"]
+    },
+    {
+        "name": "Technical",
+        "description": "Technical content, development updates, and engineering",
+        "keywords": ["technical", "development", "engineering", "code", "protocol", "smart contract"]
+    },
+    {
+        "name": "Research",
+        "description": "Research papers, analysis, and deep dives",
+        "keywords": ["research", "analysis", "paper", "study", "report", "findings"]
+    },
+    {
+        "name": "Events",
+        "description": "Conferences, meetups, AMAs, and scheduled events",
+        "keywords": ["event", "conference", "meetup", "ama", "webinar", "summit"]
+    },
+    {
+        "name": "Partnerships",
+        "description": "Partnership announcements and collaborations",
+        "keywords": ["partnership", "collaboration", "integration", "alliance", "joint"]
+    },
+    {
+        "name": "Market & Trading",
+        "description": "Market updates, trading, and price-related content",
+        "keywords": ["market", "trading", "price", "token", "listing", "exchange"]
+    },
+    {
+        "name": "Community",
+        "description": "Community updates, governance, and social content",
+        "keywords": ["community", "governance", "vote", "proposal", "dao"]
+    },
+    {
+        "name": "Security",
+        "description": "Security updates, audits, and vulnerability disclosures",
+        "keywords": ["security", "audit", "vulnerability", "hack", "exploit", "fix"]
+    },
+    {
+        "name": "Other",
+        "description": "Content that doesn't fit other categories",
+        "keywords": []
+    }
+]

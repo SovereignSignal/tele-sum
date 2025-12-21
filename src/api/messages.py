@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, and_, desc
 from typing import List, Optional
@@ -10,6 +12,7 @@ from src.models.models import Message, Summary, Category, ProcessingStatus, Conf
 from src.services.processor import process_message
 
 router = APIRouter()
+templates = Jinja2Templates(directory="templates")
 
 class MessageResponse(BaseModel):
     id: int
@@ -26,18 +29,16 @@ class MessageResponse(BaseModel):
     class Config:
         from_attributes = True
 
-@router.get("/", response_model=List[MessageResponse])
-async def search_messages(
-    q: Optional[str] = Query(None, description="Search query"),
-    category_id: Optional[int] = Query(None, description="Filter by category"),
-    confidence: Optional[str] = Query(None, description="Filter by confidence level"),
-    status: Optional[str] = Query(None, description="Filter by processing status"),
-    date_from: Optional[datetime] = Query(None, description="Filter from date"),
-    date_to: Optional[datetime] = Query(None, description="Filter to date"),
-    limit: int = Query(100, ge=1, le=500),
-    offset: int = Query(0, ge=0),
-    db: Session = Depends(get_db)
+def build_message_query(
+    db: Session,
+    q: Optional[str] = None,
+    category_id: Optional[int] = None,
+    confidence: Optional[str] = None,
+    status: Optional[str] = None,
+    date_from: Optional[datetime] = None,
+    date_to: Optional[datetime] = None
 ):
+    """Build the base query for messages with filters"""
     query = db.query(Message).options(
         joinedload(Message.summary).joinedload(Summary.category)
     )
@@ -72,31 +73,149 @@ async def search_messages(
     if date_to:
         query = query.filter(Message.timestamp <= date_to)
     
-    query = query.order_by(desc(Message.timestamp))
+    return query.order_by(desc(Message.timestamp))
+
+def message_to_response(msg: Message) -> MessageResponse:
+    """Convert a Message model to MessageResponse"""
+    result = MessageResponse(
+        id=msg.id,
+        telegram_id=msg.telegram_id,
+        timestamp=msg.timestamp,
+        raw_content=msg.raw_content,
+        extracted_urls=msg.extracted_urls or [],
+        processing_status=msg.summary.processing_status.value if msg.summary else "pending"
+    )
+    
+    if msg.summary:
+        result.summary = msg.summary.summary
+        result.entities = msg.summary.entities or {}
+        result.confidence = msg.summary.confidence.value if msg.summary.confidence else None
+        
+        if msg.summary.category:
+            result.category_name = msg.summary.category.name
+    
+    return result
+
+@router.get("/html", response_class=HTMLResponse)
+async def get_messages_html(
+    request: Request,
+    q: Optional[str] = Query(None, description="Search query"),
+    category_id: Optional[int] = Query(None, description="Filter by category"),
+    confidence: Optional[str] = Query(None, description="Filter by confidence level"),
+    status: Optional[str] = Query(None, description="Filter by processing status"),
+    date_from: Optional[datetime] = Query(None, description="Filter from date"),
+    date_to: Optional[datetime] = Query(None, description="Filter to date"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db)
+):
+    """Get messages as HTML partial for HTMX"""
+    query = build_message_query(db, q, category_id, confidence, status, date_from, date_to)
+    
+    # Get total count for pagination
+    total = query.count()
+    
+    # Get paginated messages
     messages = query.offset(offset).limit(limit).all()
     
-    results = []
+    # Convert to response format
+    message_list = []
     for msg in messages:
-        result = MessageResponse(
-            id=msg.id,
-            telegram_id=msg.telegram_id,
-            timestamp=msg.timestamp,
-            raw_content=msg.raw_content,
-            extracted_urls=msg.extracted_urls or [],
-            processing_status=msg.summary.processing_status.value if msg.summary else "pending"
-        )
+        msg_dict = {
+            "id": msg.id,
+            "telegram_id": msg.telegram_id,
+            "timestamp": msg.timestamp,
+            "raw_content": msg.raw_content,
+            "extracted_urls": msg.extracted_urls or [],
+            "processing_status": msg.summary.processing_status.value if msg.summary else "pending",
+            "summary": None,
+            "entities": {},
+            "confidence": None,
+            "category_name": None
+        }
         
         if msg.summary:
-            result.summary = msg.summary.summary
-            result.entities = msg.summary.entities or {}
-            result.confidence = msg.summary.confidence.value if msg.summary.confidence else None
+            msg_dict["summary"] = msg.summary.summary
+            msg_dict["entities"] = msg.summary.entities or {}
+            msg_dict["confidence"] = msg.summary.confidence.value if msg.summary.confidence else None
             
             if msg.summary.category:
-                result.category_name = msg.summary.category.name
+                msg_dict["category_name"] = msg.summary.category.name
         
-        results.append(result)
+        message_list.append(msg_dict)
     
-    return results
+    has_more = offset + limit < total
+    
+    return templates.TemplateResponse(
+        "partials/messages.html",
+        {
+            "request": request,
+            "messages": message_list,
+            "has_more": has_more,
+            "offset": offset,
+            "limit": limit,
+            "query": q,
+            "category_id": category_id,
+            "confidence": confidence,
+            "status": status
+        }
+    )
+
+@router.get("/", response_model=List[MessageResponse])
+async def search_messages(
+    q: Optional[str] = Query(None, description="Search query"),
+    category_id: Optional[int] = Query(None, description="Filter by category"),
+    confidence: Optional[str] = Query(None, description="Filter by confidence level"),
+    status: Optional[str] = Query(None, description="Filter by processing status"),
+    date_from: Optional[datetime] = Query(None, description="Filter from date"),
+    date_to: Optional[datetime] = Query(None, description="Filter to date"),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db)
+):
+    """Get messages as JSON"""
+    query = build_message_query(db, q, category_id, confidence, status, date_from, date_to)
+    messages = query.offset(offset).limit(limit).all()
+    
+    return [message_to_response(msg) for msg in messages]
+
+@router.get("/stats")
+async def get_message_stats(db: Session = Depends(get_db)):
+    """Get message statistics"""
+    total = db.query(Message).count()
+    
+    processed = db.query(Summary).filter(
+        Summary.processing_status == ProcessingStatus.SUCCESS
+    ).count()
+    
+    pending = db.query(Summary).filter(
+        Summary.processing_status.in_([
+            ProcessingStatus.PENDING,
+            ProcessingStatus.PROCESSING,
+            ProcessingStatus.RETRY
+        ])
+    ).count()
+    
+    failed = db.query(Summary).filter(
+        Summary.processing_status == ProcessingStatus.FAILED
+    ).count()
+    
+    confident = db.query(Summary).filter(
+        Summary.confidence == ConfidenceLevel.CONFIDENT
+    ).count()
+    
+    uncertain = db.query(Summary).filter(
+        Summary.confidence == ConfidenceLevel.UNCERTAIN
+    ).count()
+    
+    return {
+        "total": total,
+        "processed": processed,
+        "pending": pending,
+        "failed": failed,
+        "confident": confident,
+        "uncertain": uncertain
+    }
 
 @router.get("/{message_id}", response_model=MessageResponse)
 async def get_message(
@@ -110,24 +229,7 @@ async def get_message(
     if not message:
         raise HTTPException(status_code=404, detail="Message not found")
     
-    result = MessageResponse(
-        id=message.id,
-        telegram_id=message.telegram_id,
-        timestamp=message.timestamp,
-        raw_content=message.raw_content,
-        extracted_urls=message.extracted_urls or [],
-        processing_status=message.summary.processing_status.value if message.summary else "pending"
-    )
-    
-    if message.summary:
-        result.summary = message.summary.summary
-        result.entities = message.summary.entities or {}
-        result.confidence = message.summary.confidence.value if message.summary.confidence else None
-        
-        if message.summary.category:
-            result.category_name = message.summary.category.name
-    
-    return result
+    return message_to_response(message)
 
 @router.post("/{message_id}/reprocess")
 async def reprocess_message(
@@ -141,7 +243,8 @@ async def reprocess_message(
     
     if message.summary:
         message.summary.processing_status = ProcessingStatus.RETRY
-        message.summary.processing_attempts += 1
+        message.summary.processing_attempts = 0  # Reset attempts for manual retry
+        message.summary.error_log = None
         db.commit()
     else:
         summary = Summary(
@@ -153,6 +256,29 @@ async def reprocess_message(
     
     try:
         await process_message(message_id, db)
-        return {"message": "Message queued for reprocessing"}
+        return {"message": "Message reprocessed successfully", "status": "success"}
     except Exception as e:
-        return {"message": f"Failed to queue message: {str(e)}"}
+        return {"message": f"Reprocessing queued, will be processed in background: {str(e)}", "status": "queued"}
+
+@router.post("/reprocess-failed")
+async def reprocess_all_failed(
+    db: Session = Depends(get_db)
+):
+    """Queue all failed messages for reprocessing"""
+    failed_summaries = db.query(Summary).filter(
+        Summary.processing_status == ProcessingStatus.FAILED
+    ).all()
+    
+    count = 0
+    for summary in failed_summaries:
+        summary.processing_status = ProcessingStatus.RETRY
+        summary.processing_attempts = 0
+        summary.error_log = None
+        count += 1
+    
+    db.commit()
+    
+    return {
+        "message": f"Queued {count} failed messages for reprocessing",
+        "count": count
+    }

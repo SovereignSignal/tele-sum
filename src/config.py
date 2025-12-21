@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     telegram_phone: Optional[str] = Field(default=None, alias='TELEGRAM_PHONE')
     telegram_channel_username: Optional[str] = Field(default=None, alias='TELEGRAM_CHANNEL_USERNAME')
     
+    # Telegram Session Persistence
+    telegram_session_path: str = Field(default="/app/data/telegram_session", alias='TELEGRAM_SESSION_PATH')
+    
     # Telegram Bot Configuration (For ongoing monitoring)
     telegram_bot_tokens: Optional[str] = Field(default=None, alias='TELEGRAM_BOT_TOKENS')  # Comma-separated
     enable_bot_mode: bool = Field(default=True, alias='ENABLE_BOT_MODE')
@@ -39,6 +42,10 @@ class Settings(BaseSettings):
     # Sync settings
     sync_interval_hours: int = Field(default=6, alias='SYNC_INTERVAL_HOURS')
     max_grok_requests_per_hour: int = Field(default=100, alias='MAX_GROK_REQUESTS_PER_HOUR')
+    
+    # Processing settings
+    max_processing_retries: int = Field(default=3, alias='MAX_PROCESSING_RETRIES')
+    processing_batch_size: int = Field(default=10, alias='PROCESSING_BATCH_SIZE')
     
     @field_validator('secret_key', mode='before')
     @classmethod
@@ -73,6 +80,20 @@ class Settings(BaseSettings):
             return "postgresql://user:password@localhost:5432/telesum"
         return v
     
+    @field_validator('telegram_session_path', mode='before')
+    @classmethod
+    def validate_session_path(cls, v, info):
+        """Ensure session directory exists"""
+        if v:
+            session_dir = os.path.dirname(v) if '/' in v else '.'
+            if session_dir and not os.path.exists(session_dir):
+                try:
+                    os.makedirs(session_dir, exist_ok=True)
+                    logger.info(f"✓ Created Telegram session directory: {session_dir}")
+                except Exception as e:
+                    logger.warning(f"⚠️  Could not create session directory {session_dir}: {e}")
+        return v
+    
     def is_telegram_configured(self) -> bool:
         """Check if Telegram phone auth configuration is complete"""
         return all([
@@ -104,6 +125,10 @@ class Settings(BaseSettings):
         """Check if database is properly configured"""
         return self.database_url and 'localhost' not in self.database_url
     
+    def get_session_path(self) -> str:
+        """Get the full session file path"""
+        return self.telegram_session_path
+    
     model_config = SettingsConfigDict(
         env_file='.env' if os.path.exists('.env') else None,
         env_file_encoding='utf-8',
@@ -129,6 +154,8 @@ class Settings(BaseSettings):
             bot_count = len(self.get_bot_tokens())
             logger.info(f"    └─ {bot_count} bot token(s) configured")
         logger.info(f"🧠 Grok AI: {'✅ Configured' if self.is_grok_configured() else '⚠️  Not configured (AI features disabled)'}")
+        logger.info(f"📂 Session Path: {self.telegram_session_path}")
+        logger.info(f"🔄 Max Retries: {self.max_processing_retries}")
         logger.info("=" * 60)
         
         if not self.is_database_configured():
@@ -177,6 +204,7 @@ except Exception as e:
         app_env=os.getenv('APP_ENV', 'production'),
         grok_api_url=os.getenv('GROK_API_URL', 'https://api.x.ai/v1'),
         sync_interval_hours=int(os.getenv('SYNC_INTERVAL_HOURS', '6')),
-        max_grok_requests_per_hour=int(os.getenv('MAX_GROK_REQUESTS_PER_HOUR', '100'))
+        max_grok_requests_per_hour=int(os.getenv('MAX_GROK_REQUESTS_PER_HOUR', '100')),
+        max_processing_retries=int(os.getenv('MAX_PROCESSING_RETRIES', '3'))
     )
     settings.log_configuration_status()

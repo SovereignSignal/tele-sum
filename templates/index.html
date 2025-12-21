@@ -4,11 +4,79 @@
 
 {% block content %}
 <div class="px-4 sm:px-0">
+    <!-- Stats Section -->
+    <div class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-envelope text-2xl text-gray-400"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Total Messages</dt>
+                            <dd class="text-lg font-semibold text-gray-900" id="stat-total">-</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-check-circle text-2xl text-green-400"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Processed</dt>
+                            <dd class="text-lg font-semibold text-gray-900" id="stat-processed">-</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-clock text-2xl text-yellow-400"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Pending</dt>
+                            <dd class="text-lg font-semibold text-gray-900" id="stat-pending">-</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-circle text-2xl text-red-400"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Failed</dt>
+                            <dd class="text-lg font-semibold text-gray-900" id="stat-failed">-</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filter Section -->
     <div class="bg-white shadow rounded-lg">
         <div class="px-4 py-5 sm:p-6">
             <h2 class="text-lg font-medium text-gray-900 mb-4">Search and Filter Messages</h2>
             
-            <form hx-get="/api/messages" hx-target="#messages-list" hx-trigger="submit, change from:select delay:500ms, keyup from:input[type='text'] delay:500ms" class="space-y-4">
+            <form id="search-form" class="space-y-4">
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <div>
                         <label for="search" class="block text-sm font-medium text-gray-700">Search</label>
@@ -26,7 +94,7 @@
                         <label for="confidence" class="block text-sm font-medium text-gray-700">Confidence</label>
                         <select name="confidence" id="confidence" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                             <option value="">All</option>
-                            <option value="confident">Confident</option>
+                            <option value="confident">Confident Only</option>
                             <option value="uncertain">Uncertain</option>
                         </select>
                     </div>
@@ -43,11 +111,19 @@
                 </div>
                 
                 <div class="flex justify-between items-center">
-                    <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                        <i class="fas fa-search mr-2"></i>Search
-                    </button>
+                    <div class="flex space-x-2">
+                        <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <i class="fas fa-search mr-2"></i>Search
+                        </button>
+                        <button type="button" onclick="resetFilters()" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <i class="fas fa-times mr-2"></i>Reset
+                        </button>
+                    </div>
                     
-                    <div class="space-x-2">
+                    <div class="flex space-x-2">
+                        <button type="button" onclick="reprocessFailed()" class="inline-flex items-center px-3 py-2 border border-orange-300 shadow-sm text-sm leading-4 font-medium rounded-md text-orange-700 bg-white hover:bg-orange-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500">
+                            <i class="fas fa-redo mr-2"></i>Retry Failed
+                        </button>
                         <button type="button" onclick="exportData('csv')" class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                             <i class="fas fa-file-csv mr-2"></i>Export CSV
                         </button>
@@ -60,8 +136,9 @@
         </div>
     </div>
     
+    <!-- Messages List -->
     <div class="mt-6">
-        <div id="messages-list" class="space-y-4">
+        <div id="messages-list">
             <div class="text-center py-12">
                 <i class="fas fa-spinner fa-spin text-4xl text-gray-400"></i>
                 <p class="mt-2 text-sm text-gray-500">Loading messages...</p>
@@ -70,82 +147,202 @@
     </div>
 </div>
 
-<template id="message-template">
-    <div class="bg-white shadow rounded-lg p-6">
-        <div class="flex justify-between items-start">
-            <div class="flex-1">
-                <div class="flex items-center space-x-2 mb-2">
-                    <span class="text-xs text-gray-500">ID: {telegram_id}</span>
-                    <span class="text-xs text-gray-500">•</span>
-                    <span class="text-xs text-gray-500">{timestamp}</span>
-                    {category_badge}
-                    {confidence_badge}
-                    {status_badge}
+<!-- Message Detail Modal -->
+<div id="messageModal" class="hidden fixed z-10 inset-0 overflow-y-auto">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeMessageModal()"></div>
+        
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+            <div class="bg-white px-4 pt-5 pb-4 sm:p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900">Message Details</h3>
+                    <button onclick="closeMessageModal()" class="text-gray-400 hover:text-gray-500">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
-                
-                <div class="text-sm text-gray-900 mb-3">{raw_content}</div>
-                
-                {summary_section}
-                
-                {urls_section}
-                
-                {entities_section}
-            </div>
-            
-            <div class="flex space-x-2 ml-4">
-                <button onclick="viewMessage({id})" class="text-indigo-600 hover:text-indigo-900">
-                    <i class="fas fa-eye"></i>
-                </button>
-                {reprocess_button}
+                <div id="message-detail-content">
+                    <div class="text-center py-8">
+                        <i class="fas fa-spinner fa-spin text-2xl text-gray-400"></i>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-</template>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    // Load categories
-    fetch('/api/categories')
-        .then(response => response.json())
-        .then(data => {
-            const select = document.getElementById('category');
-            data.forEach(cat => {
-                const option = document.createElement('option');
-                option.value = cat.id;
-                option.textContent = cat.name;
-                select.appendChild(option);
-            });
+    // Load categories for filter dropdown
+    function loadCategories() {
+        fetch('/api/categories')
+            .then(response => response.json())
+            .then(data => {
+                const select = document.getElementById('category');
+                select.innerHTML = '<option value="">All Categories</option>';
+                data.forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat.id;
+                    option.textContent = `${cat.name} (${cat.message_count || 0})`;
+                    select.appendChild(option);
+                });
+            })
+            .catch(error => console.error('Error loading categories:', error));
+    }
+    
+    // Load message statistics
+    function loadStats() {
+        fetch('/api/messages/stats')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('stat-total').textContent = data.total || 0;
+                document.getElementById('stat-processed').textContent = data.processed || 0;
+                document.getElementById('stat-pending').textContent = data.pending || 0;
+                document.getElementById('stat-failed').textContent = data.failed || 0;
+            })
+            .catch(error => console.error('Error loading stats:', error));
+    }
+    
+    // Load messages with HTMX
+    function loadMessages() {
+        const form = document.getElementById('search-form');
+        const params = new URLSearchParams(new FormData(form));
+        
+        htmx.ajax('GET', `/api/messages/html?${params.toString()}`, {target: '#messages-list', swap: 'innerHTML'});
+    }
+    
+    // Form submit handler
+    document.getElementById('search-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        loadMessages();
+    });
+    
+    // Auto-search on filter change
+    document.querySelectorAll('#search-form select').forEach(select => {
+        select.addEventListener('change', function() {
+            loadMessages();
         });
+    });
     
-    // Initial load
-    htmx.ajax('GET', '/api/messages', {target: '#messages-list'});
+    // Debounced search input
+    let searchTimeout;
+    document.getElementById('search').addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(loadMessages, 500);
+    });
     
+    // Reset filters
+    function resetFilters() {
+        document.getElementById('search-form').reset();
+        loadMessages();
+    }
+    
+    // Export data
     function exportData(format) {
-        const form = document.querySelector('form');
+        const form = document.getElementById('search-form');
         const params = new URLSearchParams(new FormData(form));
         window.location.href = `/api/export/${format}?${params.toString()}`;
     }
     
+    // View message details
     function viewMessage(id) {
-        // Implement view modal or navigate to detail page
-        console.log('View message:', id);
+        document.getElementById('messageModal').classList.remove('hidden');
+        document.getElementById('message-detail-content').innerHTML = '<div class="text-center py-8"><i class="fas fa-spinner fa-spin text-2xl text-gray-400"></i></div>';
+        
+        fetch(`/api/messages/${id}`)
+            .then(response => response.json())
+            .then(data => {
+                let html = `
+                    <div class="space-y-4">
+                        <div>
+                            <p class="text-xs text-gray-500 mb-1">Telegram ID: ${data.telegram_id} | ${new Date(data.timestamp).toLocaleString()}</p>
+                            <div class="flex gap-2 mb-2">
+                                ${data.category_name ? `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">${data.category_name}</span>` : ''}
+                                ${data.confidence ? `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${data.confidence === 'confident' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${data.confidence}</span>` : ''}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${data.processing_status === 'success' ? 'bg-green-100 text-green-800' : data.processing_status === 'failed' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}">${data.processing_status}</span>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <p class="text-sm font-medium text-gray-700 mb-1">Original Message</p>
+                            <div class="bg-gray-50 rounded-md p-3 text-sm text-gray-900 whitespace-pre-wrap">${data.raw_content}</div>
+                        </div>
+                        
+                        ${data.summary ? `
+                        <div>
+                            <p class="text-sm font-medium text-gray-700 mb-1">AI Summary</p>
+                            <div class="bg-indigo-50 rounded-md p-3 text-sm text-indigo-900">${data.summary}</div>
+                        </div>
+                        ` : ''}
+                        
+                        ${data.extracted_urls && data.extracted_urls.length > 0 ? `
+                        <div>
+                            <p class="text-sm font-medium text-gray-700 mb-1">Links</p>
+                            <div class="space-y-1">
+                                ${data.extracted_urls.map(url => `<a href="${url}" target="_blank" class="block text-sm text-indigo-600 hover:text-indigo-800 truncate"><i class="fas fa-external-link-alt mr-1"></i>${url}</a>`).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        ${data.entities && Object.keys(data.entities).length > 0 ? `
+                        <div>
+                            <p class="text-sm font-medium text-gray-700 mb-1">Extracted Entities</p>
+                            <div class="bg-gray-50 rounded-md p-3">
+                                <pre class="text-xs text-gray-700 overflow-auto">${JSON.stringify(data.entities, null, 2)}</pre>
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+                document.getElementById('message-detail-content').innerHTML = html;
+            })
+            .catch(error => {
+                document.getElementById('message-detail-content').innerHTML = '<p class="text-red-500">Failed to load message details</p>';
+            });
     }
     
+    function closeMessageModal() {
+        document.getElementById('messageModal').classList.add('hidden');
+    }
+    
+    // Reprocess single message
     function reprocessMessage(id) {
         fetch(`/api/messages/${id}/reprocess`, { method: 'POST' })
             .then(response => response.json())
             .then(data => {
                 alert(data.message);
-                htmx.ajax('GET', '/api/messages', {target: '#messages-list'});
+                loadMessages();
+                loadStats();
+            })
+            .catch(error => {
+                alert('Failed to reprocess message');
             });
     }
     
-    // Handle htmx response
-    document.body.addEventListener('htmx:afterSwap', (event) => {
-        if (event.detail.target.id === 'messages-list') {
-            // Response will be handled by message partial
+    // Reprocess all failed messages
+    function reprocessFailed() {
+        if (!confirm('Are you sure you want to reprocess all failed messages?')) {
+            return;
         }
-    });
+        
+        fetch('/api/messages/reprocess-failed', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                loadMessages();
+                loadStats();
+            })
+            .catch(error => {
+                alert('Failed to queue messages for reprocessing');
+            });
+    }
+    
+    // Initial load
+    loadCategories();
+    loadStats();
+    loadMessages();
+    
+    // Refresh stats periodically
+    setInterval(loadStats, 30000);
 </script>
 {% endblock %}

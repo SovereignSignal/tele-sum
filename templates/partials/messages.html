@@ -1,0 +1,138 @@
+{% if messages %}
+{% for msg in messages %}
+<div class="bg-white shadow rounded-lg p-6 mb-4">
+    <div class="flex justify-between items-start">
+        <div class="flex-1">
+            <div class="flex items-center flex-wrap gap-2 mb-2">
+                <span class="text-xs text-gray-500">ID: {{ msg.telegram_id }}</span>
+                <span class="text-xs text-gray-500">•</span>
+                <span class="text-xs text-gray-500">{{ msg.timestamp.strftime('%Y-%m-%d %H:%M') if msg.timestamp else 'N/A' }}</span>
+                
+                {% if msg.category_name %}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    {{ msg.category_name }}
+                </span>
+                {% endif %}
+                
+                {% if msg.confidence %}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if msg.confidence == 'confident' %}bg-green-100 text-green-800{% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                    {{ msg.confidence }}
+                </span>
+                {% endif %}
+                
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                    {% if msg.processing_status == 'success' %}bg-green-100 text-green-800
+                    {% elif msg.processing_status == 'pending' %}bg-gray-100 text-gray-800
+                    {% elif msg.processing_status == 'processing' %}bg-blue-100 text-blue-800
+                    {% elif msg.processing_status == 'failed' %}bg-red-100 text-red-800
+                    {% else %}bg-gray-100 text-gray-800{% endif %}">
+                    {{ msg.processing_status }}
+                </span>
+            </div>
+            
+            <div class="text-sm text-gray-900 mb-3 whitespace-pre-wrap">{{ msg.raw_content[:500] }}{% if msg.raw_content|length > 500 %}...{% endif %}</div>
+            
+            {% if msg.summary %}
+            <div class="bg-indigo-50 rounded-md p-3 mb-3">
+                <p class="text-sm font-medium text-indigo-900 mb-1">AI Summary</p>
+                <p class="text-sm text-indigo-700">{{ msg.summary }}</p>
+            </div>
+            {% elif msg.processing_status == 'failed' %}
+            <div class="bg-red-50 rounded-md p-3 mb-3">
+                <p class="text-sm text-red-700"><i class="fas fa-exclamation-triangle mr-1"></i>Summary unavailable - processing failed</p>
+            </div>
+            {% elif msg.processing_status == 'pending' %}
+            <div class="bg-gray-50 rounded-md p-3 mb-3">
+                <p class="text-sm text-gray-500"><i class="fas fa-clock mr-1"></i>Summary pending...</p>
+            </div>
+            {% endif %}
+            
+            {% if msg.extracted_urls and msg.extracted_urls|length > 0 %}
+            <div class="mb-3">
+                <p class="text-xs font-medium text-gray-500 mb-1">Links:</p>
+                <div class="flex flex-wrap gap-1">
+                    {% for url in msg.extracted_urls[:5] %}
+                    <a href="{{ url }}" target="_blank" class="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 truncate max-w-xs">
+                        <i class="fas fa-external-link-alt mr-1"></i>{{ url[:50] }}{% if url|length > 50 %}...{% endif %}
+                    </a>
+                    {% endfor %}
+                    {% if msg.extracted_urls|length > 5 %}
+                    <span class="text-xs text-gray-500">+{{ msg.extracted_urls|length - 5 }} more</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if msg.entities and (msg.entities.protocols or msg.entities.amounts or msg.entities.dates or msg.entities.key_terms) %}
+            <div class="border-t pt-3">
+                <p class="text-xs font-medium text-gray-500 mb-2">Entities:</p>
+                <div class="flex flex-wrap gap-2">
+                    {% if msg.entities.protocols %}
+                    {% for protocol in msg.entities.protocols %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                        <i class="fas fa-cube mr-1"></i>{{ protocol }}
+                    </span>
+                    {% endfor %}
+                    {% endif %}
+                    
+                    {% if msg.entities.amounts %}
+                    {% for amount in msg.entities.amounts %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                        <i class="fas fa-dollar-sign mr-1"></i>{{ amount }}
+                    </span>
+                    {% endfor %}
+                    {% endif %}
+                    
+                    {% if msg.entities.dates %}
+                    {% for date in msg.entities.dates %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">
+                        <i class="fas fa-calendar mr-1"></i>{{ date }}
+                    </span>
+                    {% endfor %}
+                    {% endif %}
+                    
+                    {% if msg.entities.key_terms %}
+                    {% for term in msg.entities.key_terms %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                        {{ term }}
+                    </span>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="flex space-x-2 ml-4">
+            <button onclick="viewMessage({{ msg.id }})" class="text-indigo-600 hover:text-indigo-900" title="View details">
+                <i class="fas fa-eye"></i>
+            </button>
+            {% if msg.processing_status in ['failed', 'pending'] %}
+            <button onclick="reprocessMessage({{ msg.id }})" class="text-orange-600 hover:text-orange-900" title="Reprocess">
+                <i class="fas fa-redo"></i>
+            </button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% if has_more %}
+<div class="text-center py-4">
+    <button 
+        hx-get="/api/messages/html?offset={{ offset + limit }}&limit={{ limit }}{% if query %}&q={{ query }}{% endif %}{% if category_id %}&category_id={{ category_id }}{% endif %}{% if confidence %}&confidence={{ confidence }}{% endif %}{% if status %}&status={{ status }}{% endif %}"
+        hx-target="#messages-list"
+        hx-swap="beforeend"
+        class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+        <i class="fas fa-chevron-down mr-2"></i>Load More
+    </button>
+</div>
+{% endif %}
+
+{% else %}
+<div class="text-center py-12">
+    <i class="fas fa-inbox text-4xl text-gray-400"></i>
+    <p class="mt-2 text-sm text-gray-500">No messages found</p>
+    <p class="text-xs text-gray-400 mt-1">Try adjusting your search or filters</p>
+</div>
+{% endif %}

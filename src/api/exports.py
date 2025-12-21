@@ -58,6 +58,23 @@ def build_query(
     
     return query.order_by(Message.timestamp.desc())
 
+def flatten_entities(entities: dict) -> dict:
+    """Flatten entities dictionary for CSV export"""
+    if not entities:
+        return {
+            "protocols": "",
+            "amounts": "",
+            "dates": "",
+            "key_terms": ""
+        }
+    
+    return {
+        "protocols": "; ".join(entities.get("protocols", [])),
+        "amounts": "; ".join(entities.get("amounts", [])),
+        "dates": "; ".join(entities.get("dates", [])),
+        "key_terms": "; ".join(entities.get("key_terms", []))
+    }
+
 @router.get("/csv")
 async def export_csv(
     q: Optional[str] = Query(None),
@@ -68,6 +85,7 @@ async def export_csv(
     date_to: Optional[datetime] = Query(None),
     db: Session = Depends(get_db)
 ):
+    """Export messages as CSV with flattened entities"""
     query = build_query(db, q, category_id, confidence, status, date_from, date_to)
     messages = query.all()
     
@@ -75,32 +93,34 @@ async def export_csv(
     writer = csv.DictWriter(
         output,
         fieldnames=[
-            "id", "telegram_id", "timestamp", "raw_content", 
+            "id", "telegram_id", "channel_id", "timestamp", "raw_content", 
             "urls", "summary", "category", "confidence", 
-            "processing_status", "entities"
+            "processing_status", "protocols", "amounts", "dates", "key_terms"
         ]
     )
     writer.writeheader()
     
     for msg in messages:
+        entities_flat = flatten_entities(msg.summary.entities if msg.summary else None)
+        
         row = {
             "id": msg.id,
             "telegram_id": msg.telegram_id,
-            "timestamp": msg.timestamp.isoformat(),
-            "raw_content": msg.raw_content,
-            "urls": "|".join(msg.extracted_urls or []),
+            "channel_id": msg.channel_id,
+            "timestamp": msg.timestamp.isoformat() if msg.timestamp else "",
+            "raw_content": msg.raw_content or "",
+            "urls": "; ".join(msg.extracted_urls or []),
             "summary": "",
             "category": "",
             "confidence": "",
             "processing_status": "pending",
-            "entities": ""
+            **entities_flat
         }
         
         if msg.summary:
             row["summary"] = msg.summary.summary or ""
-            row["processing_status"] = msg.summary.processing_status.value
+            row["processing_status"] = msg.summary.processing_status.value if msg.summary.processing_status else ""
             row["confidence"] = msg.summary.confidence.value if msg.summary.confidence else ""
-            row["entities"] = json.dumps(msg.summary.entities or {})
             
             if msg.summary.category:
                 row["category"] = msg.summary.category.name
@@ -127,6 +147,7 @@ async def export_json(
     date_to: Optional[datetime] = Query(None),
     db: Session = Depends(get_db)
 ):
+    """Export messages as JSON"""
     query = build_query(db, q, category_id, confidence, status, date_from, date_to)
     messages = query.all()
     
@@ -135,9 +156,11 @@ async def export_json(
         item = {
             "id": msg.id,
             "telegram_id": msg.telegram_id,
-            "timestamp": msg.timestamp.isoformat(),
+            "channel_id": msg.channel_id,
+            "timestamp": msg.timestamp.isoformat() if msg.timestamp else None,
             "raw_content": msg.raw_content,
             "urls": msg.extracted_urls or [],
+            "import_method": msg.import_method,
             "summary": None,
             "category": None,
             "confidence": None,
@@ -147,7 +170,7 @@ async def export_json(
         
         if msg.summary:
             item["summary"] = msg.summary.summary
-            item["processing_status"] = msg.summary.processing_status.value
+            item["processing_status"] = msg.summary.processing_status.value if msg.summary.processing_status else None
             item["confidence"] = msg.summary.confidence.value if msg.summary.confidence else None
             item["entities"] = msg.summary.entities or {}
             
@@ -178,3 +201,71 @@ async def export_json(
             "Content-Disposition": f"attachment; filename=telesum_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         }
     )
+
+@router.get("/stats")
+async def export_stats(
+    date_from: Optional[datetime] = Query(None),
+    date_to: Optional[datetime] = Query(None),
+    db: Session = Depends(get_db)
+):
+    """Get export statistics"""
+    query = db.query(Message)
+    
+    if date_from:
+        query = query.filter(Message.timestamp >= date_from)
+    if date_to:
+        query = query.filter(Message.timestamp <= date_to)
+    
+    total = query.count()
+    
+    # Get category breakdown
+    categories = db.query(Category).filter(Category.user_id == 1).all()
+    category_stats = []
+    
+    for cat in categories:
+        count = db.query(Summary).filter(Summary.category_id == cat.id).count()
+        category_stats.append({
+            "name": cat.name,
+            "count": count,
+            "percentage": round(count / total * 100, 1) if total > 0 else 0
+        })
+    
+    # Get confidence breakdown
+    confident = db.query(Summary).filter(
+        Summary.confidence == ConfidenceLevel.CONFIDENT
+    ).count()
+    
+    uncertain = db.query(Summary).filter(
+        Summary.confidence == ConfidenceLevel.UNCERTAIN
+    ).count()
+    
+    # Get status breakdown
+    success = db.query(Summary).filter(
+        Summary.processing_status == ProcessingStatus.SUCCESS
+    ).count()
+    
+    pending = db.query(Summary).filter(
+        Summary.processing_status.in_([
+            ProcessingStatus.PENDING,
+            ProcessingStatus.PROCESSING,
+            ProcessingStatus.RETRY
+        ])
+    ).count()
+    
+    failed = db.query(Summary).filter(
+        Summary.processing_status == ProcessingStatus.FAILED
+    ).count()
+    
+    return {
+        "total_messages": total,
+        "categories": category_stats,
+        "confidence": {
+            "confident": confident,
+            "uncertain": uncertain
+        },
+        "processing": {
+            "success": success,
+            "pending": pending,
+            "failed": failed
+        }
+    }

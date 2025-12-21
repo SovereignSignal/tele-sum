@@ -8,13 +8,14 @@ from telegram.error import TelegramError
 from sqlalchemy.orm import Session
 
 from src.config import settings
+from src.models.database import SessionLocal
 from src.models.models import Message, Summary, SyncStatus, ProcessingStatus, TelegramBot, ChannelConfig, ImportMode
 from src.utils.url_extractor import extract_urls
 
 logger = logging.getLogger(__name__)
 
 class TelegramBotService:
-    """Service for handling bot-based Telegram message collection"""
+    """Service for handling bot-based Telegram message collection with proper session management"""
     
     def __init__(self, bot_token: str, bot_id: Optional[int] = None):
         self.bot_token = bot_token
@@ -96,83 +97,99 @@ class TelegramBotService:
                 "error": str(e)
             }
     
-    async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE, db: Session):
-        """Handle incoming messages from Telegram"""
+    async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle incoming messages from Telegram with fresh database session"""
         if not update.message:
             return
         
+        # Create a fresh database session for each message to avoid stale connections
+        db = SessionLocal()
         try:
-            msg = update.message
-            channel_id = str(msg.chat_id)
-            
-            # Check if we're tracking this channel
-            channel_config = db.query(ChannelConfig).filter(
-                ChannelConfig.channel_id == channel_id,
-                ChannelConfig.is_active == True
-            ).first()
-            
-            if not channel_config:
-                logger.debug(f"Ignoring message from untracked channel: {channel_id}")
-                return
-            
-            # Check for duplicate
-            existing = db.query(Message).filter(
-                Message.telegram_id == msg.message_id
-            ).first()
-            
-            if existing:
-                logger.debug(f"Skipping duplicate message: {msg.message_id}")
-                return
-            
-            # Extract message content
-            message_text = msg.text or msg.caption or ""
-            if not message_text:
-                logger.debug(f"Skipping message without text content: {msg.message_id}")
-                return
-            
-            # Extract URLs
-            urls = extract_urls(message_text)
-            
-            # Create message record
-            message = Message(
-                telegram_id=msg.message_id,
-                channel_id=channel_id,
-                bot_id=self.bot_id,
-                import_method="bot",
-                timestamp=msg.date,
-                raw_content=message_text,
-                extracted_urls=urls
-            )
-            
-            db.add(message)
-            db.flush()
-            
-            # Create summary record for processing
-            summary = Summary(
-                message_id=message.id,
-                processing_status=ProcessingStatus.PENDING
-            )
-            db.add(summary)
-            
-            # Update sync status
-            sync_status = db.query(SyncStatus).filter(
-                SyncStatus.channel_id == channel_id
-            ).first()
-            
-            if sync_status:
-                sync_status.last_bot_sync_id = msg.message_id
-                sync_status.last_sync_at = datetime.utcnow()
-                sync_status.total_messages_synced += 1
-            
-            db.commit()
-            logger.info(f"Imported message {msg.message_id} from channel {channel_id}")
-            
+            await self._process_message(update, db)
         except Exception as e:
             logger.error(f"Failed to handle message: {e}")
             db.rollback()
+        finally:
+            db.close()
     
-    async def start_polling(self, db: Session):
-        """Start polling for messages"""
+    async def _process_message(self, update: Update, db: Session):
+        """Process a single message with the provided database session"""
+        msg = update.message
+        channel_id = str(msg.chat_id)
+        
+        # Check if we're tracking this channel
+        channel_config = db.query(ChannelConfig).filter(
+            ChannelConfig.channel_id == channel_id,
+            ChannelConfig.is_active == True
+        ).first()
+        
+        if not channel_config:
+            logger.debug(f"Ignoring message from untracked channel: {channel_id}")
+            return
+        
+        # Check for duplicate
+        existing = db.query(Message).filter(
+            Message.telegram_id == msg.message_id
+        ).first()
+        
+        if existing:
+            logger.debug(f"Skipping duplicate message: {msg.message_id}")
+            return
+        
+        # Extract message content
+        message_text = msg.text or msg.caption or ""
+        if not message_text:
+            logger.debug(f"Skipping message without text content: {msg.message_id}")
+            return
+        
+        # Extract URLs
+        urls = extract_urls(message_text)
+        
+        # Create message record
+        message = Message(
+            telegram_id=msg.message_id,
+            channel_id=channel_id,
+            bot_id=self.bot_id,
+            import_method="bot",
+            timestamp=msg.date,
+            raw_content=message_text,
+            extracted_urls=urls
+        )
+        
+        db.add(message)
+        db.flush()
+        
+        # Create summary record for processing
+        summary = Summary(
+            message_id=message.id,
+            processing_status=ProcessingStatus.PENDING
+        )
+        db.add(summary)
+        
+        # Update sync status
+        sync_status = db.query(SyncStatus).filter(
+            SyncStatus.channel_id == channel_id
+        ).first()
+        
+        if sync_status:
+            sync_status.last_bot_sync_id = msg.message_id
+            sync_status.last_sync_at = datetime.utcnow()
+            sync_status.total_messages_synced += 1
+        else:
+            # Create new sync status if doesn't exist
+            sync_status = SyncStatus(
+                channel_id=channel_id,
+                last_bot_sync_id=msg.message_id,
+                last_sync_at=datetime.utcnow(),
+                total_messages_synced=1
+            )
+            db.add(sync_status)
+        
+        db.commit()
+        logger.info(f"Imported message {msg.message_id} from channel {channel_id}")
+    
+    async def start_polling(self):
+        """Start polling for messages - no db session passed, fresh sessions created per message"""
         if self.is_running:
             logger.warning("Bot polling is already running")
             return
@@ -181,18 +198,18 @@ class TelegramBotService:
             # Build application
             self.application = Application.builder().token(self.bot_token).build()
             
-            # Add message handler with db session
-            async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-                await self.handle_message(update, context, db)
-            
+            # Add message handler - uses self.handle_message which creates fresh sessions
             self.application.add_handler(
-                MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler)
+                MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message)
             )
             
             # Initialize and start polling
             await self.application.initialize()
             await self.application.start()
-            await self.application.updater.start_polling()
+            await self.application.updater.start_polling(
+                allowed_updates=Update.ALL_TYPES,
+                drop_pending_updates=True
+            )
             
             self.is_running = True
             logger.info(f"Started bot polling for bot ID: {self.bot_id}")
@@ -256,8 +273,9 @@ class BotManager:
         self.bots: Dict[int, TelegramBotService] = {}
         self.active_bots: set = set()
     
-    async def register_bot(self, db: Session, bot_token: str) -> Dict[str, Any]:
+    async def register_bot(self, bot_token: str) -> Dict[str, Any]:
         """Register a new bot in the system"""
+        db = SessionLocal()
         try:
             # Validate token
             temp_service = TelegramBotService(bot_token)
@@ -310,9 +328,12 @@ class BotManager:
                 "success": False,
                 "error": str(e)
             }
+        finally:
+            db.close()
     
-    async def start_bot(self, db: Session, bot_id: int) -> bool:
+    async def start_bot(self, bot_id: int) -> bool:
         """Start a bot's polling"""
+        db = SessionLocal()
         try:
             if bot_id in self.active_bots:
                 logger.warning(f"Bot {bot_id} is already active")
@@ -331,8 +352,8 @@ class BotManager:
             if bot_id not in self.bots:
                 self.bots[bot_id] = TelegramBotService(bot_record.bot_token, bot_id)
             
-            # Start polling
-            await self.bots[bot_id].start_polling(db)
+            # Start polling - no db session passed
+            await self.bots[bot_id].start_polling()
             self.active_bots.add(bot_id)
             
             return True
@@ -340,6 +361,8 @@ class BotManager:
         except Exception as e:
             logger.error(f"Failed to start bot {bot_id}: {e}")
             return False
+        finally:
+            db.close()
     
     async def stop_bot(self, bot_id: int) -> bool:
         """Stop a bot's polling"""
@@ -350,7 +373,7 @@ class BotManager:
             
             if bot_id in self.bots:
                 await self.bots[bot_id].stop_polling()
-                self.active_bots.remove(bot_id)
+                self.active_bots.discard(bot_id)
             
             return True
             
@@ -362,3 +385,49 @@ class BotManager:
         """Stop all active bots"""
         for bot_id in list(self.active_bots):
             await self.stop_bot(bot_id)
+    
+    async def start_all_active_bots(self):
+        """Start all active bots from database"""
+        db = SessionLocal()
+        try:
+            active_bots = db.query(TelegramBot).filter(
+                TelegramBot.is_active == True
+            ).all()
+            
+            for bot in active_bots:
+                if bot.id not in self.bots:
+                    self.bots[bot.id] = TelegramBotService(bot.bot_token, bot.id)
+                await self.start_bot(bot.id)
+                
+        finally:
+            db.close()
+    
+    def get_status(self) -> Dict[str, Any]:
+        """Get status of all managed bots"""
+        return {
+            "total_bots": len(self.bots),
+            "active_count": len(self.active_bots),
+            "bots": [
+                {
+                    "id": bot_id,
+                    "is_running": bot.is_running
+                }
+                for bot_id, bot in self.bots.items()
+            ]
+        }
+
+
+# Global bot manager instance
+bot_manager = BotManager()
+
+async def start_bot_manager():
+    """Start the global bot manager"""
+    await bot_manager.start_all_active_bots()
+
+async def stop_bot_manager():
+    """Stop the global bot manager"""
+    await bot_manager.stop_all_bots()
+
+def get_bot_manager_status():
+    """Get bot manager status"""
+    return bot_manager.get_status()
