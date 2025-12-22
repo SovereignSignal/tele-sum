@@ -26,19 +26,24 @@
                         <a href="/" class="nav-link inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium" data-page="dashboard">
                             Dashboard
                         </a>
-                        <a href="/bots" class="nav-link inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium" data-page="bots">
-                            Bots
-                        </a>
                         <a href="/categories" class="nav-link inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium" data-page="categories">
                             Categories
                         </a>
                         <a href="/import" class="nav-link inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium" data-page="import">
                             Import
                         </a>
-                        <a href="/settings" class="nav-link inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium" data-page="settings">
-                            Settings
-                        </a>
                     </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <!-- Status indicator -->
+                    <div id="scheduler-status" class="hidden sm:flex items-center text-sm text-gray-500">
+                        <span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
+                        <span>Auto-sync active</span>
+                    </div>
+                    <!-- Logout button -->
+                    <a href="/logout" class="text-gray-500 hover:text-gray-700 text-sm font-medium">
+                        <i class="fas fa-sign-out-alt mr-1"></i>Logout
+                    </a>
                 </div>
                 <!-- Mobile menu button -->
                 <div class="sm:hidden flex items-center">
@@ -56,10 +61,9 @@
         <div class="sm:hidden hidden" id="mobile-menu">
             <div class="pt-2 pb-3 space-y-1">
                 <a href="/" class="mobile-nav-link block pl-3 pr-4 py-2 border-l-4 text-base font-medium">Dashboard</a>
-                <a href="/bots" class="mobile-nav-link block pl-3 pr-4 py-2 border-l-4 text-base font-medium">Bots</a>
                 <a href="/categories" class="mobile-nav-link block pl-3 pr-4 py-2 border-l-4 text-base font-medium">Categories</a>
                 <a href="/import" class="mobile-nav-link block pl-3 pr-4 py-2 border-l-4 text-base font-medium">Import</a>
-                <a href="/settings" class="mobile-nav-link block pl-3 pr-4 py-2 border-l-4 text-base font-medium">Settings</a>
+                <a href="/logout" class="mobile-nav-link block pl-3 pr-4 py-2 border-l-4 text-base font-medium text-red-600">Logout</a>
             </div>
         </div>
     </nav>
@@ -73,8 +77,25 @@
             event.detail.headers['X-Requested-With'] = 'XMLHttpRequest';
         });
         
+        // Check scheduler status
+        async function checkSchedulerStatus() {
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                const statusEl = document.getElementById('scheduler-status');
+                if (statusEl && data.scheduler) {
+                    statusEl.classList.remove('hidden');
+                    statusEl.classList.add('flex');
+                }
+            } catch (e) {
+                console.log('Could not check scheduler status');
+            }
+        }
+        
         // Handle active navigation highlighting
         document.addEventListener('DOMContentLoaded', function() {
+            checkSchedulerStatus();
+            
             const navLinks = document.querySelectorAll('.nav-link');
             const mobileNavLinks = document.querySelectorAll('.mobile-nav-link');
             const currentPath = window.location.pathname;
@@ -99,6 +120,7 @@
             // Mobile navigation
             mobileNavLinks.forEach(link => {
                 const href = link.getAttribute('href');
+                if (href === '/logout') return; // Skip logout link
                 
                 // Reset all links to inactive state
                 link.classList.remove('border-indigo-500', 'text-indigo-700', 'bg-indigo-50');
