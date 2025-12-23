@@ -63,4 +63,4 @@ static/uploads/
 static/cache/
 
 # Railway
-railway.toml
+railway.toml.env
