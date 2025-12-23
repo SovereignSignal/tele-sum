@@ -20,7 +20,7 @@ import os
 import secrets
 
 from src.api import messages, categories, imports, exports, config, hybrid
-from src.models.database import get_engine, Base, SessionLocal
+from src.models.database import get_engine, Base
 from src.services.scheduler import start_scheduler, shutdown_scheduler, get_scheduler_status
 from src.config import settings
 
@@ -63,8 +63,10 @@ async def auth_required(request: Request):
 async def seed_default_categories_if_empty():
     """Seed default categories if none exist"""
     from src.models.models import Category
-    
-    db = SessionLocal()
+    from src.models import database
+
+    # Must use database.SessionLocal (not the imported one) since it's set after get_engine()
+    db = database.SessionLocal()
     try:
         existing = db.query(Category).filter(Category.user_id == 1).count()
         if existing == 0:
@@ -311,8 +313,9 @@ app.include_router(
 async def get_stats():
     """Get processing statistics"""
     from src.models.models import Message, Summary, ProcessingStatus
-    
-    db = SessionLocal()
+    from src.models import database
+
+    db = database.SessionLocal()
     try:
         total = db.query(Message).count()
         success = db.query(Summary).filter(Summary.processing_status == ProcessingStatus.SUCCESS).count()
@@ -345,9 +348,10 @@ async def trigger_sync():
 async def trigger_process():
     """Manually trigger processing"""
     from src.services.processor import MessageProcessor
-    
+    from src.models import database
+
     processor = MessageProcessor()
-    db = SessionLocal()
+    db = database.SessionLocal()
     try:
         processed = await processor.process_batch(db, limit=20, include_retries=True)
         return {"message": f"Processed {processed} messages"}
