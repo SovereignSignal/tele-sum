@@ -74,7 +74,23 @@ class MessageProcessor:
             if result:
                 # Update summary with results
                 summary.summary = result.get("summary")
-                summary.entities = result.get("entities", {})
+                # Merge source info into entities for storage
+                entities = result.get("entities", {})
+                source = result.get("source", {})
+                # Get URLs from message
+                urls = message.extracted_urls or []
+                # Use message URL if available, otherwise use Grok's source URL (if any)
+                if urls:
+                    source["url"] = urls[0]
+                elif source.get("url") and source.get("url") != "null":
+                    # Keep Grok's URL if it provided one
+                    pass
+                else:
+                    source["url"] = None
+                    source["note"] = "Original source link unavailable"
+                entities["source"] = source
+                entities["urls"] = urls
+                summary.entities = entities
                 summary.confidence = result.get("confidence")
                 
                 # Match category

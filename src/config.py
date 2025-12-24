@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     # Grok AI
     grok_api_key: Optional[str] = Field(default=None, alias='GROK_API_KEY')
     grok_api_url: str = Field(default="https://api.x.ai/v1", alias='GROK_API_URL')
+    grok_model: str = Field(default="grok-3", alias='GROK_MODEL')
     
     # App Settings
     app_env: str = Field(default="production", alias='APP_ENV')

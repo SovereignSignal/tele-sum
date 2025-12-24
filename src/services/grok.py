@@ -64,13 +64,22 @@ class GrokService:
     ) -> str:
         """Build the analysis prompt for Grok"""
         prompt_parts = []
-        
+
         # Identify Twitter URLs
         twitter_urls = [url for url in urls if is_twitter_url(url)]
         other_urls = [url for url in urls if not is_twitter_url(url)]
-        
-        prompt_parts.append("You are analyzing a message from a Telegram channel. Your task is to summarize the content and categorize it.")
-        prompt_parts.append(f"\n## Original Message\n{message_content}")
+
+        # Check if we have any URLs at all
+        has_urls = bool(twitter_urls or other_urls)
+
+        if has_urls:
+            prompt_parts.append("You are analyzing content that was curated and shared via a Telegram channel. The Telegram message itself is just a pointer - focus entirely on the LINKED CONTENT, not the message wrapper.")
+            prompt_parts.append(f"\n## Telegram Message (just context, focus on the links)\n{message_content}")
+        else:
+            # No URLs - this is pre-summarized content from an external source
+            prompt_parts.append("You are analyzing pre-summarized governance/grants content for The Grant Wire. The original source link is not available.")
+            prompt_parts.append(f"\n## Content to Analyze\n{message_content}")
+            prompt_parts.append("\nNOTE: Do NOT fabricate or guess URLs. Set source.url to null since the original link is unavailable.")
         
         # Handle Twitter/X URLs - explicitly tell Grok to read them
         if twitter_urls:
@@ -90,10 +99,13 @@ class GrokService:
         
         # Instructions
         prompt_parts.append("\n## Your Task")
-        prompt_parts.append("1. **Summary**: Write a 2-3 sentence summary explaining:")
-        prompt_parts.append("   - What this content is about")
-        prompt_parts.append("   - Why it matters or what the key insight is")
-        prompt_parts.append("   - Explicitly mention any: protocols/projects, funding amounts, deadlines, or key dates")
+        prompt_parts.append("1. **Summary**: Write a 3-4 sentence summary of the LINKED CONTENT (not the Telegram message):")
+        prompt_parts.append("   - Focus on the substance: what is being announced, proposed, or reported")
+        prompt_parts.append("   - Be detailed and informative - include specific numbers, amounts, percentages, requirements")
+        prompt_parts.append("   - Concise but complete - no fluff, no flowery adjectives, just facts")
+        prompt_parts.append("   - NEVER use the word 'blockchain' - say 'crypto', 'onchain', or name the specific chain (Ethereum, Optimism, etc.)")
+        prompt_parts.append("   - Do NOT frame this as 'shared via' or 'posted on' - just describe the content directly")
+        prompt_parts.append("   - IMPORTANT: For dates, use the ACTUAL date from the source content. Verify dates from the linked content, not today's date.")
         
         # Category classification with keywords
         if categories:
@@ -108,20 +120,31 @@ class GrokService:
             prompt_parts.append("3. **Confidence**: Mark as 'uncertain' since no categories are defined")
         
         prompt_parts.append("\n## Response Format")
-        prompt_parts.append("Respond ONLY with valid JSON in this exact format:")
+        prompt_parts.append("Respond ONLY with valid JSON. Use EXACTLY these field names (they are strict), but values can vary:")
         prompt_parts.append("""```json
 {
-  "summary": "Your 2-3 sentence summary here",
-  "category": "Selected category name",
-  "confidence": "confident or uncertain",
+  "summary": "Your 3-4 sentence summary",
+  "category": "MUST be one of the categories listed above - use exact name",
+  "confidence": "confident OR uncertain (exactly one of these)",
+  "source": {
+    "name": "Descriptive source name (e.g., 'Optimism Governance Forum', '@username on X', 'Blog Name')",
+    "type": "MUST be one of: forum, twitter, blog, governance, news, substack, mirror, medium, github, discord, other",
+    "original_date": "YYYY-MM-DD format - the date the source published this, NOT today's date",
+    "url": "null if no URL available, otherwise the source URL"
+  },
   "entities": {
-    "protocols": ["list of protocols/projects mentioned"],
-    "amounts": ["funding amounts like $X million"],
-    "dates": ["specific dates or deadlines"],
-    "key_terms": ["important technical terms"]
+    "protocols": ["protocols/projects mentioned - use official names"],
+    "amounts": ["funding amounts with currency, e.g., '$5M', '100,000 OP'"],
+    "deadlines": ["specific deadlines in YYYY-MM-DD format when possible"],
+    "key_terms": ["important domain-specific terms"]
   }
 }
 ```""")
+        prompt_parts.append("\nSTRICT RULES:")
+        prompt_parts.append("- category: MUST exactly match one of the categories above")
+        prompt_parts.append("- confidence: MUST be exactly 'confident' or 'uncertain'")
+        prompt_parts.append("- source.type: MUST be one of the allowed types listed")
+        prompt_parts.append("- All other values: use your judgment based on the content")
         
         return "\n".join(prompt_parts)
     
@@ -146,11 +169,11 @@ class GrokService:
         prompt = self.build_prompt(message_content, urls, url_contents, categories)
         
         payload = {
-            "model": "grok-2",
+            "model": settings.grok_model,
             "messages": [
                 {
                     "role": "system",
-                    "content": "You are a content analysis assistant specialized in analyzing Telegram channel messages. You can access Twitter/X URLs directly to read tweet content. Always respond with valid JSON only, no additional text."
+                    "content": "You are a content analyst for The Grant Wire, a crypto grants and funding news aggregator. Your job is to summarize linked content about: governance votes, treasury decisions, grant program results, funding opportunities, incentive programs, and grants ecosystem research/tools. You can access Twitter/X URLs directly. Always respond with valid JSON only, no additional text."
                 },
                 {
                     "role": "user",
@@ -261,6 +284,7 @@ class GrokService:
             "summary": response.get("summary", ""),
             "category": response.get("category"),
             "confidence": None,
+            "source": response.get("source", {}),
             "entities": response.get("entities", {})
         }
         
@@ -289,13 +313,30 @@ class GrokService:
                 logger.warning(f"Grok selected unknown category: {validated['category']}")
                 validated["confidence"] = ConfidenceLevel.UNCERTAIN
         
+        # Normalize source
+        source = validated["source"]
+        if not isinstance(source, dict):
+            source = {}
+
+        # Validate source type against allowed values
+        allowed_source_types = {"forum", "twitter", "blog", "governance", "news", "substack", "mirror", "medium", "github", "discord", "other"}
+        source_type = source.get("type", "other").lower()
+        if source_type not in allowed_source_types:
+            source_type = "other"
+
+        validated["source"] = {
+            "name": source.get("name", "Unknown"),
+            "type": source_type,
+            "original_date": source.get("original_date")
+        }
+
         # Normalize entities
         entities = validated["entities"]
         if not isinstance(entities, dict):
             entities = {}
-        
+
         # Ensure all entity lists are actually lists
-        for key in ["protocols", "amounts", "dates", "key_terms"]:
+        for key in ["protocols", "amounts", "deadlines", "key_terms"]:
             if key not in entities:
                 entities[key] = []
             elif not isinstance(entities[key], list):

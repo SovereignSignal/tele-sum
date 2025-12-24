@@ -1,157 +1,227 @@
 # Tele-Sum
 
-[![Deployed on Railway](https://railway.app/button.svg)](https://railway.app)
+AI-powered Telegram channel summarization system. Transforms message streams into structured, searchable data using Grok AI.
 
-🚀 **Currently deployed and running on Railway** - A production-ready system that extracts and organizes historical data from Telegram channels, using Grok AI to analyze and summarize content.
+## 🎯 What This Does
 
-## 🎯 Vision & Purpose
+Tele-Sum solves the problem of Telegram channels being write-only archives where valuable links and content get buried. The system:
 
-**Transform Telegram's append-only message stream into searchable, AI-enriched knowledge.**
+- **Imports messages** from any Telegram channel (full historical + ongoing sync)
+- **Summarizes content** using Grok AI (reads linked content including X/Twitter posts)
+- **Categorizes** into user-defined categories
+- **Extracts entities** like names, amounts, dates, and key terms
+- **Stores everything** in PostgreSQL for search and analysis
 
-Tele-Sum solves the problem of Telegram channels being write-only archives where valuable links and content get buried. Most posts are links without context - you can't know what's valuable without clicking through. Our system changes that by:
+### Example Use Case: The Grant Wire
 
-- **Extracting 100% of channel history** and maintaining ongoing synchronization
-- **Using Grok AI's unique X/Twitter access** to analyze and summarize content that other AIs can't see
-- **User-defined categorization** letting each user organize content their way
-- **Graceful degradation** ensuring the system works even when AI services are unavailable
+This system was built for **The Grant Wire**, a curated Telegram channel aggregating crypto grants, governance proposals, and funding opportunities. Categories include:
 
-📖 **[Read the full vision and project overview →](VISION.md)**
+- Governance & Treasury
+- Grant Programs
+- Funding Opportunities
+- Incentives
+- Research & Analysis
+- Tools & Infrastructure
 
-## 🚀 Railway Deployment
+## 🚀 Quick Start
 
-This application is **designed for and deployed on Railway**. Railway provides:
-- Automatic PostgreSQL database provisioning
-- Environment variable management
-- Automatic HTTPS and custom domains
-- Built-in health checks and monitoring
-- Scheduled jobs for message synchronization
+### Prerequisites
 
-📚 **[Complete Railway deployment guide →](RAILWAY_DEPLOYMENT.md)**
+- Python 3.9+
+- PostgreSQL database (Railway or local)
+- Telegram API credentials
+- Grok API key (from x.ai)
 
-### Quick Deploy
+### Setup
 
-1. Fork this repository
-2. Connect to Railway via GitHub
-3. Railway auto-configures the database
-4. Add your API keys in Railway's dashboard
-5. Your instance is live!
+1. **Clone and install:**
 
-## Features
+   ```bash
+   git clone https://github.com/yourusername/tele-sum.git
+   cd tele-sum
+   pip install -r requirements.txt
+   ```
 
-- **Complete History Import**: Extracts all historical messages from Telegram channels
-- **AI-Powered Summaries**: Uses Grok to analyze content and generate 2-3 sentence summaries
-- **Smart Categorization**: User-defined categories with AI classification
-- **Twitter/X Integration**: Grok can directly analyze X/Twitter posts
-- **Search & Filter**: Full-text search across original messages and summaries
-- **Export Functionality**: Export filtered data as CSV or JSON
-- **Graceful Degradation**: System remains functional even when Grok is unavailable
-- **Automatic Sync**: Periodic synchronization for new messages
+2. **Configure environment:**
 
-## Configuration
+   ```bash
+   cp .env.example .env
+   # Edit .env with your credentials
+   ```
 
-### Required API Keys
+3. **Required environment variables:**
 
-To fully utilize all features, you'll need:
+   ```bash
+   # Database
+   DATABASE_URL=postgresql://user:pass@host:port/db
 
-1. **Telegram API Credentials** (for importing messages)
-   - Get from https://my.telegram.org
-   - Required: API ID, API Hash, Phone Number
+   # Telegram
+   TELEGRAM_API_ID=your_api_id
+   TELEGRAM_API_HASH=your_api_hash
+   TELEGRAM_PHONE=+1234567890
+   TELEGRAM_CHANNEL_USERNAME=your_channel
 
-2. **Grok (xAI) API Key** (for AI summaries)
-   - Get from https://x.ai
-   - Essential for analyzing X/Twitter content
+   # Grok AI
+   GROK_API_KEY=your_grok_api_key
+   GROK_MODEL=grok-4-fast-reasoning  # or grok-3
+   ```
 
-3. **PostgreSQL Database**
-   - Automatically provisioned by Railway
-   - No manual configuration needed
+## 📝 Daily Workflow
 
-### Environment Variables
-
-Railway makes configuration simple - just add these in your service settings:
+### Sync & Process New Messages
 
 ```bash
-# Telegram Configuration
-TELEGRAM_API_ID=your_api_id
-TELEGRAM_API_HASH=your_api_hash
-TELEGRAM_PHONE=+1234567890
-TELEGRAM_CHANNEL_USERNAME=channelname
+# Sync new Telegram messages + process next batch
+python3 process_batch.py --count 50
 
-# AI Configuration
-GROK_API_KEY=your_grok_api_key
+# Just sync (no processing)
+python3 sync_new.py
 
-# Security (auto-generated if not set)
-SECRET_KEY=your-secure-random-string
+# Process specific range
+python3 process_batch.py --start 146 --count 100
+
+# Skip sync, just process
+python3 process_batch.py --count 50 --no-sync
 ```
 
-📚 **[Full configuration guide →](RAILWAY_DEPLOYMENT.md#environment-variable-reference)**
+The `process_batch.py` script automatically:
 
-## Usage
+1. Syncs new messages from Telegram
+2. Finds the first unprocessed message (by ID)
+3. Processes sequentially so you can watch in real-time
+4. Handles rate limits gracefully (100 requests/hour on Grok)
 
-Access your deployed instance at your Railway-provided URL
+### View Results
 
-### Initial Import
+Use **TablePlus** (or any PostgreSQL client) to view results:
 
-1. Navigate to the Import page
-2. Click "Start Import" to begin importing channel history
-3. Monitor progress on the dashboard
+```sql
+-- View processed summaries
+SELECT m.id, s.summary, c.name as category,
+       s.entities->'source'->>'name' as source,
+       s.entities->'source'->>'url' as url
+FROM messages m
+JOIN summaries s ON s.message_id = m.id
+LEFT JOIN categories c ON c.id = s.category_id
+WHERE s.processing_status = 'SUCCESS'
+ORDER BY m.id;
 
-### Managing Categories
+-- Check processing status
+SELECT processing_status, COUNT(*)
+FROM summaries
+GROUP BY processing_status;
+```
 
-1. Go to Categories page
-2. Add custom categories for your content
-3. AI will use these for classification
+## 🤖 How Grok Processes Content
 
-### Search and Export
+Each message goes through this pipeline:
 
-- Use the dashboard to search and filter messages
-- Export filtered results as CSV or JSON
-- View AI summaries and categorizations
+1. **URL Detection** - Extract URLs from Telegram message
+2. **Content Fetching** - For non-Twitter URLs, scrape the page content
+3. **Grok Analysis** - Send to Grok with:
+   - The message content
+   - Scraped URL content (or Twitter URL for Grok to read directly)
+   - Category list for classification
+4. **Response Parsing** - Extract summary, category, confidence, entities
+5. **Storage** - Save to PostgreSQL with source metadata
 
-## API Endpoints
+### What Grok Returns
 
-- `GET /api/messages` - Search and filter messages
-- `GET /api/categories` - List categories
-- `POST /api/categories` - Create category
-- `POST /api/import/start` - Start initial import
-- `GET /api/import/status` - Check import status
-- `GET /api/export/csv` - Export as CSV
-- `GET /api/export/json` - Export as JSON
+```json
+{
+  "summary": "3-4 sentence factual summary",
+  "category": "Grant Programs",
+  "confidence": "confident",
+  "source": {
+    "name": "Optimism Governance Forum",
+    "type": "forum",
+    "original_date": "2024-01-15",
+    "url": "https://gov.optimism.io/..."
+  },
+  "entities": {
+    "protocols": ["Optimism", "Uniswap"],
+    "amounts": ["$5M", "100,000 OP"],
+    "deadlines": ["2024-02-01"],
+    "key_terms": ["retroactive funding", "public goods"]
+  }
+}
+```
 
-## Production Status
+## 📁 Project Structure
 
-✅ **This system is production-ready and currently deployed on Railway**
+```text
+tele-sum/
+├── src/
+│   ├── config.py           # Settings and environment
+│   ├── models/
+│   │   ├── database.py     # Database connection
+│   │   └── models.py       # SQLAlchemy models
+│   ├── services/
+│   │   ├── grok.py         # Grok AI integration
+│   │   └── processor.py    # Message processing pipeline
+│   ├── scrapers/
+│   │   └── content_scraper.py  # URL content fetching
+│   └── scripts/
+│       └── initial_import.py   # Full historical import
+├── process_batch.py        # Main batch processing script
+├── sync_new.py            # Telegram sync only
+└── .env                   # Environment configuration
+```
 
-The deployed instance includes:
-- Full historical message import from Telegram channels
-- Grok AI integration for X/Twitter content analysis
-- PostgreSQL database with proper indexing
-- Automated synchronization every 6 hours
-- Graceful degradation when AI services are unavailable
-- Web interface accessible via Railway's provided URL
+## ⚡ Rate Limits
 
-## Architecture
+- **Grok API**: ~100 requests/hour (depends on your tier)
+- **Telegram**: No significant limits for reading
 
-- **Backend**: FastAPI with async support
-- **Database**: PostgreSQL with SQLAlchemy ORM
-- **Telegram**: Telethon library for API access
-- **AI Processing**: Grok API for content analysis
-- **Background Jobs**: APScheduler for synchronization
-- **Frontend**: Server-side rendered with HTMX
+When you hit the Grok rate limit, the script will mark messages as "retry" status. Wait ~1 hour and run again.
 
-## Graceful Degradation
+## 🗄️ Database Schema
 
-The system handles Grok failures gracefully:
-- Messages remain searchable by original content
-- Failed processing is logged with error details
-- Retry mechanism for temporary failures
-- Core functionality continues without AI features
+**messages** - Raw Telegram content
 
-## Monitoring
+- `id`, `telegram_id`, `channel_id`
+- `raw_content`, `extracted_urls`
+- `timestamp`, `created_at`
 
-- Check `/health` endpoint for system status
-- View import status at `/api/import/status`
-- Monitor logs for processing errors
-- Track API usage and costs
+**summaries** - AI-processed results
+
+- `message_id` (FK)
+- `summary`, `category_id`
+- `entities` (JSON with source, protocols, amounts, etc.)
+- `processing_status` (PENDING, SUCCESS, RETRY, FAILED)
+- `confidence` (CONFIDENT, UNCERTAIN)
+
+**categories** - User-defined categories
+
+- `name`, `description`, `keywords`
+
+## 🔧 Configuration Options
+
+| Variable | Default | Description |
+| -------- | ------- | ----------- |
+| `GROK_MODEL` | grok-3 | Grok model to use |
+| `GROK_API_URL` | `https://api.x.ai/v1` | Grok API endpoint |
+| `SYNC_INTERVAL_HOURS` | 6 | Auto-sync interval (Railway) |
+| `MAX_GROK_REQUESTS_PER_HOUR` | 100 | Rate limit setting |
+
+## 📚 Additional Documentation
+
+- [VISION.md](VISION.md) - Project goals and purpose
+- [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) - Technical architecture
+- [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md) - Production deployment guide
+- [HYBRID_SETUP.md](HYBRID_SETUP.md) - Bot + Phone hybrid setup
+
+## 🚢 Production Deployment (Railway)
+
+For ongoing automated processing, deploy to Railway:
+
+1. Fork this repo
+2. Connect to Railway
+3. Add PostgreSQL service
+4. Configure environment variables
+5. Auto-syncs every 6 hours
+
+See [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md) for full guide.
 
 ## License
 
