@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from src.models.models import Message, Summary, Category, ProcessingStatus, ConfidenceLevel
 from src.services.grok import GrokService
 from src.scrapers.content_scraper import ContentScraper
+from src.scrapers.twitter_scraper import TwitterScraper
 from src.utils.url_extractor import is_twitter_url
 from src.config import settings
 
@@ -28,6 +29,7 @@ class MessageProcessor:
     def __init__(self):
         self.grok_service = GrokService()
         self.content_scraper = ContentScraper()
+        self.twitter_scraper = TwitterScraper()
         self.max_retries = settings.max_processing_retries  # Default: 3 attempts
         self.retry_delay_minutes = 5
 
@@ -76,12 +78,21 @@ class MessageProcessor:
             urls = message.extracted_urls or []
             twitter_urls = [url for url in urls if is_twitter_url(url)]
             other_urls = [url for url in urls if not is_twitter_url(url)]
-            
-            # Scrape non-Twitter URLs
+
+            # Scrape all URLs - both Twitter and non-Twitter
             url_contents = {}
+
+            # Scrape Twitter URLs using our dedicated scraper
+            if twitter_urls:
+                twitter_contents = await self.twitter_scraper.scrape_multiple_tweets(twitter_urls)
+                url_contents.update(twitter_contents)
+                logger.info(f"Scraped {len(twitter_contents)}/{len(twitter_urls)} Twitter URLs")
+
+            # Scrape non-Twitter URLs
             if other_urls:
-                url_contents = await self.content_scraper.scrape_multiple_urls(other_urls)
-            
+                other_contents = await self.content_scraper.scrape_multiple_urls(other_urls)
+                url_contents.update(other_contents)
+
             # Call Grok API
             result = await self.grok_service.analyze_content(
                 message.raw_content,
@@ -93,6 +104,7 @@ class MessageProcessor:
             
             if result:
                 # Update summary with results
+                summary.title = result.get("title")
                 summary.summary = result.get("summary")
                 # Merge source info into entities for storage
                 entities = result.get("entities", {})

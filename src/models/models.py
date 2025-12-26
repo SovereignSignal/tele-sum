@@ -66,9 +66,10 @@ class Message(Base):
 
 class Summary(Base):
     __tablename__ = "summaries"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     message_id = Column(Integer, ForeignKey("messages.id"), unique=True, nullable=False)
+    title = Column(String(100), nullable=True)  # Short 4-5 word title for the entry
     summary = Column(Text, nullable=True)
     entities = Column(JSON, default=dict)
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)

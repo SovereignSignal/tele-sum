@@ -81,12 +81,19 @@ class GrokService:
             prompt_parts.append(f"\n## Content to Analyze\n{message_content}")
             prompt_parts.append("\nNOTE: Do NOT fabricate or guess URLs. Set source.url to null since the original link is unavailable.")
         
-        # Handle Twitter/X URLs - explicitly tell Grok to read them
+        # Handle Twitter/X URLs - use scraped content if available
         if twitter_urls:
-            prompt_parts.append("\n## Twitter/X Links (IMPORTANT: Please access and read these tweets directly)")
+            prompt_parts.append("\n## Twitter/X Content")
             for url in twitter_urls:
                 prompt_parts.append(f"- {url}")
-            prompt_parts.append("\nYou have the ability to access Twitter/X content. Please read the tweets at the URLs above and include their content in your analysis.")
+                if url in url_contents and url_contents[url]:
+                    # We have scraped tweet content - use it
+                    tweet_text = url_contents[url]
+                    prompt_parts.append(f"  Tweet content:\n{tweet_text}")
+                else:
+                    # No scraped content - ask Grok to try reading directly
+                    prompt_parts.append("  (Could not scrape - try reading directly if possible)")
+            prompt_parts.append("\nIMPORTANT: Base your summary on the ACTUAL tweet content shown above. Do NOT guess or use your training data.")
         
         # Handle other URLs with scraped content
         if other_urls:
@@ -99,30 +106,38 @@ class GrokService:
         
         # Instructions
         prompt_parts.append("\n## Your Task")
-        prompt_parts.append("1. **Summary**: Write a 3-4 sentence summary of the LINKED CONTENT (not the Telegram message):")
+        prompt_parts.append("1. **Title**: Create a short, descriptive title (4-5 words max):")
+        prompt_parts.append("   - NEWS (official announcements, vote results, grant rounds): Describe the action (e.g., 'Optimism Grants Council Results', 'Arbitrum Treasury Vote Passes')")
+        prompt_parts.append("   - OPINION/ANALYSIS (someone sharing views, lessons, threads): Credit the author/source + topic (e.g., 'Chase Chapman on Grant Design', 'Polynya Analyzes L2 Economics')")
+        prompt_parts.append("   - Use title case, no punctuation at the end")
+        prompt_parts.append("   - Be specific - include protocol/project name when relevant")
+        prompt_parts.append("")
+        prompt_parts.append("2. **Summary**: Write a 3-4 sentence summary of the LINKED CONTENT (not the Telegram message):")
         prompt_parts.append("   - Focus on the substance: what is being announced, proposed, or reported")
         prompt_parts.append("   - Be detailed and informative - include specific numbers, amounts, percentages, requirements")
         prompt_parts.append("   - Concise but complete - no fluff, no flowery adjectives, just facts")
         prompt_parts.append("   - NEVER use the word 'blockchain' - say 'crypto', 'onchain', or name the specific chain (Ethereum, Optimism, etc.)")
         prompt_parts.append("   - Do NOT frame this as 'shared via' or 'posted on' - just describe the content directly")
         prompt_parts.append("   - IMPORTANT: For dates, use the ACTUAL date from the source content. Verify dates from the linked content, not today's date.")
+        prompt_parts.append("   - CRITICAL: Distinguish between LAUNCHES vs CLOSURES/RESULTS. If the content says 'applications closed', 'wrap-up', 'results', or 'funded' - this is announcing OUTCOMES, not a new program launch. Read carefully!")
         
         # Category classification with keywords
         if categories:
-            prompt_parts.append("\n2. **Classification**: Categorize this into ONE of these categories:")
+            prompt_parts.append("\n3. **Classification**: Categorize this into ONE of these categories:")
             for cat in categories:
                 keywords_hint = f" (keywords: {', '.join(cat.keywords)})" if cat.keywords else ""
                 description = f" - {cat.description}" if cat.description else ""
                 prompt_parts.append(f"   - **{cat.name}**{description}{keywords_hint}")
-            prompt_parts.append("\n3. **Confidence**: Rate your categorization confidence as 'confident' or 'uncertain'")
+            prompt_parts.append("\n4. **Confidence**: Rate your categorization confidence as 'confident' or 'uncertain'")
         else:
-            prompt_parts.append("\n2. **Classification**: Suggest a general category for this content")
-            prompt_parts.append("3. **Confidence**: Mark as 'uncertain' since no categories are defined")
+            prompt_parts.append("\n3. **Classification**: Suggest a general category for this content")
+            prompt_parts.append("4. **Confidence**: Mark as 'uncertain' since no categories are defined")
         
         prompt_parts.append("\n## Response Format")
         prompt_parts.append("Respond ONLY with valid JSON. Use EXACTLY these field names (they are strict), but values can vary:")
         prompt_parts.append("""```json
 {
+  "title": "Short 4-5 Word Title",
   "summary": "Your 3-4 sentence summary",
   "category": "MUST be one of the categories listed above - use exact name",
   "confidence": "confident OR uncertain (exactly one of these)",
@@ -281,6 +296,7 @@ class GrokService:
     def validate_response(self, response: Dict, categories: List[Category]) -> Optional[Dict]:
         """Validate and normalize the parsed response"""
         validated = {
+            "title": response.get("title", ""),
             "summary": response.get("summary", ""),
             "category": response.get("category"),
             "confidence": None,
