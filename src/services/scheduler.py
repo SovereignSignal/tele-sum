@@ -16,8 +16,30 @@ logger = logging.getLogger(__name__)
 
 scheduler = AsyncIOScheduler()
 
+# =============================================================================
+# BACKGROUND JOBS
+#
+# The scheduler runs 5 jobs to keep the system processing:
+#   1. sync_and_process    - Full Telegram sync + batch processing (every N hours)
+#   2. process_pending_only - Process pending messages only (every 2 min)
+#   3. retry_failed_messages - Re-queue failed messages for retry (every 15 min)
+#   4. cleanup_stale_processing - Reset stuck PROCESSING status (every 1 hour)
+#   5. log_daily_stats     - Log statistics at midnight
+#
+# See PROCESSING.md for full documentation.
+# =============================================================================
+
+
 async def sync_and_process():
-    """Hybrid sync task that handles both phone and bot-based syncing"""
+    """
+    Main sync job: Sync new messages from Telegram and process them.
+
+    Runs every sync_interval_hours (default: 6 hours).
+    1. Syncs new messages from Telegram (phone or bot mode)
+    2. Processes messages in batches of 20
+    3. Processes up to 10 batches (200 messages max per run)
+    4. 5 second pause between batches to avoid overwhelming Grok API
+    """
     logger.info("Starting scheduled sync and process task")
     
     db = SessionLocal()
@@ -57,19 +79,22 @@ async def sync_and_process():
             except Exception as e:
                 logger.error(f"Error in bot sync: {e}")
         
-        # Process pending messages regardless of source
+        # Process pending messages regardless of source (phone or bot)
         processor = MessageProcessor()
         processed = 0
-        batch_size = 20
-        max_batches = 10
-        
+        batch_size = 20   # Messages per batch
+        max_batches = 10  # Maximum batches per sync (20 * 10 = 200 messages max)
+
+        # Process in batches until we run out of pending messages or hit max_batches
         for _ in range(max_batches):
             batch_processed = await processor.process_batch(db, limit=batch_size, include_retries=True)
             processed += batch_processed
-            
+
+            # If batch wasn't full, we've processed all pending messages
             if batch_processed < batch_size:
                 break
-            
+
+            # Pause between batches to avoid rate limiting Grok API
             await asyncio.sleep(5)
         
         logger.info(f"Processed {processed} messages")
@@ -80,7 +105,14 @@ async def sync_and_process():
         db.close()
 
 async def retry_failed_messages():
-    """Queue failed messages for retry"""
+    """
+    Re-queue FAILED messages for another attempt.
+
+    Runs every 15 minutes.
+
+    Calls processor.retry_failed_messages() which changes FAILED -> RETRY
+    for messages that are within 24 hours old and haven't exceeded max_retries.
+    """
     logger.info("Checking for failed messages to retry...")
     
     db = SessionLocal()
@@ -99,12 +131,20 @@ async def retry_failed_messages():
         db.close()
 
 async def cleanup_stale_processing():
-    """Reset messages stuck in 'processing' status"""
+    """
+    Reset messages stuck in PROCESSING status.
+
+    Runs every 1 hour.
+
+    If a message has been in PROCESSING status for >10 minutes, it's likely
+    the process crashed or timed out. Reset to RETRY so it can be picked up
+    by the next processing cycle.
+    """
     logger.info("Cleaning up stale processing status...")
-    
+
     db = SessionLocal()
     try:
-        # Find messages stuck in processing for more than 10 minutes
+        # 10-minute timeout: if a message is still PROCESSING after this, something went wrong
         cutoff = datetime.utcnow() - timedelta(minutes=10)
         
         stale_summaries = db.query(Summary).filter(
@@ -151,8 +191,17 @@ async def log_daily_stats():
         db.close()
 
 def start_scheduler():
-    """Start the scheduler with all jobs"""
-    # Main sync and process job
+    """
+    Start the APScheduler with all background jobs.
+
+    Jobs registered (see PROCESSING.md for full documentation):
+    - sync_job: Full Telegram sync + process (every N hours)
+    - process_pending: Process pending messages (every 2 min)
+    - retry_failed: Re-queue failed messages (every 15 min)
+    - cleanup_stale: Reset stuck PROCESSING status (every 1 hour)
+    - daily_stats: Log statistics (midnight)
+    """
+    # JOB 1: Main sync - fetch new messages from Telegram and process them
     scheduler.add_job(
         sync_and_process,
         trigger=IntervalTrigger(hours=settings.sync_interval_hours),
@@ -160,8 +209,8 @@ def start_scheduler():
         name="Sync and Process Messages",
         replace_existing=True
     )
-    
-    # Process pending messages more frequently (every 2 minutes)
+
+    # JOB 2: Process pending - keep queue moving between main syncs
     scheduler.add_job(
         process_pending_only,
         trigger=IntervalTrigger(minutes=2),
@@ -169,8 +218,8 @@ def start_scheduler():
         name="Process Pending Messages",
         replace_existing=True
     )
-    
-    # Retry failed messages every 15 minutes
+
+    # JOB 3: Retry failed - give failed messages another chance
     scheduler.add_job(
         retry_failed_messages,
         trigger=IntervalTrigger(minutes=15),
@@ -178,8 +227,8 @@ def start_scheduler():
         name="Retry Failed Messages",
         replace_existing=True
     )
-    
-    # Cleanup stale processing every hour
+
+    # JOB 4: Cleanup stale - reset messages stuck in PROCESSING (crashed jobs)
     scheduler.add_job(
         cleanup_stale_processing,
         trigger=IntervalTrigger(hours=1),
@@ -187,8 +236,8 @@ def start_scheduler():
         name="Cleanup Stale Processing",
         replace_existing=True
     )
-    
-    # Daily stats at midnight
+
+    # JOB 5: Daily stats - log summary at midnight for monitoring
     scheduler.add_job(
         log_daily_stats,
         trigger=CronTrigger(hour=0, minute=0),
@@ -196,12 +245,19 @@ def start_scheduler():
         name="Log Daily Statistics",
         replace_existing=True
     )
-    
+
     scheduler.start()
     logger.info(f"✅ Scheduler started with {settings.sync_interval_hours} hour sync interval")
 
 async def process_pending_only():
-    """Process only pending messages without syncing"""
+    """
+    Process pending messages without syncing from Telegram.
+
+    Runs every 2 minutes.
+
+    This keeps the processing queue moving between the main sync_and_process
+    jobs. Processes only 10 messages per run to avoid long-running jobs.
+    """
     db = SessionLocal()
     try:
         processor = MessageProcessor()
