@@ -91,6 +91,27 @@ The `process_batch.py` script automatically:
 3. Processes sequentially so you can watch in real-time
 4. Handles rate limits gracefully (100 requests/hour on Grok)
 
+### Resilient Batch Processing
+
+For large batch processing with automatic retry on database timeouts:
+
+```bash
+# Process 100 messages with auto-retry (recommended for bulk processing)
+python3 batch_runner.py 1001 1100 25
+
+# Arguments: <start_id> <end_id> [chunk_size]
+# - Processes in chunks of 25 (default)
+# - Auto-retries on database timeouts
+# - Continues from where it left off
+```
+
+The `batch_runner.py` script handles Railway database connection timeouts gracefully by:
+
+- Breaking large batches into smaller chunks
+- Auto-detecting next unprocessed message
+- Retrying failed chunks up to 3 times
+- Skipping and continuing on persistent failures
+
 ### View Results
 
 Use **TablePlus** (or any PostgreSQL client) to view results:
@@ -164,8 +185,9 @@ tele-sum/
 │   └── scripts/
 │       └── initial_import.py   # Full historical import
 ├── process_batch.py        # Main batch processing script
-├── sync_new.py            # Telegram sync only
-└── .env                   # Environment configuration
+├── batch_runner.py         # Resilient batch runner with auto-retry
+├── sync_new.py             # Telegram sync only
+└── .env                    # Environment configuration
 ```
 
 ## ⚡ Rate Limits
