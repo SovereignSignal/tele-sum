@@ -13,14 +13,32 @@ from src.config import settings
 logger = logging.getLogger(__name__)
 
 class MessageProcessor:
+    """
+    Handles the processing of Telegram messages through Grok AI.
+
+    Processing Status State Machine:
+        PENDING -> PROCESSING -> SUCCESS (happy path)
+        PENDING -> PROCESSING -> RETRY (Grok API error, will retry)
+        PENDING -> PROCESSING -> FAILED (max retries exceeded)
+        RETRY -> PROCESSING -> SUCCESS/RETRY/FAILED (on next processing cycle)
+
+    See PROCESSING.md for full documentation.
+    """
+
     def __init__(self):
         self.grok_service = GrokService()
         self.content_scraper = ContentScraper()
-        self.max_retries = settings.max_processing_retries
+        self.max_retries = settings.max_processing_retries  # Default: 3 attempts
         self.retry_delay_minutes = 5
-    
+
     async def process_message(self, message: Message, db: Session) -> bool:
-        """Process a single message with Grok AI"""
+        """
+        Process a single message with Grok AI.
+
+        Returns True if processing succeeded, False otherwise.
+        Updates the message's Summary record with status, summary text,
+        category, entities, and error log (if failed).
+        """
         if not message.summary:
             message.summary = Summary(
                 message_id=message.id,
@@ -30,19 +48,21 @@ class MessageProcessor:
             db.commit()
         
         summary = message.summary
-        
-        # Check if already successfully processed
+
+        # STATE CHECK: Already processed successfully - skip
         if summary.processing_status == ProcessingStatus.SUCCESS:
             return True
-        
-        # Check retry limit
+
+        # STATE TRANSITION: Check if max retries exceeded -> FAILED
+        # This prevents infinite retry loops for persistently failing messages
         if summary.processing_attempts >= self.max_retries:
             summary.processing_status = ProcessingStatus.FAILED
             summary.error_log = f"Max retries ({self.max_retries}) exceeded"
             db.commit()
             return False
-        
-        # Update status to processing
+
+        # STATE TRANSITION: PENDING/RETRY -> PROCESSING
+        # Increment attempt counter and update timestamp for tracking
         summary.processing_status = ProcessingStatus.PROCESSING
         summary.processing_attempts += 1
         summary.last_processed_at = datetime.utcnow()
@@ -103,30 +123,36 @@ class MessageProcessor:
                     if category:
                         summary.category_id = category.id
                 
+                # STATE TRANSITION: PROCESSING -> SUCCESS
                 summary.processing_status = ProcessingStatus.SUCCESS
                 summary.error_log = None
                 db.commit()
-                
+
                 logger.info(f"Successfully processed message {message.id}")
                 return True
             else:
-                # Grok returned None - could be rate limit or API issue
+                # STATE TRANSITION: PROCESSING -> RETRY
+                # Grok returned None - typically means rate limit hit or API unavailable
+                # Message will be picked up again in the next processing cycle
                 summary.processing_status = ProcessingStatus.RETRY
                 summary.error_log = "Grok API returned no result - will retry"
                 db.commit()
-                
+
                 logger.warning(f"Message {message.id} queued for retry (attempt {summary.processing_attempts})")
                 return False
-                
+
         except Exception as e:
             logger.error(f"Error processing message {message.id}: {e}")
-            
+
+            # STATE TRANSITION: PROCESSING -> RETRY or FAILED
+            # If we've exhausted retries, mark as FAILED (requires manual intervention)
+            # Otherwise, mark as RETRY for automatic retry in next cycle
             if summary.processing_attempts >= self.max_retries:
                 summary.processing_status = ProcessingStatus.FAILED
             else:
                 summary.processing_status = ProcessingStatus.RETRY
-            
-            summary.error_log = str(e)[:1000]
+
+            summary.error_log = str(e)[:1000]  # Truncate long error messages
             db.commit()
             return False
     
@@ -136,20 +162,29 @@ class MessageProcessor:
         limit: int = 10,
         include_retries: bool = True
     ) -> int:
-        """Process a batch of pending messages"""
-        # Build query for messages to process
+        """
+        Process a batch of pending messages.
+
+        Selection priority:
+        1. PENDING messages first (never been processed)
+        2. RETRY messages second (failed but eligible for retry)
+        3. Within each status, oldest messages first (by timestamp)
+
+        Returns the number of successfully processed messages.
+        """
+        # Build status filter - always include PENDING, optionally include RETRY
         status_filter = [ProcessingStatus.PENDING]
         if include_retries:
             status_filter.append(ProcessingStatus.RETRY)
-        
-        # Get messages that need processing
+
+        # Query messages ordered by priority:
+        # - processing_status.desc() puts PENDING before RETRY (alphabetically P > R when desc)
+        # - timestamp.asc() ensures oldest messages are processed first within each status
         messages_to_process = db.query(Message).join(Summary).filter(
             Summary.processing_status.in_(status_filter)
         ).order_by(
-            # Prioritize pending over retry
-            Summary.processing_status.desc(),
-            # Then by oldest first
-            Message.timestamp.asc()
+            Summary.processing_status.desc(),  # PENDING before RETRY
+            Message.timestamp.asc()            # Oldest first
         ).limit(limit).all()
         
         # Also get messages without summaries
@@ -183,8 +218,9 @@ class MessageProcessor:
             success = await self.process_message(message, db)
             if success:
                 processed += 1
-            
-            # Small delay between requests to avoid rate limiting
+
+            # Rate limiting: 1 second delay between Grok API calls
+            # This helps stay under the 100 requests/hour limit and avoids API throttling
             await asyncio.sleep(1)
         
         logger.info(f"Batch processing complete: {processed}/{len(messages_to_process)} successful")
@@ -196,7 +232,16 @@ class MessageProcessor:
         max_age_hours: int = 24,
         limit: int = 50
     ) -> int:
-        """Queue failed messages for retry"""
+        """
+        Re-queue FAILED messages for another retry attempt.
+
+        Only re-queues messages that:
+        - Have FAILED status
+        - Were last processed within max_age_hours (default: 24h)
+        - Have not exceeded max_retries
+
+        This is called by the scheduler's retry_failed_messages job every 15 minutes.
+        """
         cutoff = datetime.utcnow() - timedelta(hours=max_age_hours)
         
         # Find failed messages that haven't exceeded retry limit

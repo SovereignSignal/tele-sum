@@ -206,6 +206,7 @@ When you hit the Grok rate limit, the script will mark messages as "retry" statu
 
 ## 📚 Additional Documentation
 
+- [PROCESSING.md](PROCESSING.md) - Batch processing, retry logic, and scheduler jobs
 - [VISION.md](VISION.md) - Project goals and purpose
 - [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) - Technical architecture
 - [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md) - Production deployment guide
