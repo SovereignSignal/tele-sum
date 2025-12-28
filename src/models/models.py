@@ -147,6 +147,49 @@ class SyncStatus(Base):
     
     channel_config = relationship("ChannelConfig", back_populates="sync_status")
 
+class ReviewStatus(enum.Enum):
+    PENDING = "pending"        # Needs review
+    IN_PROGRESS = "in_progress"  # Being worked on
+    CORRECTED = "corrected"    # Fixed and verified
+    SKIPPED = "skipped"        # Intentionally skipped (e.g., not recoverable)
+
+class ReviewQueue(Base):
+    """
+    Track entries that need manual review/correction.
+    Used for x23 entries with mismatched or missing source URLs.
+    Entries are removed from this table once corrected.
+    """
+    __tablename__ = "review_queue"
+
+    id = Column(Integer, primary_key=True, index=True)
+    summary_id = Column(Integer, ForeignKey("summaries.id"), unique=True, nullable=False)
+
+    # Review categorization
+    issue_type = Column(String(50), nullable=False, index=True)  # 'url_mismatch', 'url_missing', 'search_failed', 'unknown_protocol', 'no_forum'
+
+    # Details about the issue
+    our_title = Column(String(255), nullable=True)  # The title we generated
+    matched_url = Column(Text, nullable=True)  # The URL we matched (if any)
+    matched_page_title = Column(String(255), nullable=True)  # Title of the matched page
+    protocol = Column(String(100), nullable=True)  # Detected protocol
+    notes = Column(Text, nullable=True)  # Additional notes or context
+
+    # Tracking
+    status = Column(SQLEnum(ReviewStatus), default=ReviewStatus.PENDING, index=True)
+    corrected_url = Column(Text, nullable=True)  # The manually corrected URL
+    reviewed_by = Column(String(100), nullable=True)  # Who reviewed it
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    summary = relationship("Summary")
+
+    __table_args__ = (
+        Index('ix_review_queue_status_type', 'status', 'issue_type'),
+    )
+
+
 class GrokUsage(Base):
     """Track Grok API usage for rate limiting and cost monitoring"""
     __tablename__ = "grok_usage"
