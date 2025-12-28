@@ -13,6 +13,10 @@ class ProcessingStatus(enum.Enum):
     FAILED = "failed"
     RETRY = "retry"
 
+class DataQuality(enum.Enum):
+    COMPLETE = "complete"      # Full data including verified source URL
+    INCOMPLETE = "incomplete"  # Missing or unverified source URL
+
 class ConfidenceLevel(enum.Enum):
     CONFIDENT = "confident"
     UNCERTAIN = "uncertain"
@@ -78,12 +82,13 @@ class Summary(Base):
     error_log = Column(Text, nullable=True)
     processing_attempts = Column(Integer, default=0)
     last_processed_at = Column(DateTime(timezone=True), nullable=True)
+    data_quality = Column(String(20), default="complete", index=True)  # 'complete' or 'incomplete'
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
+
     message = relationship("Message", back_populates="summary")
     category = relationship("Category", back_populates="summaries")
-    
+
     # Composite indexes for retry and processing queries
     __table_args__ = (
         Index('ix_summaries_status_processed', 'processing_status', 'last_processed_at'),
