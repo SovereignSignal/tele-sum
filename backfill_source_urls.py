@@ -730,7 +730,7 @@ async def retry_unavailable_batch(limit: int = 500, mark_unavailable: bool = Tru
     not_found = 0
     no_forum = 0
     unknown_protocol = 0
-    marked_unavailable = 0
+    updated_reason = 0
 
     for row in entries:
         summary_id, title, content = row
@@ -745,19 +745,25 @@ async def retry_unavailable_batch(limit: int = 500, mark_unavailable: bool = Tru
         elif result['reason'] == 'No forum exists':
             print(f"  ⊘ No forum for {result['protocol']}")
             no_forum += 1
-            # Already marked, no need to re-mark
+            # Update the reason if it was previously unknown_protocol
+            mark_source_unavailable(summary_id, result['protocol'], 'no_forum')
+            updated_reason += 1
         elif result['reason'] == 'Unknown protocol':
             print(f"  ? Unknown protocol")
             unknown_protocol += 1
         else:
             print(f"  ✗ Not found ({result['protocol']})")
             not_found += 1
+            # Update the reason and protocol if protocol was detected
+            mark_source_unavailable(summary_id, result['protocol'], 'search_failed')
+            updated_reason += 1
 
         # Rate limit
         await asyncio.sleep(0.5)
 
     print(f"\n{'='*60}")
     print(f"Results: {found} found, {not_found} not found, {no_forum} no forum, {unknown_protocol} unknown protocol")
+    print(f"Updated reason for {updated_reason} entries")
     print(f"{'='*60}")
 
 
