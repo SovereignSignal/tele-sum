@@ -1,3 +1,47 @@
+"""
+Application Configuration
+
+This module handles all configuration settings for the Tele-Sum application.
+Settings are loaded from environment variables and/or a .env file.
+
+Environment Variables:
+    Database:
+        DATABASE_URL: PostgreSQL connection string
+
+    Telegram (Phone Auth):
+        TELEGRAM_API_ID: Telegram API ID from my.telegram.org
+        TELEGRAM_API_HASH: Telegram API hash
+        TELEGRAM_PHONE: Phone number for authentication
+        TELEGRAM_CHANNEL_USERNAME: Channel to import from
+
+    Telegram (Bot Mode):
+        TELEGRAM_BOT_TOKENS: Comma-separated bot tokens
+        ENABLE_BOT_MODE: Enable bot-based imports (default: true)
+
+    Grok AI:
+        GROK_API_KEY: API key from x.ai
+        GROK_API_URL: API endpoint (default: https://api.x.ai/v1)
+        GROK_MODEL: Model to use (default: grok-3)
+
+    Processing:
+        SYNC_INTERVAL_HOURS: Hours between auto-sync (default: 6)
+        MAX_GROK_REQUESTS_PER_HOUR: Rate limit (default: 100)
+        MAX_PROCESSING_RETRIES: Retry attempts before FAILED (default: 3)
+        PROCESSING_BATCH_SIZE: Messages per batch (default: 10)
+
+    Security:
+        API_KEY: Optional API key for endpoint protection
+        SECRET_KEY: Secret for session encryption (auto-generated if not set)
+
+Usage:
+    from src.config import settings
+
+    if settings.is_grok_configured():
+        # Use Grok AI
+
+    db_url = settings.database_url
+"""
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field, field_validator
 from typing import Optional

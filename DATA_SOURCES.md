@@ -2,74 +2,92 @@
 
 The Grant Wire aggregates crypto grants and funding information from multiple sources. This document describes the data sources, their origins, and how they are processed.
 
+## Current Statistics (Phase 1 Complete)
+
+| Metric | Value |
+|--------|-------|
+| Total Messages | 3,069 |
+| Production Ready | 2,907 (94.7%) |
+| Incomplete | 162 (5.3%) |
+| Phone Imports | 1,529 |
+| x23 Imports | 1,540 |
+
+## Data Quality Flag
+
+The `data_quality` column in `summaries` table indicates production readiness:
+
+| Value | Count | Description |
+|-------|-------|-------------|
+| `complete` | 2,907 | Full data with verified source URL - **use for production** |
+| `incomplete` | 162 | Missing or unverified source URL - excluded from production |
+
+**Always filter by `data_quality = 'complete'` in production queries.**
+
+---
+
 ## Data Source Overview
 
-| Source | Import Method | Count | Status | Source URLs |
-|--------|---------------|-------|--------|-------------|
-| Telegram (phone import) | `phone_initial`, `phone_sync` | ~1,529 | Active | Yes - extracted from messages |
-| x23 AI Summaries | `x23` | ~1,540 | Legacy (deprecated) | No - need backfill |
+| Source | Import Method | Count | URL Coverage | Status |
+|--------|---------------|-------|--------------|--------|
+| Telegram (phone) | `phone_initial`, `phone_sync` | 1,529 | 99.3% | Active |
+| x23 AI Summaries | `x23` | 1,540 | 89.5% | Legacy (deprecated) |
+
+---
 
 ## Source Details
 
 ### 1. Telegram Channel Messages (`phone_initial`, `phone_sync`)
 
-**Origin**: Messages posted to The Grant Wire Telegram channel
+**Origin**: Messages posted directly to The Grant Wire Telegram channel
 
 **Format**:
-- Header: `📡 Update From the Grant Wire 📡`
-- Body: URLs to source content (Twitter/X, governance forums, blogs)
-
-**Processing**:
-1. Messages are imported via Telethon using phone authentication
-2. URLs are extracted from message content
-3. Twitter URLs are scraped using FxTwitter API
-4. Other URLs are scraped for content preview
-5. Grok AI generates summaries and titles based on linked content
-
-**Source URL**: Always available - extracted directly from the message
-
-**Example**:
 ```
 📡 Update From the Grant Wire 📡
 
 https://gov.optimism.io/t/cycle-45-results-season-8-audit-grants/10508
 ```
 
+**Processing**:
+1. Messages imported via Telethon using phone authentication
+2. URLs extracted from message content
+3. Twitter URLs scraped using FxTwitter API
+4. Other URLs scraped for content preview
+5. Grok AI generates summaries and titles based on linked content
+
+**Source URL**: Always available - extracted directly from the message (99.3% coverage)
+
+---
+
 ### 2. x23 AI Pre-Summarized Content (`x23`)
 
 **Origin**: Automated governance forum summaries from x23.ai (now deprecated)
 
-**Original Source**: The x23 entries originally came from:
-- Discourse governance forums of major protocols
-- Each entry had a corresponding x23.ai URL (e.g., `https://app.x23.ai/makerdao/discussions/topic/27191/...`)
-
-**Historical Reference**: The original data collection was tracked in Notion:
-- [Grant Wire Notion Database](https://sovs.notion.site/d24bc00e3ed14139beb44b82a5e145c5?v=50ae5a8b531641e0b78f39a710f3ffa6)
-
 **Format**:
-- Header: `🆕` emoji
-- Body: Pre-summarized governance content with bullet points
-- Footer: `⏩ More details` (originally linked to x23.ai)
-
-**Processing**:
-1. Content is already summarized (from x23)
-2. Grok AI generates titles and re-summarizes for consistency
-3. Source URLs need to be backfilled from original forums
-
-**Source URL Challenge**:
-- x23.ai is deprecated, so original links no longer work
-- Source URLs must be backfilled by searching the corresponding protocol forums
-- Use `backfill_source_urls.py` to search Discourse forums and match topics
-
-**Example**:
 ```
-🆕 MakerDAO proposal by PhoenixLabs (Oct 2, 2025) raises supply caps...
+🆕 MakerDAO proposal by PhoenixLabs raises supply caps...
 
 - This is a multi-part Ethereum governance package...
 - Benefits: enables larger deposit growth...
 
+🏷️ Grants - Grant Proposal / Application
+
 ⏩ More details
 ```
+
+**Original Source**: The x23 entries came from Discourse governance forums. Each entry had a corresponding x23.ai URL (e.g., `https://app.x23.ai/makerdao/discussions/topic/27191/...`)
+
+**Source URL Recovery**:
+- x23.ai is deprecated, so original links no longer work
+- x23.ai URLs extracted from Telegram message entities
+- Forum URLs reconstructed from x23.ai URL patterns
+- Current coverage: 89.5% (1,378 / 1,540)
+
+**Remaining Gap**: 162 entries (10.5%) couldn't have URLs recovered:
+- 125 `search_failed`: Forum search didn't find matching post
+- 33 `no_forum`: Protocol has no Discourse forum (Jupiter, Drift)
+- 4 `unknown_protocol`: Protocol couldn't be identified
+
+---
 
 ## Identifying Data Sources in Database
 
@@ -86,71 +104,134 @@ SELECT * FROM messages WHERE import_method = 'x23';
 SELECT * FROM messages WHERE import_method LIKE 'phone%';
 ```
 
+---
+
 ## Source URL Coverage
 
-### Entries with Source URLs
-- **Telegram imports**: Have URLs in `messages.extracted_urls`
-- **x23 entries**: Need `entities.source.url` backfilled from forums
+### By Import Method
+
+| Method | Total | With URL | Coverage |
+|--------|-------|----------|----------|
+| phone_initial | 1,524 | 1,513 | 99.3% |
+| phone_sync | 5 | 5 | 100.0% |
+| x23 | 1,540 | 1,378 | 89.5% |
 
 ### Checking URL Status
+
 ```sql
--- Entries missing source URLs (x23 entries needing backfill)
-SELECT COUNT(*)
-FROM messages m
-JOIN summaries s ON s.message_id = m.id
-WHERE m.import_method = 'x23'
-  AND (s.entities->'source'->>'url' IS NULL
-       OR s.entities->'source'->>'url' = 'null');
+-- Entries with complete data (production ready)
+SELECT COUNT(*) FROM summaries WHERE data_quality = 'complete';
+
+-- Entries missing source URLs
+SELECT COUNT(*) FROM summaries WHERE data_quality = 'incomplete';
+
+-- Breakdown of incomplete entries by issue
+SELECT issue_type, COUNT(*)
+FROM review_queue
+WHERE status = 'pending'
+GROUP BY issue_type;
 ```
 
-## Backfilling x23 Source URLs
+---
 
-The `backfill_source_urls.py` script searches Discourse forums to find original posts:
+## URL Backfill Process
 
-```bash
-# Check current stats
-python3 backfill_source_urls.py stats
+### Scripts Used
 
-# Test on specific entry
-python3 backfill_source_urls.py test <summary_id>
+1. **backfill_source_urls.py** - Search Discourse forums by title
+2. **extract_x23_urls.py** - Extract x23.ai URLs from Telegram entities
+3. **reconstruct_urls.py** - Reconstruct forum URLs from x23.ai patterns
 
-# Run backfill on batch
-python3 backfill_source_urls.py run 50
+### x23.ai URL Pattern
+
+```
+https://app.x23.ai/{protocol}/discussions/topic/{id}/{slug}
+        ↓
+https://{forum_domain}/t/{slug}/{id}
 ```
 
 ### Supported Protocol Forums
 
-| Protocol | Forum URL |
-|----------|-----------|
-| Arbitrum | forum.arbitrum.foundation |
-| Optimism | gov.optimism.io |
-| MakerDAO | forum.makerdao.com |
-| ENS | discuss.ens.domains |
-| Uniswap | gov.uniswap.org |
-| Aave | governance.aave.com |
-| Compound | comp.xyz |
-| Lido | research.lido.fi |
-| Curve | gov.curve.fi |
-| Gitcoin | gov.gitcoin.co |
-| ... | (see backfill_source_urls.py for full list) |
+| Protocol | Forum URL | Status |
+|----------|-----------|--------|
+| Arbitrum | forum.arbitrum.foundation | Working |
+| Optimism | gov.optimism.io | Working |
+| Lido | research.lido.fi | Working |
+| Gitcoin | gov.gitcoin.co | Working |
+| ENS | discuss.ens.domains | Working |
+| Uniswap | gov.uniswap.org | Working |
+| Safe | forum.safe.global | Working |
+| CoW DAO | forum.cow.fi | Working |
+| Balancer | forum.balancer.fi | Working |
+| MakerDAO | forum.makerdao.com | Some 404s |
+| Gnosis | forum.gnosis.io | Access issues |
+| Jupiter | N/A | No Discourse forum |
+| Drift | N/A | No Discourse forum |
+
+---
 
 ## Data Quality Notes
 
-1. **Title Generation**: All entries now have 4-5 word titles generated by Grok AI
-   - NEWS entries: Describe the action (e.g., "Optimism Grants Council Results")
-   - OPINION entries: Credit the source (e.g., "Polynya on L2 Economics")
+### Title Generation
+All entries have 4-6 word titles generated by Grok AI:
+- **NEWS entries**: Describe the action (e.g., "Optimism Grants Council Results")
+- **OPINION entries**: Credit the source (e.g., "Polynya on L2 Economics")
 
-2. **Summary Accuracy**:
-   - Telegram imports: Summaries based on actual linked content
-   - x23 entries: Summaries based on pre-summarized text (may have less detail)
+### Summary Quality
+- **Telegram imports**: Summaries based on actual linked content
+- **x23 entries**: Summaries based on pre-summarized text
 
-3. **Source URL Accuracy**:
-   - Telegram imports: 100% accurate (direct extraction)
-   - x23 entries: Best-effort matching via forum search (validate matches)
+### Source URL Accuracy
+- **Telegram imports**: 100% accurate (direct extraction)
+- **x23 entries**: Best-effort matching via forum search and URL reconstruction
 
-## Future Improvements
+---
 
-1. Complete x23 source URL backfill
-2. Add validation for backfilled URLs
-3. Consider alternative sources for protocols not on Discourse
-4. Track data freshness and update timestamps
+## Category Distribution
+
+| Category | Count | Percentage |
+|----------|-------|------------|
+| Governance & Treasury | 1,210 | 39.4% |
+| Funding Opportunities | 691 | 22.5% |
+| Grant Programs | 507 | 16.5% |
+| Research & Analysis | 305 | 9.9% |
+| Tools & Infrastructure | 222 | 7.2% |
+| Incentives | 134 | 4.4% |
+
+---
+
+## Review Queue
+
+Entries that couldn't have URLs automatically recovered are tracked in `review_queue`:
+
+```sql
+-- View pending entries
+SELECT rq.id, s.title, rq.issue_type, rq.protocol
+FROM review_queue rq
+JOIN summaries s ON rq.summary_id = s.id
+WHERE rq.status = 'pending'
+ORDER BY rq.protocol;
+```
+
+### Managing Review Queue
+
+```bash
+# View stats
+python3 populate_review_queue.py stats
+
+# Export to CSV for manual review
+python3 populate_review_queue.py export pending_urls.csv
+
+# Mark as corrected
+python3 populate_review_queue.py complete <summary_id> <url>
+
+# Mark as skipped (unrecoverable)
+python3 populate_review_queue.py skip <summary_id> "Post deleted"
+```
+
+---
+
+## Historical Reference
+
+The original data collection was tracked in Notion:
+- [Grant Wire Notion Database](https://sovs.notion.site/d24bc00e3ed14139beb44b82a5e145c5?v=50ae5a8b531641e0b78f39a710f3ffa6)

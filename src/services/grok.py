@@ -1,3 +1,26 @@
+"""
+Grok AI Integration Service
+
+This module provides the interface to the Grok AI API (x.ai) for content analysis.
+Grok is used because it can directly access Twitter/X content that other AI models cannot see.
+
+Key components:
+- GrokRateLimiter: Tracks API usage to stay under rate limits
+- GrokService: Main service for analyzing content via Grok API
+
+Usage:
+    grok = GrokService()
+    result = await grok.analyze_content(message, urls, url_contents, categories, db)
+
+Configuration (via environment variables):
+- GROK_API_KEY: Your Grok API key from x.ai
+- GROK_API_URL: API endpoint (default: https://api.x.ai/v1)
+- GROK_MODEL: Model to use (default: grok-3)
+- MAX_GROK_REQUESTS_PER_HOUR: Rate limit (default: 100)
+
+See PROCESSING.md for the full processing pipeline documentation.
+"""
+
 import httpx
 import logging
 import json

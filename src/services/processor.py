@@ -1,3 +1,25 @@
+"""
+Message Processing Pipeline
+
+This module handles the core processing of Telegram messages through Grok AI.
+It manages the complete lifecycle from PENDING -> PROCESSING -> SUCCESS/RETRY/FAILED.
+
+Key components:
+- MessageProcessor: Main class that orchestrates message processing
+- process_message(): Convenience function for single message processing
+
+Processing Flow:
+1. Message enters as PENDING
+2. URLs are extracted and categorized (Twitter vs other)
+3. Non-Twitter URLs are scraped for content preview
+4. Twitter URLs are scraped via FxTwitter API
+5. Content is sent to Grok AI for analysis
+6. Results (summary, category, entities) are stored
+7. Status is updated to SUCCESS, RETRY, or FAILED
+
+See PROCESSING.md for the full state machine and retry logic documentation.
+"""
+
 import logging
 import asyncio
 from typing import Optional, List, Dict

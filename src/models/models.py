@@ -1,3 +1,29 @@
+"""
+Database Models
+
+This module defines all SQLAlchemy ORM models for the Grant Wire database.
+
+Core Tables:
+    - Message: Raw Telegram messages (import source)
+    - Summary: AI-generated summaries and metadata
+    - Category: User-defined classification categories
+    - ReviewQueue: Entries needing manual URL correction
+
+Supporting Tables:
+    - User: Multi-tenant user support
+    - TelegramBot: Bot configuration for monitoring
+    - ChannelConfig: Channel import settings
+    - SyncStatus: Telegram sync tracking
+    - GrokUsage: API usage monitoring
+
+Key Enums:
+    - ProcessingStatus: PENDING -> PROCESSING -> SUCCESS/RETRY/FAILED
+    - DataQuality: COMPLETE (production-ready) or INCOMPLETE (missing URL)
+    - ConfidenceLevel: AI classification confidence
+
+See DATABASE_SCHEMA.md for complete documentation and query examples.
+"""
+
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON, Boolean, Float, Enum as SQLEnum, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
