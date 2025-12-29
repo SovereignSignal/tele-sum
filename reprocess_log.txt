@@ -1,0 +1,1639 @@
+INFO:src.config:Initializing Tele-Sum settings...
+WARNING:src.config:Could not create session directory: [Errno 30] Read-only file system: '/app'
+WARNING:src.config:⚠️  No SECRET_KEY provided - generated temporary key
+INFO:src.config:============================================================
+INFO:src.config:🚀 Tele-Sum Configuration
+INFO:src.config:============================================================
+INFO:src.config:Environment: development
+INFO:src.config:Port: 8000
+INFO:src.config:Database: ✅
+INFO:src.config:API Key: ⚠️  UNPROTECTED
+INFO:src.config:Telegram Phone: ✅
+INFO:src.config:Telegram Bot: ❌
+INFO:src.config:Grok AI: ✅
+INFO:src.config:Sync Interval: 6 hours
+INFO:src.config:Max Retries: 3
+INFO:src.config:============================================================
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/october-2-2025-proposed-changes-to-spark-for-upcoming-spell "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/october-2-2025-proposed-changes-to-spark-for-upcoming-spell "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/october-2-2025-proposed-changes-to-spark-for-upcoming-spell/27191 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 192
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/anemoy-tokenized-apollo-diversified-credit-fund-risk-assessment "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/anemoy-tokenized-apollo-diversified-credit-fund-risk-assessment "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/anemoy-tokenized-apollo-diversified-credit-fund-risk-assessment/27186 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 193
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/non-profit-entity-as-new-star "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/non-profit-entity-as-new-star "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/non-profit-entity-as-new-star/27185 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 194
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/met-airdrop-for-jupdao "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/met-airdrop-for-jupdao/39502 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 199
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/gnosis.eth/proposal/0xff2ea0fb10996165e0d31f25522d24e345146682058f894a42b3ba158905360a "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 203
+INFO:httpx:HTTP Request: GET https://dydx.forum/t/drc-coinroutes-order-router-rev-share-proposal "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://dydx.forum/t/drc-coinroutes-order-router-rev-share-proposal/4056 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 207
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/is-the-maker-dao-community-portal-still-a-thing "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/is-the-maker-dao-community-portal-still-a-thing "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/is-the-maker-dao-community-portal-still-a-thing/27182 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 209
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/catalyzing-sustainable-growth-a-strategic-initiative-for-jupiter-community-adoption-liquidity-depth "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/catalyzing-sustainable-growth-a-strategic-initiative-for-jupiter-community-adoption-liquidity-depth/39497 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 211
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/gnosis.eth/proposal/0x2e08952c22ca96dbee9fb6e8ba2ee4d3df0d3994e18d38f819cfb8e228d39384 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 214
+INFO:httpx:HTTP Request: GET https://research.lido.fi/t/proposal-funding-request-for-valos-early-adopter-assessment-subsidies "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://research.lido.fi/t/proposal-funding-request-for-valos-early-adopter-assessment-subsidies/10657 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 228
+INFO:httpx:HTTP Request: GET https://gov.gmx.io/t/distributions "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.gmx.io/t/distributions/4860 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 229
+INFO:httpx:HTTP Request: GET https://gov.optimism.io/t/introducing-drift-escapes-immersive-tourism-meets-web3 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.optimism.io/t/introducing-drift-escapes-immersive-tourism-meets-web3/10277 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 234
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/proposal-jupiter-debit-card-real-world-spending-with-tiered-cashback-in-jlp-usdc-sol-or-btc "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/proposal-jupiter-debit-card-real-world-spending-with-tiered-cashback-in-jlp-usdc-sol-or-btc/39472 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 236
+INFO:httpx:HTTP Request: GET https://gov.gitcoin.co/t/shardoo-clean-coal-innovation-for-a-sustainable-and-empowered-future "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.gitcoin.co/t/shardoo-clean-coal-innovation-for-a-sustainable-and-empowered-future/23718 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 242
+INFO:httpx:HTTP Request: GET https://gov.gitcoin.co/t/can-i-release-a-project-preliminarily "HTTP/1.1 404 Not Found"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://gov.gitcoin.co/t/can-i-release-a-project-preliminarily: Status 404
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 246
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/jup-from-euphoria-to-maturity "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/jup-from-euphoria-to-maturity/39461 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 253
+INFO:httpx:HTTP Request: GET https://dao.rocketpool.net/t/round-29-gmc-community-discussion-of-submitted-applications "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://dao.rocketpool.net/t/round-29-gmc-community-discussion-of-submitted-applications/3758 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 256
+INFO:httpx:HTTP Request: GET https://gov.optimism.io/t/is-optimism-dying-a-long-time-supporter-s-concerns "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.optimism.io/t/is-optimism-dying-a-long-time-supporter-s-concerns/10267 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 261
+INFO:httpx:HTTP Request: GET https://forum.polygon.technology/t/proposal-educational-content-and-community-growth-on-polygon "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.polygon.technology/t/proposal-educational-content-and-community-growth-on-polygon/21273 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 272
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/dao-2-0-budgetting-proposal "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/dao-2-0-budgetting-proposal/39452 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 273
+INFO:httpx:HTTP Request: GET https://gov.gitcoin.co/t/a-better-way-to-finance-desci-and-open-source-software-than-grants "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.gitcoin.co/t/a-better-way-to-finance-desci-and-open-source-software-than-grants/23531 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 276
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/atlas-core-development-payment-requests-september-2025 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/atlas-core-development-payment-requests-september-2025 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/atlas-core-development-payment-requests-september-2025/27139 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 279
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/depreciating-the-65-5m-in-usdc-dai-lps-on-uni "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/depreciating-the-65-5m-in-usdc-dai-lps-on-uni "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/depreciating-the-65-5m-in-usdc-dai-lps-on-uni/27126 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 283
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/a-5-10-utilization-of-the-sky-simplification-buffer-budget "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/a-5-10-utilization-of-the-sky-simplification-buffer-budget "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/a-5-10-utilization-of-the-sky-simplification-buffer-budget/27130 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 285
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/utilization-of-the-accessibility-reward-budget-a-2-4 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/utilization-of-the-accessibility-reward-budget-a-2-4 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/utilization-of-the-accessibility-reward-budget-a-2-4/27131 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 291
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/gnosis.eth/proposal/0x0dfcbdfaf4388fad71029b474c6b3e5fd2051354c7c768c1b099949205f254c4 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 294
+INFO:httpx:HTTP Request: GET https://forum.eigenlayer.xyz/t/request-for-inclusion-of-treehouse-eth-teth-in-programmatic-incentives-v2 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.eigenlayer.xyz/t/request-for-inclusion-of-treehouse-eth-teth-in-programmatic-incentives-v2/14709 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 310
+INFO:httpx:HTTP Request: GET https://forum.balancer.fi/t/semi-automatic-non-loosing-trading-logic-smart-contract-lvr-similar-1-of-functions-from-dapp-i-developed-grant-looking "HTTP/1.1 404 Not Found"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.balancer.fi/t/semi-automatic-non-loosing-trading-logic-smart-contract-lvr-similar-1-of-functions-from-dapp-i-developed-grant-looking: Status 404
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 311
+INFO:httpx:HTTP Request: GET https://forum.reserve.org/t/rfc-eusd-fintech-revenue-share-update-2025-08-20 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.reserve.org/t/rfc-eusd-fintech-revenue-share-update-2025-08-20/1236 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 316
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/high-school-personal-finance-program-with-solana-jupiter "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/high-school-personal-finance-program-with-solana-jupiter/39441 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 317
+ERROR:src.scrapers.content_scraper:Error fetching https://forum.instadapp.io/t/syrupusdc-to-fluid-on-ethereum-arbitrum-and-base: [Errno 8] nodename nor servname provided, or not known
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 328
+INFO:httpx:HTTP Request: GET https://gov.gitcoin.co/t/donating-tokens-to-gitcoin "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.gitcoin.co/t/donating-tokens-to-gitcoin/23192 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 335
+INFO:httpx:HTTP Request: GET https://gov.gitcoin.co/t/proposal-try-out-condorcet-voting-for-gg24-domains "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.gitcoin.co/t/proposal-try-out-condorcet-voting-for-gg24-domains/23188 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 336
+INFO:httpx:HTTP Request: GET https://gov.optimism.io/t/nomination-stephan1516417-solo-builder-of-public-goods-on-optimism "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.optimism.io/t/nomination-stephan1516417-solo-builder-of-public-goods-on-optimism/10245 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 345
+INFO:httpx:HTTP Request: GET https://gov.gitcoin.co/t/gravitydao-v3-paradox-management-for-ethereum-governance-gitcoin-3-0-sensemaking-report "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.gitcoin.co/t/gravitydao-v3-paradox-management-for-ethereum-governance-gitcoin-3-0-sensemaking-report/23032 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 351
+INFO:httpx:HTTP Request: GET https://forum.gnosis.io/t/gip-132-should-the-dao-pay-out-a-bounty-for-a-disclosure-regarding-a-consensus-discrepancy-on-gnosis-chain "HTTP/1.1 405 Not Allowed"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.gnosis.io/t/gip-132-should-the-dao-pay-out-a-bounty-for-a-disclosure-regarding-a-consensus-discrepancy-on-gnosis-chain: Status 405
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 357
+INFO:httpx:HTTP Request: GET https://forum.cow.fi/t/cow-grants-retro-round-is-open-for-applications "HTTP/1.1 404 Not Found"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.cow.fi/t/cow-grants-retro-round-is-open-for-applications: Status 404
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 359
+INFO:httpx:HTTP Request: GET https://forum.reserve.org/t/morpho-dollar-morpho-based-rtoken "HTTP/1.1 404 Not Found"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.reserve.org/t/morpho-dollar-morpho-based-rtoken: Status 404
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 366
+INFO:httpx:HTTP Request: GET https://gov.gmx.io/t/glv-as-a-coherent-network "HTTP/1.1 404 Not Found"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://gov.gmx.io/t/glv-as-a-coherent-network: Status 404
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 370
+INFO:httpx:HTTP Request: GET https://forum.gnosis.io/t/gip-131-should-gnosis-dao-continue-and-update-the-gnosis-pay-cashback-programme "HTTP/1.1 405 Not Allowed"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.gnosis.io/t/gip-131-should-gnosis-dao-continue-and-update-the-gnosis-pay-cashback-programme: Status 405
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 371
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/initial-cash-grant-to-spark-foundation "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/initial-cash-grant-to-spark-foundation "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/initial-cash-grant-to-spark-foundation/27060 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 375
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/vibe-coding-on-with-juptier "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/vibe-coding-on-with-juptier/39403 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 377
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/weekly-cycle-atlas-edit-proposal-week-starting-2025-08-11 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/weekly-cycle-atlas-edit-proposal-week-starting-2025-08-11 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/weekly-cycle-atlas-edit-proposal-week-starting-2025-08-11/27008 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 390
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/spark-aave-revenue-share-calculations-payments-8-q2-2025 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/spark-aave-revenue-share-calculations-payments-8-q2-2025 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/spark-aave-revenue-share-calculations-payments-8-q2-2025/27005 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 393
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/strategic-integration-precog-protocol-sky-protocol "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/strategic-integration-precog-protocol-sky-protocol "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/strategic-integration-precog-protocol-sky-protocol/27001 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 399
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/aavegotchi.eth/proposal/0xfcf7bb54537fcbf9c3fa181a4dbcd525702c52b1e01d24e72e735d46564b4bb4 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 409
+ERROR:src.scrapers.content_scraper:Error fetching https://forum.superfluid.finance/t/grant-bounty-progress-tracking-platform-for-superfluid-dao: [Errno 8] nodename nor servname provided, or not known
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 428
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/atlas-core-development-payment-requests-august-2025 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/atlas-core-development-payment-requests-august-2025 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/atlas-core-development-payment-requests-august-2025/26976 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 443
+INFO:httpx:HTTP Request: GET https://forum.arbitrum.foundation/t/boost-your-project-with-youtube-influencer-hype-from-arbitrum-stars "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.arbitrum.foundation/t/boost-your-project-with-youtube-influencer-hype-from-arbitrum-stars/29743 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 446
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/uplink-working-group-year-at-a-glance "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/uplink-working-group-year-at-a-glance/39314 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 451
+INFO:httpx:HTTP Request: GET https://forum.gnosis.io/t/gnosis-pay-rewards-pool-is-nearing-exhaustion "HTTP/1.1 405 Not Allowed"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.gnosis.io/t/gnosis-pay-rewards-pool-is-nearing-exhaustion: Status 405
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 477
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/aavegotchi.eth/proposal/0x525d47507adfb3285ce767795e72d74123a1b2d727ee9834a421dc364b46ad6f "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 484
+INFO:httpx:HTTP Request: GET https://gov.frax.finance/t/project-progress-tracking-platform-for-frax-finance "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.frax.finance/t/project-progress-tracking-platform-for-frax-finance/3757 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 486
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/project-progress-tracking-platform-for-sky "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/project-progress-tracking-platform-for-sky "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/project-progress-tracking-platform-for-sky/26876 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 491
+INFO:httpx:HTTP Request: GET https://gov.optimism.io/t/grant-and-project-progress-tracking-platform-for-optimism "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.optimism.io/t/grant-and-project-progress-tracking-platform-for-optimism/10170 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 493
+INFO:httpx:HTTP Request: GET https://forum.morpho.org/t/project-progress-tracking-platform-for-morpho "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.morpho.org/t/project-progress-tracking-platform-for-morpho/1894 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 517
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/capital-transparency-mid-year-2025-update "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/capital-transparency-mid-year-2025-update "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/capital-transparency-mid-year-2025-update/26863 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 520
+INFO:httpx:HTTP Request: GET https://forum.polygon.technology/t/grant-progress-tracking-platform-for-polygon "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.polygon.technology/t/grant-progress-tracking-platform-for-polygon/21156 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 524
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/gnosis.eth/proposal/0xcd71a158169e5fcde6c97046f87a6318faf77f921540628f4c142d43ecb07ebe "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 535
+INFO:httpx:HTTP Request: GET https://forum.gnosis.io/t/grant-progress-tracking-platform-for-gnosisdao "HTTP/1.1 405 Not Allowed"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.gnosis.io/t/grant-progress-tracking-platform-for-gnosisdao: Status 405
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 536
+INFO:httpx:HTTP Request: GET https://forum.cow.fi/t/grant-progress-tracking-platform "HTTP/1.1 404 Not Found"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.cow.fi/t/grant-progress-tracking-platform: Status 404
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 545
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/june-2025-aligned-delegate-compensation "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/june-2025-aligned-delegate-compensation "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/june-2025-aligned-delegate-compensation/26816 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 559
+INFO:httpx:HTTP Request: GET https://forum.gnosis.io/t/gip-128-should-gnosisdao-fund-gnosis-ltd-with-30m-year "HTTP/1.1 405 Not Allowed"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.gnosis.io/t/gip-128-should-gnosisdao-fund-gnosis-ltd-with-30m-year: Status 405
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 583
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/aavegotchi.eth/proposal/0x8208eab9425d5c4c1dd0057d6287ba6d6d80f3758e19304ffbef4f132bbea248 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 584
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/jup-indonesia-regional-accomplishments-and-milestones-achieved-report "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/jup-indonesia-regional-accomplishments-and-milestones-achieved-report/39140 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 597
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/atlas-core-development-payment-requests-july-2025 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/atlas-core-development-payment-requests-july-2025 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/atlas-core-development-payment-requests-july-2025/26779 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 610
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/jupiter-devrel-trial-wg-treasury "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/jupiter-devrel-trial-wg-treasury/39112 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 621
+INFO:httpx:HTTP Request: GET https://research.lido.fi/t/lidodao-grant-progress-tracker-automated-monitoring-dashboard "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://research.lido.fi/t/lidodao-grant-progress-tracker-automated-monitoring-dashboard/10300 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 624
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/aavegotchi.eth/proposal/0x47649cb4854e00ea85dd86714ddca2fc174f94e74ef79dbddf731251194e5981 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 625
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/jupiter-product-academy-grant-audit "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/jupiter-product-academy-grant-audit/39100 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 627
+INFO:httpx:HTTP Request: GET https://research.lido.fi/t/automated-grant-and-treasury-monitoring-for-lidodao "HTTP/1.1 404 Not Found"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://research.lido.fi/t/automated-grant-and-treasury-monitoring-for-lidodao: Status 404
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 632
+INFO:httpx:HTTP Request: GET https://forum.gnosis.io/t/gip-127-should-gnosisdao-reimburse-liquidity-providers-in-the-balancer-eure-sdai-pool-for-lost-opportunity-caused-by-the-issue-reported-by-nolanv "HTTP/1.1 405 Not Allowed"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.gnosis.io/t/gip-127-should-gnosisdao-reimburse-liquidity-providers-in-the-balancer-eure-sdai-pool-for-lost-opportunity-caused-by-the-issue-reported-by-nolanv: Status 405
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 642
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/aavegotchi.eth/proposal/0xb9a713cf64939a3539844d7b16a94c900cbee3fd091c7f30087507cdef00e233 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 665
+INFO:httpx:HTTP Request: GET https://forum.gnosis.io/t/rfp-bringing-real-world-assets-rwas-onto-gnosis "HTTP/1.1 405 Not Allowed"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.gnosis.io/t/rfp-bringing-real-world-assets-rwas-onto-gnosis: Status 405
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 672
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/aavegotchi.eth/proposal/0x55d5964f47c7bd7c678561a3fd76ad206e74f6e06a8668e687e194fbc63e853e "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 673
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/grants-program-post-mortem "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/grants-program-post-mortem/38973 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 674
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/gnosis.eth/proposal/0x7fbbe7acfb37e2985c6cceb86dc69b90e21b9db37e2830c29638d68d23366582 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 693
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/building-the-future-of-regional-initiatives "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/building-the-future-of-regional-initiatives/38904 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 712
+INFO:httpx:HTTP Request: GET https://forum.gnosis.io/t/kpk-may-2025-report-for-gnosisdao "HTTP/1.1 405 Not Allowed"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.gnosis.io/t/kpk-may-2025-report-for-gnosisdao: Status 405
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 713
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/may-2025-aligned-delegate-compensation "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/may-2025-aligned-delegate-compensation "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/may-2025-aligned-delegate-compensation/26698 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 717
+INFO:httpx:HTTP Request: GET https://forum.polygon.technology/t/i-need-matic-pol-from-testnet-on-amoy-for-development-testing "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.polygon.technology/t/i-need-matic-pol-from-testnet-on-amoy-for-development-testing/21045 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 722
+INFO:httpx:HTTP Request: GET https://gov.optimism.io/t/improving-dao-grant-sustainability-through-revenue-based-buyback "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.optimism.io/t/improving-dao-grant-sustainability-through-revenue-based-buyback/10023 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 732
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/quarterly-update-from-cawg-mar-may-2025 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/quarterly-update-from-cawg-mar-may-2025/38820 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 739
+INFO:httpx:HTTP Request: GET https://forum.cow.fi/t/grant-application-2-polyswap "HTTP/1.1 404 Not Found"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.cow.fi/t/grant-application-2-polyswap: Status 404
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 766
+INFO:httpx:HTTP Request: GET https://forum.gnosis.io/t/should-the-gnosisdao-renew-its-long-term-partnership-with-nethermind-for-gnosis-chain-maintenance "HTTP/1.1 405 Not Allowed"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.gnosis.io/t/should-the-gnosisdao-renew-its-long-term-partnership-with-nethermind-for-gnosis-chain-maintenance: Status 405
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 772
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/interim-report-trial-grant-gts-grant-talent-support "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/interim-report-trial-grant-gts-grant-talent-support/38523 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 807
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/atlas-core-development-payment-requests-june-2025 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/atlas-core-development-payment-requests-june-2025 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/atlas-core-development-payment-requests-june-2025/26585 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 814
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/wbs-ad-recognition-submission "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/wbs-ad-recognition-submission "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/wbs-ad-recognition-submission/26561 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 819
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/arbitrum.eth/proposal/0x9ea3f5ef5b6c838ffc24430bb927baa13bf25dcf5f444358e89f0958bb41a5e7 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 822
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/venus.eth/proposal/0xd231b6cbf3094e8669ba1c2872b75fb727656c50a6ff9deb25435ce2cf9461e8 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 826
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/aura.eth/proposal/0x18c574bc129a6c1da45327e04a9c7e756a8238028ea2328dfbcf5c396100a928 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 832
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/jup-and-juice-work-group-proposal-draft "HTTP/1.1 404 Not Found"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://discuss.jup.ag/t/jup-and-juice-work-group-proposal-draft: Status 404
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 839
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/chinese-initiative-regional-grant-conclusion-report "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/chinese-initiative-regional-grant-conclusion-report/38286 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 845
+INFO:httpx:HTTP Request: GET https://governance.aave.com/t/arfc-aave-events-sponsorship-budget-2025 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://governance.aave.com/t/arfc-aave-events-sponsorship-budget-2025/22173 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 846
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/a-grumpy-old-cat "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/a-grumpy-old-cat/38271 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 849
+INFO:httpx:HTTP Request: GET https://gov.frax.finance/t/astralfxs-yield-bearing-frax-derivative-partnership-request "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.frax.finance/t/astralfxs-yield-bearing-frax-derivative-partnership-request/3719 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 858
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/april-2025-aligned-delegate-compensation "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/april-2025-aligned-delegate-compensation "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/april-2025-aligned-delegate-compensation/26441 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 862
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/design-art-work-group-case-study "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/design-art-work-group-case-study/38200 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 865
+INFO:httpx:HTTP Request: GET https://forum.scroll.io/t/argentina-local-node-proposal "HTTP/1.1 404 Not Found"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.scroll.io/t/argentina-local-node-proposal: Status 404
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 876
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/aavegotchi.eth/proposal/0xacae31069e6b3ac970cfa77dfa4bfe1452532c149c7983ac1acd75bd8ab2b6dd "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.x.ai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:src.services.processor:Successfully processed message 879
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/progress-report-design-art-working-group "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/progress-report-design-art-working-group/38075 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 888 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://ethresear.ch/t/ethproofs-community-call-2-provers-may-23-2025 "HTTP/1.1 404 Not Found"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://ethresear.ch/t/ethproofs-community-call-2-provers-may-23-2025: Status 404
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 889 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://ethresear.ch/t/model-submissions-for-ethereum-deep-funding "HTTP/1.1 404 Not Found"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://ethresear.ch/t/model-submissions-for-ethereum-deep-funding: Status 404
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 892 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.gnosis.io/t/kpk-april-2025-report-for-gnosisdao "HTTP/1.1 405 Not Allowed"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.gnosis.io/t/kpk-april-2025-report-for-gnosisdao: Status 405
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 893 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://governance.aave.com/t/temp-check-aave-events-sponsorship-budget-2025 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://governance.aave.com/t/temp-check-aave-events-sponsorship-budget-2025/22058 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 902 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://gov.gitcoin.co/t/wa11y-empowering-women-with-accessible-web3-ux-education "HTTP/1.1 404 Not Found"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://gov.gitcoin.co/t/wa11y-empowering-women-with-accessible-web3-ux-education: Status 404
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 906 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/devrel-work-group-case-study "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/devrel-work-group-case-study/37982 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 907 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/let-the-jup-grant-mentors-hear-your-voice "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/let-the-jup-grant-mentors-hear-your-voice/37960 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 919 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/superfluid.eth/proposal/0xb710cfaf3538c552994c1ab784af9be7c8b9908daf834ec80cc4a24334394c92 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 935 queued for retry (attempt 1)
+ERROR:src.scrapers.content_scraper:Error fetching https://forum.superfluid.finance/t/season-2-ideas-superfluid-payments-distributions: [Errno 8] nodename nor servname provided, or not known
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 938 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://gov.curve.fi/t/quarterly-progress-report-dec-2024-feb-2025 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.curve.finance/t/quarterly-progress-report-dec-2024-feb-2025 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.curve.finance/t/quarterly-progress-report-dec-2024-feb-2025/10612 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 939 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://dao.rocketpool.net/t/pdao-2025-04-10-2025-05-08-treasury-report "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://dao.rocketpool.net/t/pdao-2025-04-10-2025-05-08-treasury-report/3613 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 940 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/aura.eth/proposal/0xbc9344f69f560ab336bc2e7d1436be9db3bb3dca9e4c22bf92e8e007f794e4a8 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 941 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://dao.rocketpool.net/t/gmc-bounty-updates-may-2025 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://dao.rocketpool.net/t/gmc-bounty-updates-may-2025/3612 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 942 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/balancer.eth/proposal/0x54df592ece6b23c3f34d7d4f915e9607c320a68bd9d171387e2de9078c178d97 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 944 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/proposal-xjup-the-next-gen-web3-payment-and-rewards-v1-0 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/proposal-xjup-the-next-gen-web3-payment-and-rewards-v1-0/37911 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 952 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/proposal-decentralize-web3-infrastructure-earn-real-yield-the-new-jup-validator-strategy-v1-0 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/proposal-decentralize-web3-infrastructure-earn-real-yield-the-new-jup-validator-strategy-v1-0/37910 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 954 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/cwg-quarterly-report-3 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/cwg-quarterly-report-3/37895 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 962 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://ethresear.ch/t/a-roadmap-for-funding-ethereum-s-open-source-infrastructure "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://ethresear.ch/t/a-roadmap-for-funding-ethereum-s-open-source-infrastructure/22278 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 964 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/micro-grant-proposal-jup-collab-juppy-community-hub-for-missions-memes-nfts "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/micro-grant-proposal-jup-collab-juppy-community-hub-for-missions-memes-nfts/37898 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 969 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/sparkfi-impact-lending-proposal-using-some-or-all-of-the-yield-from-stablecoin-lending-to-fund-social-impact "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/sparkfi-impact-lending-proposal-using-some-or-all-of-the-yield-from-stablecoin-lending-to-fund-social-impact "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/sparkfi-impact-lending-proposal-using-some-or-all-of-the-yield-from-stablecoin-lending-to-fund-social-impact/26340 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 970 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.arbitrum.foundation/t/proposal-getting-funding-idea "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.arbitrum.foundation/t/proposal-getting-funding-idea/29162 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 977 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/atlas-core-development-payment-requests-may-2025 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/atlas-core-development-payment-requests-may-2025 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/atlas-core-development-payment-requests-may-2025/26344 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 979 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://www.comp.xyz/t/help-filling-community-gaps-thru-compound "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://www.comp.xyz/t/help-filling-community-gaps-thru-compound/6735 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 980 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/accessibility-rewards-faq-for-sky-builders "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/accessibility-rewards-faq-for-sky-builders "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/accessibility-rewards-faq-for-sky-builders/26333 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 981 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://gov.frax.finance/t/proposal-to-add-wfrax-emissions-for-crv-frxusd-curve-pool-on-fraxtal "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.frax.finance/t/proposal-to-add-wfrax-emissions-for-crv-frxusd-curve-pool-on-fraxtal/3715 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 986 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/projects-for-uplink "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/projects-for-uplink/37869 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 987 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://ethresear.ch/t/post-pectra-in-practice-a-public-dashboard-for-real-world-p2p-metrics "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://ethresear.ch/t/post-pectra-in-practice-a-public-dashboard-for-real-world-p2p-metrics/22251 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 992 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.thegraph.com/t/semiotic-april-2025-update "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.thegraph.com/t/semiotic-april-2025-update/6559 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 993 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/risk-month-in-review-april-2025 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/risk-month-in-review-april-2025 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/risk-month-in-review-april-2025/26323 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 998 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://gov.gitcoin.co/t/proposal-gitcoin-grants-2025-and-beyond-funding-what-matters-most-in-the-ethereum-ecosystem "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.gitcoin.co/t/proposal-gitcoin-grants-2025-and-beyond-funding-what-matters-most-in-the-ethereum-ecosystem/20356 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1003 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://ethresear.ch/t/protocol-fellowship-cohort-6-applications "HTTP/1.1 404 Not Found"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://ethresear.ch/t/protocol-fellowship-cohort-6-applications: Status 404
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1023 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://gov.uniswap.org/t/rfc-uniswap-growth-program-renewal "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.uniswap.org/t/rfc-uniswap-growth-program-renewal/25496 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1034 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://gov.uniswap.org/t/rfc-analytics-hub-for-uniswaps-revitalization-and-growth-program "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.uniswap.org/t/rfc-analytics-hub-for-uniswaps-revitalization-and-growth-program/25493 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1035 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/draft-proposal-strengthening-jupiter-ecosystem-jup-stability-3-part-initiative "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/draft-proposal-strengthening-jupiter-ecosystem-jup-stability-3-part-initiative/37742 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1037 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://ethresear.ch/t/storagebeat-towards-an-evaluation-framework-for-decentralised-storage "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://ethresear.ch/t/storagebeat-towards-an-evaluation-framework-for-decentralised-storage/22195 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1049 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.arbitrum.foundation/t/proposal-non-consitutional-top-up-for-hackathon-continuation-program "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.arbitrum.foundation/t/proposal-non-consitutional-top-up-for-hackathon-continuation-program/29064 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1062 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/the-next-2-years-dao-resolution-pt-1-draft "HTTP/1.1 404 Not Found"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://discuss.jup.ag/t/the-next-2-years-dao-resolution-pt-1-draft: Status 404
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1069 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://dydx.forum/t/dep-community-update-apr-25 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://dydx.forum/t/dep-community-update-apr-25/3562 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1078 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/temperature-check-proposal-for-makervision-bridging-the-governance-information-gap "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/temperature-check-proposal-for-makervision-bridging-the-governance-information-gap "HTTP/1.1 404 Not Found"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.makerdao.com/t/temperature-check-proposal-for-makervision-bridging-the-governance-information-gap: Status 404
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1079 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/ens.eth/proposal/0x60c95ab69a427ce263f4c3c950df8da1134e96a3e76d139c8dac366271009530 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1082 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.cow.fi/t/cip-draft-bridging-the-governance-information-gap-between-cow-dao-and-social-media-platforms "HTTP/1.1 404 Not Found"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.cow.fi/t/cip-draft-bridging-the-governance-information-gap-between-cow-dao-and-social-media-platforms: Status 404
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1084 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.scroll.io/t/mexico-local-node-proposal-regions-approval-state "HTTP/1.1 404 Not Found"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.scroll.io/t/mexico-local-node-proposal-regions-approval-state: Status 404
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1085 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://gov.optimism.io/t/optimism-gov-summary "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.optimism.io/t/optimism-gov-summary/9837 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1090 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.morpho.org/t/approve-review-of-2024-contributor-grants "HTTP/1.1 404 Not Found"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.morpho.org/t/approve-review-of-2024-contributor-grants: Status 404
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1092 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.cow.fi/t/grant-application-safeblock-secure-cross-chain-swaps-powered-by-cow "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.cow.fi/t/grant-application-safeblock-secure-cross-chain-swaps-powered-by-cow/2956 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1107 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://gov.curve.fi/t/bootstrap-optimism-llamalend-markets-with-60k-op-from-dao-vault "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.curve.finance/t/bootstrap-optimism-llamalend-markets-with-60k-op-from-dao-vault "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.curve.finance/t/bootstrap-optimism-llamalend-markets-with-60k-op-from-dao-vault/10569 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1118 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/creation-of-a-european-logistics-hub-for-jupiter-events-pilot-phase-france "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/creation-of-a-european-logistics-hub-for-jupiter-events-pilot-phase-france/37369 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1123 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/jupsync-dao-knowledge-simplified-synced "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.jup.ag/t/jupsync-dao-knowledge-simplified-synced/37013 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1131 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.cow.fi/t/grant-application-winks-fun-cowswap-within-twitter "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.cow.fi/t/grant-application-winks-fun-cowswap-within-twitter/2951 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1135 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.morpho.org/t/morpho-governance-call-april-3-2025 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.morpho.org/t/morpho-governance-call-april-3-2025/1667 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1145 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/atlas-core-development-payment-requests-april-2025 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/atlas-core-development-payment-requests-april-2025 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/atlas-core-development-payment-requests-april-2025/26221 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1150 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://governance.aave.com/t/bgd-request-for-bounty-payout-march-2025 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://governance.aave.com/t/bgd-request-for-bounty-payout-march-2025/21656 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1151 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://discuss.ens.domains/t/spp2-application-index "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.ens.domains/t/spp2-application-index/20495 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1165 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://gov.optimism.io/t/kuma-hada-delegation-communication-thread "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.optimism.io/t/kuma-hada-delegation-communication-thread/9795 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1171 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.cow.fi/t/descidegen-stablelab-cow-grants-committee-application "HTTP/1.1 404 Not Found"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.cow.fi/t/descidegen-stablelab-cow-grants-committee-application: Status 404
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1208 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.safe.global/t/support-eds-development-for-safe "HTTP/1.1 404 Not Found"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.safe.global/t/support-eds-development-for-safe: Status 404
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1211 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/morpho.eth/proposal/0x0490f19d8b4d263758dd11c2f21a8be3d136844c0581a62df4a5ce8b5f6a7de2 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1217 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.gnosis.io/t/should-gnosisdao-fund-the-gnosisgov-navigator-a-governance-and-delegate-dashboard "HTTP/1.1 405 Not Allowed"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.gnosis.io/t/should-gnosisdao-fund-the-gnosisgov-navigator-a-governance-and-delegate-dashboard: Status 405
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1218 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.morpho.org/t/phase-2-frontend-for-compound-morpho-polygon-collaboration "HTTP/1.1 404 Not Found"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.morpho.org/t/phase-2-frontend-for-compound-morpho-polygon-collaboration: Status 404
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1228 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/balancer.eth/proposal/0x4588d27134c45f85ca925c6c41badf8fad596120398913645d27ae8a14b266ff "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1252 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://ethresear.ch/t/transpiling-a-halo2-circuit-into-ccs "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://ethresear.ch/t/transpiling-a-halo2-circuit-into-ccs/21963 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1263 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.cow.fi/t/grant-application-polyswap "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.cow.fi/t/grant-application-polyswap/3052 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1271 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://research.lido.fi/t/egg-lido-labs-borg-grant-funding-request "HTTP/1.1 404 Not Found"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://research.lido.fi/t/egg-lido-labs-borg-grant-funding-request: Status 404
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1287 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/gnosis.eth/proposal/0x08ee3a735c8143c60339d5c9ad42f6c91b2f7e0c1c6f1ef651077004034348a6 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1298 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.cow.fi/t/dao-committee-members-application "HTTP/1.1 404 Not Found"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.cow.fi/t/dao-committee-members-application: Status 404
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1299 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/bounty-payout-request-for-immunefi-bug-38567 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/bounty-payout-request-for-immunefi-bug-38567 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/bounty-payout-request-for-immunefi-bug-38567/26072 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1318 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://gov.optimism.io/t/futarchy-experiment "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.optimism.io/t/futarchy-experiment/9697 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1340 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://research.lido.fi/t/lido-x-crecimiento-liquid-staking-awareness-ecosystem-engagement-in-argentina "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://research.lido.fi/t/lido-x-crecimiento-liquid-staking-awareness-ecosystem-engagement-in-argentina/9614 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1345 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/aura.eth/proposal/0x881783eef5e840d71bee505067d6eec03acd45ed598a09f54bd9adc4e64a4832 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1346 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.cow.fi/t/grant-application-cow-amms-lp-tokens-in-tycho "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.cow.fi/t/grant-application-cow-amms-lp-tokens-in-tycho/2843 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1359 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://gov.gitcoin.co/t/my-disastrous-experience-in-gg22 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.gitcoin.co/t/my-disastrous-experience-in-gg22/20023 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1361 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/arbitrum.eth/proposal/0xab1a7ff1a294882315f3beaa77fa0d4b2ec68633792046b941714108209ce737 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1367 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/aep-xx-securing-mkr-holder-airdrop-of-spk-subsequent-stars "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/aep-xx-securing-mkr-holder-airdrop-of-spk-subsequent-stars "HTTP/1.1 404 Not Found"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.makerdao.com/t/aep-xx-securing-mkr-holder-airdrop-of-spk-subsequent-stars: Status 404
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1370 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://governance.aave.com/t/grant-proposal-ai-powered-aave-education-via-sulla "HTTP/1.1 403 Forbidden"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://governance.aave.com/t/grant-proposal-ai-powered-aave-education-via-sulla: Status 403
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1376 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/aura.eth/proposal/0x1e4a05df880294f6b4d21b2130103476b0e4bad77472d08856f78dbf58ec8b27 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1390 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://governance.aave.com/t/cheeseai-and-possible-collaborations-with-aave "HTTP/1.1 403 Forbidden"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://governance.aave.com/t/cheeseai-and-possible-collaborations-with-aave: Status 403
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1398 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://dydx.forum/t/dep-community-update-feb-25 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://dydx.forum/t/dep-community-update-feb-25/3359 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1417 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/gitcoin.eth/proposal/0x845c3c57d7f03dcf1a1e6c2c09ba3a68006b75e409cad9345276ff4c5d8d8c38 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1426 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://discuss.ens.domains/t/data-exposure-bounty-reward-request "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.ens.domains/t/data-exposure-bounty-reward-request/20187 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1438 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/balancer.eth/proposal/0x3b8dd76c89c2ef6fb5cc9e506fbb546a4c3741617c715d327d5aa859b44d554d "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1463 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.cow.fi/t/grant-application-cow-protocol-upgrade-to-ethers-v6 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.cow.fi/t/grant-application-cow-protocol-upgrade-to-ethers-v6/2778 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1510 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.arbitrum.foundation/t/agnes-delegation-communication-thread "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.arbitrum.foundation/t/agnes-delegation-communication-thread/28220 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1525 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://gov.curve.fi/t/proposal-to-add-taiko-incentives-on-curve-pools "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.curve.finance/t/proposal-to-add-taiko-incentives-on-curve-pools "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.curve.finance/t/proposal-to-add-taiko-incentives-on-curve-pools/10448 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1526 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.gnosis.io/t/revolutionizing-user-engagement-gnosis-chain-ai-assistant-proposal "HTTP/1.1 405 Not Allowed"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.gnosis.io/t/revolutionizing-user-engagement-gnosis-chain-ai-assistant-proposal: Status 405
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1528 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://gov.gmx.io/t/gmx-avalanche-rush-incentives-bi-weekly-update-10 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.gmx.io/t/gmx-avalanche-rush-incentives-bi-weekly-update-10/4333 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1535 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/gitcoin.eth/proposal/0x7d5fe022bd18a1caac9528c56d4a2a47b5d6692e71168c166def489bf19b5ab6 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1546 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.cow.fi/t/ensuring-zeromev-s-future-as-a-public-resource-for-mev-data "HTTP/1.1 404 Not Found"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.cow.fi/t/ensuring-zeromev-s-future-as-a-public-resource-for-mev-data: Status 404
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1551 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://dydx.forum/t/dep-community-update-jan-25 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://dydx.forum/t/dep-community-update-jan-25/3265 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1554 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://gov.gitcoin.co/t/gcp-xxx-allo-yeeter-recycling-growing-gmv-with-simple-allocation "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.gitcoin.co/t/gcp-xxx-allo-yeeter-recycling-growing-gmv-with-simple-allocation/19852 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1555 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/aave.eth/proposal/0x8c04404012d9b74c3e7cebff2ddff3c9d40a280b4cfa7c2fca42be2a59b005ee "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1578 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.safe.global/t/localsafe-engagement-program "HTTP/1.1 404 Not Found"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.safe.global/t/localsafe-engagement-program: Status 404
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1590 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/gnosis.eth/proposal/0xfc7151970441fc9057948f07721c515a6d8a3151563c084ee4f67032796178d9 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1612 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.balancer.fi/t/bip-749-grant-add-reward-permissions-to-maxis-omnichain-multisig "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.balancer.fi/t/bip-749-grant-add-reward-permissions-to-maxis-omnichain-multisig/6242 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1619 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://gov.optimism.io/t/which-start-and-end-date-to-look-at-for-optimism-builder-grants "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.optimism.io/t/which-start-and-end-date-to-look-at-for-optimism-builder-grants/9385 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1639 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://gov.gitcoin.co/t/deep-funding-a-visual-guide-in-3-easy-steps "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.gitcoin.co/t/deep-funding-a-visual-guide-in-3-easy-steps/19765 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1640 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/gnosis.eth/proposal/0x80b370075f6c988b26e828702c5a057dd8c452e561aad0431fb9a7dad27c84f0 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1655 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://gov.gitcoin.co/t/gitcoin-cookie-jar "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.gitcoin.co/t/gitcoin-cookie-jar/19744 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1659 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://research.lido.fi/t/integration-of-beacon-chain-data-to-dune "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://research.lido.fi/t/integration-of-beacon-chain-data-to-dune/9118 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1667 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.gnosis.io/t/gip-draft-should-gnosis-fund-desciworld-on-gnosis "HTTP/1.1 405 Not Allowed"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.gnosis.io/t/gip-draft-should-gnosis-fund-desciworld-on-gnosis: Status 405
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1684 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/balancer.eth/proposal/0x95685a92236759db6c682af9b354d457a4e3266d9192f770da320af2aabd58be "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1702 queued for retry (attempt 1)
+ERROR:src.scrapers.content_scraper:Error fetching https://forum.instadapp.io/t/stage-1-fluid-to-2b-market-size: [Errno 8] nodename nor servname provided, or not known
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1713 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.arbitrum.foundation/t/i-want-advice-on-effective-grant-applications-for-arbitrum-projects "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.arbitrum.foundation/t/i-want-advice-on-effective-grant-applications-for-arbitrum-projects/27702 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1721 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://gov.optimism.io/t/governance-report-november-2024-update "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.optimism.io/t/governance-report-november-2024-update/9360 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1722 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/tokenization-grand-prix-application-ethena-securitize-usdtb "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/tokenization-grand-prix-application-ethena-securitize-usdtb "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/tokenization-grand-prix-application-ethena-securitize-usdtb/25621 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1749 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://dydx.forum/t/mev-committee-oct-nov-report "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://dydx.forum/t/mev-committee-oct-nov-report/3191 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1762 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://research.lido.fi/t/switzerland-for-unhcr-the-un-refugee-agency-to-launch-the-1st-worldwide-digital-asset-philanthropic-platform-with-lido-support-commits-to-restaking-all-eth-raised-with-lido "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://research.lido.fi/t/switzerland-for-unhcr-the-un-refugee-agency-to-launch-the-1st-worldwide-digital-asset-philanthropic-platform-with-lido-support-commits-to-restaking-all-eth-raised-with-lido/8925 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1764 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/aavegotchi.eth/proposal/0x0e447db3aa3734f95b2b30c0fee6cc50dc2b83cec032c83fb65c8fd5e14cad76 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1767 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/atlas-core-development-payment-requests-november-2024 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/atlas-core-development-payment-requests-november-2024 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/atlas-core-development-payment-requests-november-2024/25580 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1782 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://gov.optimism.io/t/cycle-30-grants-final-roundup "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.optimism.io/t/cycle-30-grants-final-roundup/9291 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1791 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/aavegotchi.eth/proposal/0x63f270df7ab2b36f638999e76b634baacba041d3e4450616aef56c6fcdb08dcc "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1798 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://gov.gitcoin.co/t/proposed-mechanism-secure-quadratic-assurance-sqa-by-aryan "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.gitcoin.co/t/proposed-mechanism-secure-quadratic-assurance-sqa-by-aryan/19661 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1812 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://dydx.forum/t/dep-community-update-nov-24 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://dydx.forum/t/dep-community-update-nov-24/3161 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1832 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/safedao.eth/proposal/0x81ee38f2ca886c3a868531efe635812ad6df9ad871238c9d704e397864a8fcf0 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1840 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/utilization-of-the-sky-ecosystem-liquidity-bootstrapping-budget-a-5-6-1-9 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/utilization-of-the-sky-ecosystem-liquidity-bootstrapping-budget-a-5-6-1-9 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/utilization-of-the-sky-ecosystem-liquidity-bootstrapping-budget-a-5-6-1-9/25537 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1842 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.makerdao.com/t/utilization-of-the-integration-boost-budget-a-5-2-1-2 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/utilization-of-the-integration-boost-budget-a-5-2-1-2 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.sky.money/t/utilization-of-the-integration-boost-budget-a-5-2-1-2/25536 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1843 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/aavegotchi.eth/proposal/0x677d704fc7059eaf3467f23cde3581ef66096f5f1e8d55dcee54048436ff0566 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1845 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.gnosis.io/t/gip-59-should-gnosisdao-fund-circles-ubi-r-d-work "HTTP/1.1 405 Not Allowed"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.gnosis.io/t/gip-59-should-gnosisdao-fund-circles-ubi-r-d-work: Status 405
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1855 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://ethresear.ch/t/zkmpc-publicly-auditable-mpc-for-general-purpose-computations "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://ethresear.ch/t/zkmpc-publicly-auditable-mpc-for-general-purpose-computations/20956 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1857 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://gov.optimism.io/t/documenting-a-simple-journey-of-my-guest-voting-process-for-rfs6 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.optimism.io/t/documenting-a-simple-journey-of-my-guest-voting-process-for-rfs6/9253 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1863 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.safe.global/t/draft-safe-boost-on-gnosis-chain "HTTP/1.1 404 Not Found"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.safe.global/t/draft-safe-boost-on-gnosis-chain: Status 404
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1876 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/gnosis.eth/proposal/0x963a5dceb6f7758cc06ba2ee74d7f17b5da6cce8907b54b39f7df64322e9c373 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1889 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://gov.optimism.io/t/dark-forest-ares-milestone-3-submission-and-request-for-feedback "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.optimism.io/t/dark-forest-ares-milestone-3-submission-and-request-for-feedback/9220 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1920 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.arbitrum.foundation/t/ethereum-protocol-attackathon-sponsorship "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.arbitrum.foundation/t/ethereum-protocol-attackathon-sponsorship/26122 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1921 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.gnosis.io/t/gip-115-safe-boost-on-gnosis-chain "HTTP/1.1 405 Not Allowed"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.gnosis.io/t/gip-115-safe-boost-on-gnosis-chain: Status 405
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1927 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.arbitrum.foundation/t/exploring-real-world-assets-on-arbitrum-a-builder-s-blueprint "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.arbitrum.foundation/t/exploring-real-world-assets-on-arbitrum-a-builder-s-blueprint/27315 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1929 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://gov.optimism.io/t/mission-request-developer-tools "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.optimism.io/t/mission-request-developer-tools/8515 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1934 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://research.lido.fi/t/lego-q3-2024-report "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://research.lido.fi/t/lego-q3-2024-report/8729 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1945 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://dydx.forum/t/dep-community-update-sept-24 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://dydx.forum/t/dep-community-update-sept-24/2992 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1958 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/rocketpool.eth/proposal/0x19712eaf0f9f46fb03fd37bce4bba99e273643648cc4ca9ecd03aff27e9f4419 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1962 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/aavegotchi.eth/proposal/0x4a6d74f3bc0cc93e10098ee9a882ebcf8124ab0efc0f6abd278eb716f7cceeb4 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1972 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://gov.gitcoin.co/t/rfp-allo-yeeter-build "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.gitcoin.co/t/rfp-allo-yeeter-build/19277 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1974 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/aavegotchi.eth/proposal/0xff50f7696083b6b5e0e0ba7c9bcba23cdb1c9702bfd8927718745e19f5d9be21 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1978 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.cow.fi/t/grant-application-cow-hooks-dapps "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.cow.fi/t/grant-application-cow-hooks-dapps/2544 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1986 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://discuss.ens.domains/t/temp-check-ensv2-development-funding-request "HTTP/1.1 404 Not Found"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://discuss.ens.domains/t/temp-check-ensv2-development-funding-request: Status 404
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1988 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://gov.optimism.io/t/reallocating-pre-approved-and-unused-grants-rubicon-phase-0-phase-1 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.optimism.io/t/reallocating-pre-approved-and-unused-grants-rubicon-phase-0-phase-1/9111 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 1993 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://gov.gitcoin.co/t/gcp-xxx-community-knowledge-base-for-llm "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.gitcoin.co/t/gcp-xxx-community-knowledge-base-for-llm/19523 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 2016 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://ethresear.ch/t/grant-program-registry "HTTP/1.1 429 Too Many Requests"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://ethresear.ch/t/grant-program-registry: Status 429
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 2019 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.arbitrum.foundation/t/reports-thread-new-protocols-and-ideas-domain-2-0 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.arbitrum.foundation/t/reports-thread-new-protocols-and-ideas-domain-2-0/27193 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 2021 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.gnosis.io/t/gip-114-should-gnosisdao-support-an-annual-renewal-for-blockscout-sla-and-hosting-services-october-2024-october-2025 "HTTP/1.1 405 Not Allowed"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.gnosis.io/t/gip-114-should-gnosisdao-support-an-annual-renewal-for-blockscout-sla-and-hosting-services-october-2024-october-2025: Status 405
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 2030 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/rocketpool.eth/proposal/0x2c1cf6c335ee8f07cc955133b6e0c5f7e6bc3fd0676c4d06d32f678c06ab3a0e "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 2039 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/aavegotchi.eth/proposal/0x8852af28d47a02097b7e9510b87d785bc1984813b4b474f8e8ad57b6b7b568be "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 2046 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://gov.gmx.io/t/gmx-torque-hands-free-trading-interface "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.gmx.io/t/gmx-torque-hands-free-trading-interface/3964 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 2047 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/aavegotchi.eth/proposal/0x3105b2ecf3a49e4bd4bbabc759f03eae255859ba0f02d1b4d0725c88a50b47b1 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 2048 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.arbitrum.foundation/t/rfc-non-constitutional-proposal-integrating-zktls-powered-oracle-solution-zkfetch-for-arbitrum "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.arbitrum.foundation/t/rfc-non-constitutional-proposal-integrating-zktls-powered-oracle-solution-zkfetch-for-arbitrum/27012 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 2056 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.cow.fi/t/bounty-for-cow-amm-solvers-integration "HTTP/1.1 404 Not Found"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.cow.fi/t/bounty-for-cow-amm-solvers-integration: Status 404
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 2080 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://research.lido.fi/t/aestus-mev-relay-grant-request-for-operational-expenses "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://research.lido.fi/t/aestus-mev-relay-grant-request-for-operational-expenses/8576 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 2090 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.arbitrum.foundation/t/proposal-for-financial-restitution-for-arbitrumdao-grant-winners "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.arbitrum.foundation/t/proposal-for-financial-restitution-for-arbitrumdao-grant-winners/27020 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 2091 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.arbitrum.foundation/t/research-on-context-and-retention "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.arbitrum.foundation/t/research-on-context-and-retention/26807 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 2108 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://discuss.ens.domains/t/term-5-grants-summary "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://discuss.ens.domains/t/term-5-grants-summary/18921 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 2111 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.safe.global/t/discussion-obra-mimir-mimir-module-friendly-multisig-tool-tiny "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.safe.global/t/discussion-obra-mimir-mimir-module-friendly-multisig-tool-tiny/5703 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 2136 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://gov.gmx.io/t/spectra-bi-weekly-update-05-09-2024 "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://gov.gmx.io/t/spectra-bi-weekly-update-05-09-2024/3897 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 2147 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.arbitrum.foundation/t/web3-grant-program-research-and-analysis-c-syndicate-rfp-4-report "HTTP/1.1 301 Moved Permanently"
+INFO:httpx:HTTP Request: GET https://forum.arbitrum.foundation/t/web3-grant-program-research-and-analysis-c-syndicate-rfp-4-report/26939 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 2150 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://forum.gnosis.io/t/gip-113-should-gnosis-dao-provide-grants-for-omen-2-0-initiative "HTTP/1.1 405 Not Allowed"
+WARNING:src.scrapers.content_scraper:Failed to fetch https://forum.gnosis.io/t/gip-113-should-gnosis-dao-provide-grants-for-omen-2-0-initiative: Status 405
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 2163 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/balancer.eth/proposal/0x866d1a8a02edd75b7c0cf882bdae6ad072c2a70d837df46471d52c5840c893ac "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 2192 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/balancer.eth/proposal/0x2632be3399adac44b0c25aad08ceeeee5426dcac8e8ac229e87667b59ddc1ecd "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 2194 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/balancer.eth/proposal/0x6e655d8f44bf5d8ef9099e981e071d396b21bc3f5b023c1cf416d37b3086c766 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 2196 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/aura.eth/proposal/0x5dc578d1c7f12426f4b33c0e74ae2eb2127bb455f4101c4d3f0b28472baf2d88 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 2202 queued for retry (attempt 1)
+INFO:httpx:HTTP Request: GET https://snapshot.org/#/aavegotchi.eth/proposal/0x4c1529a8fd0385d793838bd4d997aab84b2eb0f8344f941e2fab906ee5172308 "HTTP/1.1 200 OK"
+WARNING:src.services.grok:Grok rate limit reached. Remaining: 0
+WARNING:src.services.processor:Message 2210 queued for retry (attempt 1)
+Found 259 entries to re-process
+
+Processing batch 1 (10 entries)...
+  Processing Summary 192: MakerDAO PhoenixLabs Governance Proposal...
+    SUCCESS
+  Processing Summary 193: MakerDAO $50M ACRDX Allocation Proposal...
+    SUCCESS
+  Processing Summary 194: MakerDAO Star Prime Agent Proposal...
+    SUCCESS
+  Processing Summary 199: JupDAO Debates Meteora MET Inclusion...
+    SUCCESS
+  Processing Summary 203: Gnosis $40K Growth Fund Proposal...
+    SUCCESS
+  Processing Summary 207: dYdX CoinRoutes Partnership Proposal...
+    SUCCESS
+  Processing Summary 209: MakerDAO Users Query Sky Grants Portal...
+    SUCCESS
+  Processing Summary 211: Jupiter Community Ecosystem Proposal...
+    SUCCESS
+  Processing Summary 214: gEURO Requests GnosisDAO Grant...
+    SUCCESS
+  Processing Summary 228: Lido Proposes $60K ValOS Subsidies...
+    SUCCESS
+  Batch complete. Total: 10 processed, 0 failed
+
+Processing batch 2 (10 entries)...
+  Processing Summary 229: GMX Distributions Payout Disruption...
+    SUCCESS
+  Processing Summary 234: Driftcoin Unveils Drift Escapes Project...
+    SUCCESS
+  Processing Summary 236: Jupiter Debit Card Funding Proposal...
+    SUCCESS
+  Processing Summary 242: Shardoo Advised for Gitcoin GG24...
+    SUCCESS
+  Processing Summary 246: vporton Pre-Vote Software Release Concer...
+    SUCCESS
+  Processing Summary 253: Jupiter Proposes Long-Term Rewards...
+    SUCCESS
+  Processing Summary 256: ShfRyn Centralizes Rocketpool Round 29 Q...
+    SUCCESS
+  Processing Summary 261: Celebrimbor Warns Optimism Irrelevance...
+    SUCCESS
+  Processing Summary 272: Tiza Proposes Polygon Educational Grant...
+    SUCCESS
+  Processing Summary 273: lochie2001 Proposes Jupiter WG Funding...
+    SUCCESS
+  Batch complete. Total: 20 processed, 0 failed
+
+Processing batch 3 (10 entries)...
+  Processing Summary 276: vporton Proposes AI Gitcoin Payouts...
+    SUCCESS
+  Processing Summary 279: MakerDAO Atlas September Payment Process...
+    SUCCESS
+  Processing Summary 283: MakerDAO Treasury Yield Proposal...
+    SUCCESS
+  Processing Summary 285: MakerDAO USDS Transfer Request...
+    SUCCESS
+  Processing Summary 291: MakerDAO Requests 3M USDS for Atlas Edit...
+    SUCCESS
+  Processing Summary 294: Gnosis GNO Replenishment Proposal Lacks ...
+    SUCCESS
+  Processing Summary 310: Treehouse Requests tETH EigenLayer Inclu...
+    SUCCESS
+  Processing Summary 311: LuckyBAL Requests Balancer Grant...
+    SUCCESS
+  Processing Summary 316: Reserve eUSD RevShare Tweak Proposal...
+    SUCCESS
+  Processing Summary 317: Jupiter DeFi in BC Schools...
+    SUCCESS
+  Batch complete. Total: 30 processed, 0 failed
+
+Processing batch 4 (10 entries)...
+  Processing Summary 328: Instadapp Maple Finance Proposal...
+    SUCCESS
+  Processing Summary 335: Zach Offers Currency Coin to Gitcoin...
+    SUCCESS
+  Processing Summary 336: Gitcoin Condorcet Tally Proposal...
+    SUCCESS
+  Processing Summary 345: Stephan Schwab RetroPGF Proposal...
+    SUCCESS
+  Processing Summary 351: GravityDAO v3 Funding Clarification...
+    SUCCESS
+  Processing Summary 357: Gnosis GIP-132 Bounty Proposal...
+    SUCCESS
+  Processing Summary 359: CowDAO Opens Retro Grants Round...
+    SUCCESS
+  Processing Summary 366: Reserve Morpho Dollar rToken Proposal...
+    SUCCESS
+  Processing Summary 370: Naiqun Proposes TNFR for GMX Modeling...
+    SUCCESS
+  Processing Summary 371: Gnosis DAO Cashback Poll Update...
+    SUCCESS
+  Batch complete. Total: 40 processed, 0 failed
+
+Processing batch 5 (10 entries)...
+  Processing Summary 375: MakerDAO PhoenixLabs Grant Transfer...
+    SUCCESS
+  Processing Summary 377: Andrew Saul Proposes Jupiter Grants...
+    SUCCESS
+  Processing Summary 390: MakerDAO Atlas Modification Proposal...
+    SUCCESS
+  Processing Summary 393: MakerDAO SparkLend Revenue Payment...
+    SUCCESS
+  Processing Summary 399: MakerDAO Proposal Seeks Precog Integrati...
+    SUCCESS
+  Processing Summary 409: Aavegotchi Rarity Seasons Proposal Pendi...
+    SUCCESS
+  Processing Summary 428: BuildUnion Proposes Superfluid Dashboard...
+    SUCCESS
+  Processing Summary 443: MakerDAO August 2025 Payment Process...
+    SUCCESS
+  Processing Summary 446: Zhunda Proposes Arbitrum YouTube Campaig...
+    SUCCESS
+  Processing Summary 451: Uplink First-Year Report and Funding...
+    SUCCESS
+  Batch complete. Total: 50 processed, 0 failed
+
+Processing batch 6 (10 entries)...
+  Processing Summary 477: Gnosis Pay GNO Rewards Depleting...
+    SUCCESS
+  Processing Summary 484: Aavegotchi DAO Compliance Proposal Oppos...
+    SUCCESS
+  Processing Summary 486: Frax Dashboard Proposal Minimal Feedback...
+    SUCCESS
+  Processing Summary 491: MakerDAO $5K Dashboard Proposal...
+    SUCCESS
+  Processing Summary 493: BuildUnion Proposes Optimism Dashboard...
+    SUCCESS
+  Processing Summary 517: BuildUnion Morpho Dashboard Proposal...
+    SUCCESS
+  Processing Summary 520: MakerDAO Mid-2025 Expense Report...
+    SUCCESS
+  Processing Summary 524: BuildUnion Proposes Polygon Grant Dashbo...
+    SUCCESS
+  Processing Summary 535: GnosisDAO $30M Grant Proposal...
+    SUCCESS
+  Processing Summary 536: BuildUnion Proposes GnosisDAO Dashboard ...
+    SUCCESS
+  Batch complete. Total: 60 processed, 0 failed
+
+Processing batch 7 (10 entries)...
+  Processing Summary 545: BuildUnion Proposes CowDAO Dashboard Gra...
+    SUCCESS
+  Processing Summary 559: MakerDAO June 2025 Delegate Compensation...
+    SUCCESS
+  Processing Summary 583: GnosisDAO $30M Annual Grant Proposal...
+    SUCCESS
+  Processing Summary 584: Aavegotchi Proposal Seeks $29K...
+    SUCCESS
+  Processing Summary 597: JUP DAO Indonesia Initiative Results...
+    SUCCESS
+  Processing Summary 610: MakerDAO July 2025 Payment Process...
+    SUCCESS
+  Processing Summary 621: Jupiter Allocates 49,500 USDC for DevRel...
+    SUCCESS
+  Processing Summary 624: LidoDAO Dashboard Proposal Seeks $12k...
+    SUCCESS
+  Processing Summary 625: Aavegotchi DAO Mechagotchis Funding Prop...
+    SUCCESS
+  Processing Summary 627: Lochie2001 Audits Jupiter Academy Grant...
+    SUCCESS
+  Batch complete. Total: 70 processed, 0 failed
+
+Processing batch 8 (10 entries)...
+  Processing Summary 632: LidoDAO $12k Dashboard Proposal...
+    SUCCESS
+  Processing Summary 642: GnosisDAO Reimbursement Proposal for Bal...
+    SUCCESS
+  Processing Summary 665: Aavegotchi DAO Reimbursement Vote Stalle...
+    SUCCESS
+  Processing Summary 672: DoDAO RWA Templates Grant Proposal...
+    SUCCESS
+  Processing Summary 673: Aavegotchi Proposal Seeks $29K...
+    SUCCESS
+  Processing Summary 674: JUP DAO Grants Program Results...
+    SUCCESS
+  Processing Summary 693: GnosisDAO GIP-126 Nethermind Renewal...
+    SUCCESS
+  Processing Summary 712: Jupiter Four-Tier Regional Framework Pro...
+    SUCCESS
+  Processing Summary 713: Karpatkey May 2025 GnosisDAO Report...
+    SUCCESS
+  Processing Summary 717: MakerDAO Delegate Compensation Announced...
+    SUCCESS
+  Batch complete. Total: 80 processed, 0 failed
+
+Processing batch 9 (10 entries)...
+  Processing Summary 722: Chema Requests Polygon Testnet Funds...
+    SUCCESS
+  Processing Summary 732: CaptMal Proposes OP Token Burns...
+    SUCCESS
+  Processing Summary 739: Jupiter Quarterly Update Funding Request...
+    SUCCESS
+  Processing Summary 766: CowDAO PolySwap Grant Proposal...
+    SUCCESS
+  Processing Summary 772: GnosisDAO Nethermind Renewal Proposal...
+    SUCCESS
+  Processing Summary 807: Jupiter GTS Interim Report...
+    SUCCESS
+  Processing Summary 814: MakerDAO June 2025 Payment Guidelines...
+    SUCCESS
+  Processing Summary 819: MakerDAO Governance Actions Confirmed...
+    SUCCESS
+  Processing Summary 822: Arbitrum Reclaims 6.9M ARB from Event Ho...
+    SUCCESS
+  Processing Summary 826: Venus Arculus Integration Proposal Passe...
+    SUCCESS
+  Batch complete. Total: 90 processed, 0 failed
+
+Processing batch 10 (10 entries)...
+  Processing Summary 832: Aura DAO $64K ETH Transfer Proposal...
+    SUCCESS
+  Processing Summary 839: Jupiter DAO J&J Upgrade Proposal...
+    SUCCESS
+  Processing Summary 845: Jupiter Approves Chinese Regional Grant...
+    SUCCESS
+  Processing Summary 846: AaveLabs Proposes $750K GHO Grant...
+    SUCCESS
+  Processing Summary 849: GreyHairedTrade on Jupiter Wales Grant F...
+    SUCCESS
+  Processing Summary 858: Astral Proposes Yield-Bearing FRAX Deriv...
+    SUCCESS
+  Processing Summary 862: MakerDAO Disburses Delegate Compensation...
+    SUCCESS
+  Processing Summary 865: DAWG Jupiter Case Study...
+    SUCCESS
+  Processing Summary 876: Scroll $58K Argentina Node Proposal...
+    SUCCESS
+  Processing Summary 879: Aavegotchi Proposes $35k Budget...
+    SUCCESS
+  Batch complete. Total: 100 processed, 0 failed
+
+Processing batch 11 (10 entries)...
+  Processing Summary 888: Jupiter Design Group Progress Update...
+    FAILED
+  Processing Summary 889: Ethproofs Announces Real-Time Proving Gr...
+    FAILED
+  Processing Summary 892: Ethereum $50k Deep Funding Challenge...
+    FAILED
+  Processing Summary 893: GnosisDAO April 2025 Treasury Report...
+    FAILED
+  Processing Summary 902: AaveLabs $750K GHO Budget Proposal...
+    FAILED
+  Processing Summary 906: wA11y Launches Web3 UX Education...
+    FAILED
+  Processing Summary 907: Jupiter Proposes 5K USDC Grant...
+    FAILED
+  Processing Summary 919: Jupiter Opens Grant Collaboration Call...
+    FAILED
+  Processing Summary 935: Superfluid SIP-4 Token Allocation...
+    FAILED
+  Processing Summary 938: Superfluid Payroll Expansion Plan...
+    FAILED
+  Batch complete. Total: 100 processed, 10 failed
+
+Processing batch 12 (10 entries)...
+  Processing Summary 939: Curve Quarterly Progress Report...
+    FAILED
+  Processing Summary 940: Rocketpool pDAO Treasury Reallocation...
+    FAILED
+  Processing Summary 941: Rocket Pool Balancer Alliance Proposal...
+    FAILED
+  Processing Summary 942: Rocketpool GMC Cancels Inactive Bounties...
+    FAILED
+  Processing Summary 944: Rocket Pool Balancer Alliance Proposal...
+    FAILED
+  Processing Summary 952: XJup Funding Proposal Seeks €1.17M...
+    FAILED
+  Processing Summary 954: JUP Validator Network Proposal...
+    FAILED
+  Processing Summary 962: Jupiter DAO Final Quarterly Report...
+    FAILED
+  Processing Summary 964: Ethereum Funding Experiment Proposal...
+    FAILED
+  Processing Summary 969: JUP Collab Micro Grant Proposal...
+    FAILED
+  Batch complete. Total: 100 processed, 20 failed
+
+Processing batch 13 (10 entries)...
+  Processing Summary 970: MakerDAO Impact.Spark.fi Proposal...
+    FAILED
+  Processing Summary 977: Arbitrum DAO FundAlign Investment Propos...
+    FAILED
+  Processing Summary 979: MakerDAO Opens May 2025 Payment Requests...
+    FAILED
+  Processing Summary 980: LoveRippleGirl Seeks Compound Developers...
+    FAILED
+  Processing Summary 981: MakerDAO Launches Accessibility Rewards ...
+    FAILED
+  Processing Summary 986: wFRAX Incentives for Curve frxUSD Pool...
+    FAILED
+  Processing Summary 987: Uplink DAO Clarifies Jupiter Criteria...
+    FAILED
+  Processing Summary 992: A41 Releases Post-Pectra Dashboard...
+    FAILED
+  Processing Summary 993: Semiotic Open Sources Graphdoc...
+    FAILED
+  Processing Summary 998: BA Labs SP-BEAM Launch Review...
+    FAILED
+  Batch complete. Total: 100 processed, 30 failed
+
+Processing batch 14 (10 entries)...
+  Processing Summary 1003: MathildaDV Proposes Gitcoin Relaunch...
+    FAILED
+  Processing Summary 1023: Ethereum EPF6 Applications Open...
+    FAILED
+  Processing Summary 1034: Uniswap $1.15M Growth Renewal Proposal...
+    FAILED
+  Processing Summary 1035: DooStableLab Uniswap Analytics Proposal...
+    FAILED
+  Processing Summary 1037: Jupiter 3-Pillar Initiative Proposal...
+    FAILED
+  Processing Summary 1049: StorageBeat Ethereum Grantee Update...
+    FAILED
+  Processing Summary 1062: Arbitrum Proposal Reallocates $89K Funds...
+    FAILED
+  Processing Summary 1069: Jupiter DAO Structure Proposal Draft...
+    FAILED
+  Processing Summary 1078: dYdX DEP Approves $326K Grants...
+    FAILED
+  Processing Summary 1079: MakerDAO SkyVision Funding Proposal...
+    FAILED
+  Batch complete. Total: 100 processed, 40 failed
+
+Processing batch 15 (10 entries)...
+  Processing Summary 1082: ENS EP6.5 Revamps Provider Funding...
+    FAILED
+  Processing Summary 1084: CowDAO CowCheck Proposal...
+    FAILED
+  Processing Summary 1085: Scroll $36K Mexico Pilot Proposal...
+    FAILED
+  Processing Summary 1090: DAO Bi-Weekly Recap Updates...
+    FAILED
+  Processing Summary 1092: MorphoAssociation 2024 Grants Await Vote...
+    FAILED
+  Processing Summary 1107: SafeBlock Seeks $50K xDAI Grant...
+    FAILED
+  Processing Summary 1118: LlamaRisk Proposes 60K OP Transfer...
+    FAILED
+  Processing Summary 1123: Jupiter Logistics Hub Proposal...
+    FAILED
+  Processing Summary 1131: Jupiter DAO Grant Proposal for AI Tools...
+    FAILED
+  Processing Summary 1135: CoWDAO Winks Integration Grant Proposal...
+    FAILED
+  Batch complete. Total: 100 processed, 50 failed
+
+Processing batch 16 (10 entries)...
+  Processing Summary 1145: WinVerseDAOplomats Governance Call Sched...
+    FAILED
+  Processing Summary 1150: MakerDAO USDS Payments Consideration...
+    FAILED
+  Processing Summary 1151: Aave $23K Immunefi Bounty Proposal...
+    FAILED
+  Processing Summary 1165: MetaGov Unveils SPP2 Applications Index...
+    FAILED
+  Processing Summary 1171: Kumahada Joins Optimism Ecosystem...
+    FAILED
+  Processing Summary 1208: JoseStableLab Applies for CoW Grant Stew...
+    FAILED
+  Processing Summary 1211: SafeDAO $220K Security Proposal...
+    FAILED
+  Processing Summary 1217: Morpho $100K Proposal Faces Quorum...
+    FAILED
+  Processing Summary 1218: GnosisDAO Navigator Funding Proposal...
+    FAILED
+  Processing Summary 1228: Compound.blue Seeks $100K Grant...
+    FAILED
+  Batch complete. Total: 100 processed, 60 failed
+
+Processing batch 17 (10 entries)...
+  Processing Summary 1252: Balancer Seeks $237K Operations Funding...
+    FAILED
+  Processing Summary 1263: Halo2 CCS+ Transpiler for Ethereum...
+    FAILED
+  Processing Summary 1271: PolySwap Seeks CowDAO Grant...
+    FAILED
+  Processing Summary 1287: Lido Labs Seeks $34.9M Grant...
+    FAILED
+  Processing Summary 1298: GnosisDAO $4.8M VPN Proposal...
+    FAILED
+  Processing Summary 1299: cfostars Applies for CoW Grants Committe...
+    FAILED
+  Processing Summary 1318: MakerDAO Awards Sky.money Bounty...
+    FAILED
+  Processing Summary 1340: Futarchy Grant Experiment Concerns...
+    FAILED
+  Processing Summary 1345: Lido Proposes $98K Aleph Sponsorship...
+    FAILED
+  Processing Summary 1346: Balancer DAO Approves Brazil Retreat...
+    FAILED
+  Batch complete. Total: 100 processed, 70 failed
+
+Processing batch 18 (10 entries)...
+  Processing Summary 1359: CoWDAO Tycho Integration Proposal...
+    FAILED
+  Processing Summary 1361: Ius Naturalis GG22 Sybil Hurdles...
+    FAILED
+  Processing Summary 1367: Arbitrum Growth Circles Proposal Pushbac...
+    FAILED
+  Processing Summary 1370: MakerDAO Atlas Edit Proposal...
+    FAILED
+  Processing Summary 1376: AAVE DAO Sulla Grant Proposal...
+    FAILED
+  Processing Summary 1390: BIP-778 Empowers Balancer Maxis Paramete...
+    FAILED
+  Processing Summary 1398: Aave CheeseAI Grant Proposal Hurdles...
+    FAILED
+  Processing Summary 1417: dYdX Allocates $563K Upgrades...
+    FAILED
+  Processing Summary 1426: Gitcoin ETHDenver Funding Proposal Await...
+    FAILED
+  Processing Summary 1438: ENS Bounty Rejection Raises Concerns...
+    FAILED
+  Batch complete. Total: 100 processed, 80 failed
+
+Processing batch 19 (10 entries)...
+  Processing Summary 1463: Balancer BIP-766 Fails Quorum...
+    FAILED
+  Processing Summary 1510: CowDAO Ether-V6 SDK Upgrade Proposal...
+    FAILED
+  Processing Summary 1525: ArbitrumNewsDAO Grant Bounty Proposal...
+    FAILED
+  Processing Summary 1526: Curve $500K TAIKO Incentives Proposal...
+    FAILED
+  Processing Summary 1528: Gnosis Chain AI Assistant Proposal...
+    FAILED
+  Processing Summary 1535: GMX Allocates $330K Liquidity Incentives...
+    FAILED
+  Processing Summary 1546: Gitcoin DAO Seeks $808K Operations...
+    FAILED
+  Processing Summary 1551: Silo Labs xDAI Grant Proposal...
+    FAILED
+  Processing Summary 1554: dYdX Trust Approves $834K Grants...
+    FAILED
+  Processing Summary 1555: Allo Yeeter Automation Proposal...
+    FAILED
+  Batch complete. Total: 100 processed, 90 failed
+
+Processing batch 20 (10 entries)...
+  Processing Summary 1578: Aave Proposes $230K Sherlock Contest...
+    FAILED
+  Processing Summary 1590: SafeDAO Launches LocalSafe Program...
+    FAILED
+  Processing Summary 1612: Gnosis GIP-117 Gains Support...
+    FAILED
+  Processing Summary 1619: Maxis Multisig Addreward Permissions Pro...
+    FAILED
+  Processing Summary 1639: Builder Grant Deadline May 2025...
+    FAILED
+  Processing Summary 1640: Vitalik Buterin's Deep Funding Distribut...
+    FAILED
+  Processing Summary 1655: GIP-119 DeSciWorld Funding Vote...
+    FAILED
+  Processing Summary 1659: Gitcoin Cookie Jar ETH Perk...
+    FAILED
+  Processing Summary 1667: Ethereum Beacon Dune Integration Proposa...
+    FAILED
+  Processing Summary 1684: Gnosis Proposal Funds DeSciWorld...
+    FAILED
+  Batch complete. Total: 100 processed, 100 failed
+
+Processing batch 21 (10 entries)...
+  Processing Summary 1702: Balancer BIP-741 Security Permissions Pr...
+    FAILED
+  Processing Summary 1713: Instadapp $1.3M INST Proposal...
+    FAILED
+  Processing Summary 1721: Lysander Tips for Arbitrum Grants...
+    FAILED
+  Processing Summary 1722: Holocene Governance November Update...
+    FAILED
+  Processing Summary 1749: EthenaLabs USDtb Spark Application...
+    FAILED
+  Processing Summary 1762: MEV Committee Monthly Report...
+    FAILED
+  Processing Summary 1764: UNHCR Seeks $445K ETH Grant...
+    FAILED
+  Processing Summary 1767: Aavegotchi $100k Expansion Proposal Awai...
+    FAILED
+  Processing Summary 1782: MakerDAO Atlas Core Payments...
+    FAILED
+  Processing Summary 1791: Transparent Season 6 Funds 22 Projects...
+    FAILED
+  Batch complete. Total: 100 processed, 110 failed
+
+Processing batch 22 (10 entries)...
+  Processing Summary 1798: Aavegotchi AGIP135 Proposal Passes...
+    FAILED
+  Processing Summary 1812: Arry Proposes Secure Quadratic Assurance...
+    FAILED
+  Processing Summary 1832: DEP November Grants Update...
+    FAILED
+  Processing Summary 1840: Gnosis Guild Proposes Safe Role Interfac...
+    FAILED
+  Processing Summary 1842: MakerDAO $4M USDS Proposal...
+    FAILED
+  Processing Summary 1843: MakerDAO Seeks 3M USDS Approval...
+    FAILED
+  Processing Summary 1845: Gotchi Greetoors V2 Proposal Lags Quorum...
+    FAILED
+  Processing Summary 1855: GnosisDAO GIP-59 Proposal Skepticism...
+    FAILED
+  Processing Summary 1857: ZKMPC SPDZ Extension Funded...
+    FAILED
+  Processing Summary 1863: Davydl's 2.7M OP Budget Proposal...
+    FAILED
+  Batch complete. Total: 100 processed, 120 failed
+
+Processing batch 23 (10 entries)...
+  Processing Summary 1876: SafeDAO SafeBoost Proposal 250k Tokens...
+    FAILED
+  Processing Summary 1889: GIP-115 SafeBoost Rewards Proposal...
+    FAILED
+  Processing Summary 1920: Dark Forest MUD Milestone Update...
+    FAILED
+  Processing Summary 1921: Arbitrum Attackathon Proposal Sparks Deb...
+    FAILED
+  Processing Summary 1927: Gnosis Proposes Safe{Boost} Rewards...
+    FAILED
+  Processing Summary 1929: DoDAO RWAIG Grantee Update...
+    FAILED
+  Processing Summary 1934: Gonna.eth Seeks 200K OP Grant...
+    FAILED
+  Processing Summary 1945: AlexL's LEGO Q3 Lido Grants...
+    FAILED
+  Processing Summary 1958: DEP September Grants Update...
+    FAILED
+  Processing Summary 1962: Rocketpool GMC Vote Quorum Stalled...
+    FAILED
+  Batch complete. Total: 100 processed, 130 failed
+
+Processing batch 24 (10 entries)...
+  Processing Summary 1972: Aavegotchi Grid Gladiator Proposal Lags...
+    FAILED
+  Processing Summary 1974: Gitcoin Debates Allo Yeeter RFP...
+    FAILED
+  Processing Summary 1978: Gotchi Greetoors V2 Proposal Fails...
+    FAILED
+  Processing Summary 1986: CowDAO CoW Hooks Proposal Reactions...
+    FAILED
+  Processing Summary 1988: ENSv2 Funding Increase Proposal...
+    FAILED
+  Processing Summary 1993: OP Reallocation to Rubicon Gains Support...
+    FAILED
+  Processing Summary 2016: Gitcoin Debates a3na Protocol Proposal...
+    FAILED
+  Processing Summary 2019: Ownerlessinc Proposes Ethereum Grants St...
+    FAILED
+  Processing Summary 2021: Questbook Season 2 Allocates $770k...
+    FAILED
+  Processing Summary 2030: GnosisDAO Blockscout Renewal Proposal...
+    FAILED
+  Batch complete. Total: 100 processed, 140 failed
+
+Processing batch 25 (10 entries)...
+  Processing Summary 2039: Rocket Pool RPIP-37 Funding Renewal Vote...
+    FAILED
+  Processing Summary 2046: Aavegotchi Grid Gladiator Proposal Seeks...
+    FAILED
+  Processing Summary 2047: GMX Votes on $119K Torque Proposal...
+    FAILED
+  Processing Summary 2048: Aavegotchi Sandbox Expansion Vote...
+    FAILED
+  Processing Summary 2056: Arbitrum zkFetch Proposal Debate...
+    FAILED
+  Processing Summary 2080: CoW DAO Solver Bounties Succeed...
+    FAILED
+  Processing Summary 2090: Aestus Seeks $50K Lido Grant...
+    FAILED
+  Processing Summary 2091: ArbitrumDAO Proposal Seeks $95K Restitut...
+    FAILED
+  Processing Summary 2108: TogetherCrew Proposal Seeks Approval...
+    FAILED
+  Processing Summary 2111: EP0.4 Awards Term 5 ENS Grants...
+    FAILED
+  Batch complete. Total: 100 processed, 150 failed
+
+Processing batch 26 (9 entries)...
+  Processing Summary 2136: Mimir Seeks $10K USDC Grant...
+    FAILED
+  Processing Summary 2147: Spectra Grant Bi-Weekly Update...
+    FAILED
+  Processing Summary 2150: ZER8 on Web3 Grant Frameworks...
+    FAILED
+  Processing Summary 2163: Gnosis DAO Omen 2.0 Proposal...
+    FAILED
+  Processing Summary 2192: Balancer BIP-694 Funding Approved...
+    FAILED
+  Processing Summary 2194: Balancer Unanimously Approves BDSP Fundi...
+    FAILED
+  Processing Summary 2196: Balancer Unanimously Approves $333K Prop...
+    FAILED
+  Processing Summary 2202: Balancer BIP-697 Funding Proposal Approv...
+    FAILED
+  Processing Summary 2210: Aavegotchi Proposal Seeks $190k...
+    FAILED
+  Batch complete. Total: 100 processed, 159 failed
+
+============================================================
+RE-PROCESSING COMPLETE
+  Total processed: 100
+  Total failed: 159
+============================================================

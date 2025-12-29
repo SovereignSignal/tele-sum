@@ -133,6 +133,75 @@ python3 reconstruct_urls.py test <summary_id>
 
 ---
 
+## URL Recovery Scripts
+
+### import_recovered_urls.py
+**Purpose**: Import manually recovered source URLs from CSV files and update the database.
+
+```bash
+# Show current stats
+python3 import_recovered_urls.py stats
+
+# Dry run (show what would be updated)
+python3 import_recovered_urls.py --dry-run source_urls.csv
+
+# Import URLs from CSV
+python3 import_recovered_urls.py source_urls.csv
+```
+
+**CSV Format** (supports two formats):
+
+```csv
+# Format 1: With summary_id
+summary_id,original_source_url,source_type,protocol
+123,https://forum.example.com/t/topic,forum,Arbitrum
+
+# Format 2: With title lookup
+our_title,source_url,source_type,protocol
+"Arbitrum Grants Proposal",https://forum.example.com/t/topic,forum,Arbitrum
+```
+
+**What it does**:
+
+1. Reads entries from CSV with valid source URLs
+2. Looks up summary_id by title if not provided
+3. Updates `summaries.entities.source.url` with the recovered URL
+4. Updates `review_queue.status` to 'corrected'
+5. Updates `summaries.data_quality` to 'complete'
+
+---
+
+### reprocess_with_urls.py
+**Purpose**: Re-process entries through Grok AI using the actual source URLs (not cached summaries).
+
+```bash
+# Dry run (show what would be reprocessed)
+python3 reprocess_with_urls.py --dry-run
+
+# Reprocess all recently corrected entries
+python3 reprocess_with_urls.py
+
+# Reprocess specific batch size
+python3 reprocess_with_urls.py --batch-size 50
+
+# Limit number of entries
+python3 reprocess_with_urls.py --limit 100
+```
+
+**Use when**:
+
+- After importing recovered URLs to ensure summaries are based on actual source content
+- When you want to refresh summaries using source URLs instead of cached content
+
+**Features**:
+
+- Scrapes actual source URLs (forum pages, Snapshot proposals)
+- Sends content to Grok AI for fresh analysis
+- Respects rate limits (1.5s delay between requests)
+- Queues for retry on rate limit hits
+
+---
+
 ## Review Queue Scripts
 
 ### populate_review_queue.py

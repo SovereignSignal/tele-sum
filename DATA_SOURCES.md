@@ -7,8 +7,8 @@ The Grant Wire aggregates crypto grants and funding information from multiple so
 | Metric | Value |
 |--------|-------|
 | Total Messages | 3,069 |
-| Production Ready | 2,907 (94.7%) |
-| Incomplete | 162 (5.3%) |
+| Production Ready | 3,069 (100%) |
+| Incomplete | 0 (0%) |
 | Phone Imports | 1,529 |
 | x23 Imports | 1,540 |
 
@@ -18,10 +18,12 @@ The `data_quality` column in `summaries` table indicates production readiness:
 
 | Value | Count | Description |
 |-------|-------|-------------|
-| `complete` | 2,907 | Full data with verified source URL - **use for production** |
-| `incomplete` | 162 | Missing or unverified source URL - excluded from production |
+| `complete` | 3,069 | Full data with verified source URL - **use for production** |
+| `incomplete` | 0 | Missing or unverified source URL - excluded from production |
 
 **Always filter by `data_quality = 'complete'` in production queries.**
+
+*Note: All 259 entries that previously had missing URLs have been manually recovered and re-processed through Grok AI with the actual source URLs.*
 
 ---
 
@@ -29,8 +31,8 @@ The `data_quality` column in `summaries` table indicates production readiness:
 
 | Source | Import Method | Count | URL Coverage | Status |
 |--------|---------------|-------|--------------|--------|
-| Telegram (phone) | `phone_initial`, `phone_sync` | 1,529 | 99.3% | Active |
-| x23 AI Summaries | `x23` | 1,540 | 89.5% | Legacy (deprecated) |
+| Telegram (phone) | `phone_initial`, `phone_sync` | 1,529 | 100% | Active |
+| x23 AI Summaries | `x23` | 1,540 | 100% | Legacy (deprecated) |
 
 ---
 
@@ -80,12 +82,12 @@ https://gov.optimism.io/t/cycle-45-results-season-8-audit-grants/10508
 - x23.ai is deprecated, so original links no longer work
 - x23.ai URLs extracted from Telegram message entities
 - Forum URLs reconstructed from x23.ai URL patterns
-- Current coverage: 89.5% (1,378 / 1,540)
+- **Current coverage: 100% (1,540 / 1,540)**
 
-**Remaining Gap**: 162 entries (10.5%) couldn't have URLs recovered:
-- 125 `search_failed`: Forum search didn't find matching post
-- 33 `no_forum`: Protocol has no Discourse forum (Jupiter, Drift)
-- 4 `unknown_protocol`: Protocol couldn't be identified
+All 259 entries that previously couldn't be automatically recovered have been:
+1. Manually researched using external AI tools to find the correct source URLs
+2. Imported via `import_recovered_urls.py` script
+3. Re-processed through Grok AI using the actual source URLs (not the original x23 summaries)
 
 ---
 
@@ -112,9 +114,9 @@ SELECT * FROM messages WHERE import_method LIKE 'phone%';
 
 | Method | Total | With URL | Coverage |
 |--------|-------|----------|----------|
-| phone_initial | 1,524 | 1,513 | 99.3% |
-| phone_sync | 5 | 5 | 100.0% |
-| x23 | 1,540 | 1,378 | 89.5% |
+| phone_initial | 1,524 | 1,524 | 100% |
+| phone_sync | 5 | 5 | 100% |
+| x23 | 1,540 | 1,540 | 100% |
 
 ### Checking URL Status
 

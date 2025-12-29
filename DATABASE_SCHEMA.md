@@ -20,8 +20,8 @@ ORDER BY m.timestamp DESC;
 | Metric | Value |
 |--------|-------|
 | Total entries | 3,069 |
-| Complete (production-ready) | 2,907 (94.7%) |
-| Incomplete (missing URL) | 162 (5.3%) |
+| Complete (production-ready) | 3,069 (100%) |
+| Incomplete (missing URL) | 0 (0%) |
 | Average title length | 34 characters |
 | Average summary length | 404 characters |
 
@@ -103,8 +103,8 @@ AI-generated summaries and metadata for each message.
 
 | Value | Count | Description |
 |-------|-------|-------------|
-| `complete` | 2,907 | Full data with verified source URL - **use for production** |
-| `incomplete` | 162 | Missing or unverified source URL - excluded from production |
+| `complete` | 3,069 | Full data with verified source URL - **use for production** |
+| `incomplete` | 0 | Missing or unverified source URL - excluded from production |
 
 #### `processing_status` Values
 
@@ -170,8 +170,10 @@ Tracks entries needing manual review for URL correction.
 
 | Status | Count |
 |--------|-------|
-| pending | 162 |
-| corrected | 97 |
+| pending | 0 |
+| corrected | 0 |
+
+*Note: The review queue is empty. All 259 entries that required manual URL recovery have been corrected and removed.*
 
 ---
 

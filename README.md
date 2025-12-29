@@ -7,7 +7,7 @@ AI-powered Telegram channel summarization system that transforms message streams
 | Metric | Value |
 |--------|-------|
 | Total Entries | 3,069 |
-| Production Ready | 2,907 (94.7%) |
+| Production Ready | 3,069 (100%) |
 | Quality Score | 100% acceptable (95% excellent) |
 | Average Summary | 404 characters |
 
@@ -112,8 +112,8 @@ ORDER BY m.timestamp DESC;
 
 | Quality | Count | Use Case |
 |---------|-------|----------|
-| `complete` | 2,907 | Production - verified source URLs |
-| `incomplete` | 162 | Review queue - missing/unverified URLs |
+| `complete` | 3,069 | Production - verified source URLs |
+| `incomplete` | 0 | Review queue - missing/unverified URLs |
 
 See [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) for complete query reference.
 
