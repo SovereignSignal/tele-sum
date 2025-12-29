@@ -175,6 +175,13 @@ Set these in your `.env` file or environment:
 
 ### Tuning Recommendations
 
+**Near real-time (recommended for active monitoring):**
+```
+SYNC_INTERVAL_HOURS=1
+MAX_GROK_REQUESTS_PER_HOUR=100
+PROCESSING_BATCH_SIZE=20
+```
+
 **High-volume channels (>100 messages/day):**
 ```
 SYNC_INTERVAL_HOURS=2
@@ -184,7 +191,7 @@ PROCESSING_BATCH_SIZE=20
 
 **Low-volume channels (<20 messages/day):**
 ```
-SYNC_INTERVAL_HOURS=12
+SYNC_INTERVAL_HOURS=6
 MAX_GROK_REQUESTS_PER_HOUR=50
 PROCESSING_BATCH_SIZE=5
 ```
