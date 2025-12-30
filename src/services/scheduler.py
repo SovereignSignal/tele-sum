@@ -67,15 +67,83 @@ async def sync_and_process():
         # Handle bot-based monitoring if configured
         if has_bots:
             try:
-                # Get active bots
-                active_bots = db.query(TelegramBot).filter(
-                    TelegramBot.is_active == True
-                ).all()
-                
-                for bot in active_bots:
-                    logger.info(f"Processing bot {bot.id} (@{bot.bot_username})")
-                    # Bot polling is handled separately by the bot manager
-                    # This is just for processing pending messages
+                import httpx
+                from src.utils.url_extractor import extract_urls
+                from datetime import datetime
+
+                bot_tokens = settings.get_bot_tokens()
+                for bot_token in bot_tokens:
+                    async with httpx.AsyncClient(timeout=30.0) as client:
+                        # Get updates from Telegram Bot API
+                        response = await client.get(
+                            f'https://api.telegram.org/bot{bot_token}/getUpdates',
+                            params={'limit': 100}
+                        )
+                        updates = response.json()
+
+                        if not updates.get('ok'):
+                            logger.error(f"Bot API error: {updates}")
+                            continue
+
+                        imported = 0
+                        last_update_id = None
+
+                        for update in updates['result']:
+                            last_update_id = update['update_id']
+
+                            if 'channel_post' not in update:
+                                continue
+
+                            post = update['channel_post']
+                            telegram_id = post['message_id']
+                            chat_id = str(post['chat']['id'])
+                            text_content = post.get('text', '')
+                            timestamp = post['date']
+
+                            # Check if already exists
+                            existing = db.query(Message).filter(
+                                Message.telegram_id == telegram_id,
+                                Message.channel_id == chat_id
+                            ).first()
+
+                            if existing:
+                                continue
+
+                            # Extract URLs and create message
+                            urls = extract_urls(text_content) if text_content else []
+
+                            new_msg = Message(
+                                telegram_id=telegram_id,
+                                channel_id=chat_id,
+                                import_method='bot',
+                                timestamp=datetime.utcfromtimestamp(timestamp),
+                                raw_content=text_content,
+                                extracted_urls=urls
+                            )
+                            db.add(new_msg)
+                            db.flush()
+
+                            # Create summary with PENDING status
+                            summary = Summary(
+                                message_id=new_msg.id,
+                                processing_status=ProcessingStatus.PENDING
+                            )
+                            db.add(summary)
+                            imported += 1
+                            logger.info(f"Bot imported TG#{telegram_id}")
+
+                        db.commit()
+
+                        # Acknowledge updates
+                        if last_update_id:
+                            await client.get(
+                                f'https://api.telegram.org/bot{bot_token}/getUpdates',
+                                params={'offset': last_update_id + 1}
+                            )
+
+                        if imported > 0:
+                            logger.info(f"Bot sync completed: {imported} new messages")
+
             except Exception as e:
                 logger.error(f"Error in bot sync: {e}")
         
