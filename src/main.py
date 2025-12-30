@@ -19,7 +19,7 @@ import logging
 import os
 import secrets
 
-from src.api import messages, categories, imports, exports, config, hybrid
+from src.api import messages, categories, imports, exports, config, hybrid, entries
 from src.models.database import get_engine, Base
 from src.services.scheduler import start_scheduler, shutdown_scheduler, get_scheduler_status
 from src.config import settings
@@ -298,9 +298,18 @@ app.include_router(
     dependencies=[Depends(auth_required)]
 )
 app.include_router(
-    hybrid.router, 
-    prefix="/api/hybrid", 
+    hybrid.router,
+    prefix="/api/hybrid",
     tags=["hybrid"],
+    dependencies=[Depends(auth_required)]
+)
+
+# Public API for entries (read-only, production data)
+# Protected by API key but provides clean public interface
+app.include_router(
+    entries.router,
+    prefix="/api/entries",
+    tags=["entries"],
     dependencies=[Depends(auth_required)]
 )
 
