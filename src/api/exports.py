@@ -1,7 +1,13 @@
-from fastapi import APIRouter, Depends, Query
-from fastapi.responses import StreamingResponse, JSONResponse
+"""
+Export API for Grant Wire data.
+
+Provides CSV, JSON, and RSS/Atom feeds for exporting entries.
+"""
+
+from fastapi import APIRouter, Depends, Query, Request
+from fastapi.responses import StreamingResponse, JSONResponse, Response
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, or_, desc
 from typing import Optional
 from datetime import datetime
 import csv
@@ -12,6 +18,17 @@ from src.models.database import get_db
 from src.models.models import Message, Summary, Category, ProcessingStatus, ConfidenceLevel
 
 router = APIRouter()
+
+
+def get_source_url(msg: Message) -> str:
+    """Extract the source URL from message entities or extracted_urls"""
+    if msg.summary and msg.summary.entities:
+        source = msg.summary.entities.get('source', {})
+        if isinstance(source, dict) and source.get('url'):
+            return source['url']
+    if msg.extracted_urls:
+        return msg.extracted_urls[0]
+    return ""
 
 def build_query(
     db: Session,
@@ -269,3 +286,303 @@ async def export_stats(
             "failed": failed
         }
     }
+
+
+# =============================================================================
+# RSS/Atom Feeds
+# =============================================================================
+
+@router.get("/rss")
+async def export_rss(
+    request: Request,
+    category: Optional[str] = Query(default=None, description="Filter by category name"),
+    limit: int = Query(default=50, ge=1, le=200, description="Number of entries"),
+    db: Session = Depends(get_db)
+):
+    """
+    RSS 2.0 feed of recent Grant Wire entries.
+
+    Subscribe to this feed in your RSS reader to get updates on new grants.
+    """
+    # Get base URL for links
+    base_url = str(request.base_url).rstrip('/')
+
+    # Query production-ready entries
+    query = db.query(Message).join(Summary).options(
+        joinedload(Message.summary).joinedload(Summary.category)
+    ).filter(
+        Summary.processing_status == ProcessingStatus.SUCCESS,
+        Summary.data_quality == 'complete'
+    )
+
+    if category:
+        query = query.join(Category).filter(Category.name.ilike(category))
+
+    messages = query.order_by(desc(Message.timestamp)).limit(limit).all()
+
+    # Build RSS XML
+    rss_items = []
+    for msg in messages:
+        title = msg.summary.title if msg.summary and msg.summary.title else "Untitled"
+        description = msg.summary.summary if msg.summary and msg.summary.summary else msg.raw_content or ""
+        source_url = get_source_url(msg)
+        pub_date = msg.timestamp.strftime("%a, %d %b %Y %H:%M:%S +0000") if msg.timestamp else ""
+        category_name = msg.summary.category.name if msg.summary and msg.summary.category else ""
+
+        item = f"""    <item>
+      <title><![CDATA[{title}]]></title>
+      <description><![CDATA[{description}]]></description>
+      <link>{source_url}</link>
+      <guid isPermaLink="false">grantwire-{msg.id}</guid>
+      <pubDate>{pub_date}</pubDate>
+      <category>{category_name}</category>
+    </item>"""
+        rss_items.append(item)
+
+    rss_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Grant Wire - Crypto Grants Feed</title>
+    <link>{base_url}</link>
+    <description>Latest crypto grants, funding opportunities, and governance proposals from The Grant Wire</description>
+    <language>en-us</language>
+    <lastBuildDate>{datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000")}</lastBuildDate>
+    <atom:link href="{base_url}/api/export/rss" rel="self" type="application/rss+xml"/>
+{chr(10).join(rss_items)}
+  </channel>
+</rss>"""
+
+    return Response(
+        content=rss_content,
+        media_type="application/rss+xml",
+        headers={"Content-Type": "application/rss+xml; charset=utf-8"}
+    )
+
+
+@router.get("/atom")
+async def export_atom(
+    request: Request,
+    category: Optional[str] = Query(default=None, description="Filter by category name"),
+    limit: int = Query(default=50, ge=1, le=200, description="Number of entries"),
+    db: Session = Depends(get_db)
+):
+    """
+    Atom 1.0 feed of recent Grant Wire entries.
+
+    Subscribe to this feed in your RSS reader to get updates on new grants.
+    """
+    base_url = str(request.base_url).rstrip('/')
+
+    query = db.query(Message).join(Summary).options(
+        joinedload(Message.summary).joinedload(Summary.category)
+    ).filter(
+        Summary.processing_status == ProcessingStatus.SUCCESS,
+        Summary.data_quality == 'complete'
+    )
+
+    if category:
+        query = query.join(Category).filter(Category.name.ilike(category))
+
+    messages = query.order_by(desc(Message.timestamp)).limit(limit).all()
+
+    # Build Atom XML
+    atom_entries = []
+    for msg in messages:
+        title = msg.summary.title if msg.summary and msg.summary.title else "Untitled"
+        summary = msg.summary.summary if msg.summary and msg.summary.summary else msg.raw_content or ""
+        source_url = get_source_url(msg)
+        updated = msg.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ") if msg.timestamp else ""
+        category_name = msg.summary.category.name if msg.summary and msg.summary.category else ""
+
+        entry = f"""  <entry>
+    <title><![CDATA[{title}]]></title>
+    <summary><![CDATA[{summary}]]></summary>
+    <link href="{source_url}"/>
+    <id>urn:grantwire:{msg.id}</id>
+    <updated>{updated}</updated>
+    <category term="{category_name}"/>
+  </entry>"""
+        atom_entries.append(entry)
+
+    atom_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Grant Wire - Crypto Grants Feed</title>
+  <link href="{base_url}"/>
+  <link href="{base_url}/api/export/atom" rel="self"/>
+  <id>urn:grantwire:feed</id>
+  <updated>{datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")}</updated>
+  <subtitle>Latest crypto grants, funding opportunities, and governance proposals from The Grant Wire</subtitle>
+{chr(10).join(atom_entries)}
+</feed>"""
+
+    return Response(
+        content=atom_content,
+        media_type="application/atom+xml",
+        headers={"Content-Type": "application/atom+xml; charset=utf-8"}
+    )
+
+
+# =============================================================================
+# Production-Ready Exports
+# =============================================================================
+
+@router.get("/production/csv")
+async def export_production_csv(
+    category: Optional[str] = Query(default=None, description="Filter by category name"),
+    protocol: Optional[str] = Query(default=None, description="Filter by protocol name"),
+    date_from: Optional[datetime] = Query(default=None, description="Filter from date"),
+    date_to: Optional[datetime] = Query(default=None, description="Filter to date"),
+    db: Session = Depends(get_db)
+):
+    """
+    Export production-ready entries as CSV.
+
+    Only includes entries with data_quality='complete'.
+    Includes title and source_url fields.
+    """
+    query = db.query(Message).join(Summary).options(
+        joinedload(Message.summary).joinedload(Summary.category)
+    ).filter(
+        Summary.processing_status == ProcessingStatus.SUCCESS,
+        Summary.data_quality == 'complete'
+    )
+
+    if category:
+        query = query.join(Category).filter(Category.name.ilike(category))
+
+    if protocol:
+        query = query.filter(
+            Summary.entities['protocols'].astext.ilike(f'%{protocol}%')
+        )
+
+    if date_from:
+        query = query.filter(Message.timestamp >= date_from)
+    if date_to:
+        query = query.filter(Message.timestamp <= date_to)
+
+    messages = query.order_by(desc(Message.timestamp)).all()
+
+    output = io.StringIO()
+    writer = csv.DictWriter(
+        output,
+        fieldnames=[
+            "id", "title", "summary", "category", "source_url", "source_name",
+            "source_type", "protocols", "amounts", "published_at"
+        ]
+    )
+    writer.writeheader()
+
+    for msg in messages:
+        source = {}
+        protocols = []
+        amounts = []
+
+        if msg.summary and msg.summary.entities:
+            source = msg.summary.entities.get('source', {}) or {}
+            protocols = msg.summary.entities.get('protocols', []) or []
+            amounts = msg.summary.entities.get('amounts', []) or []
+
+        row = {
+            "id": msg.id,
+            "title": msg.summary.title if msg.summary else "",
+            "summary": msg.summary.summary if msg.summary else "",
+            "category": msg.summary.category.name if msg.summary and msg.summary.category else "",
+            "source_url": source.get('url', '') if isinstance(source, dict) else get_source_url(msg),
+            "source_name": source.get('name', '') if isinstance(source, dict) else "",
+            "source_type": source.get('type', '') if isinstance(source, dict) else "",
+            "protocols": "; ".join(protocols) if isinstance(protocols, list) else "",
+            "amounts": "; ".join(amounts) if isinstance(amounts, list) else "",
+            "published_at": msg.timestamp.isoformat() if msg.timestamp else ""
+        }
+        writer.writerow(row)
+
+    output.seek(0)
+
+    return StreamingResponse(
+        io.BytesIO(output.getvalue().encode('utf-8')),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename=grantwire_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        }
+    )
+
+
+@router.get("/production/json")
+async def export_production_json(
+    category: Optional[str] = Query(default=None, description="Filter by category name"),
+    protocol: Optional[str] = Query(default=None, description="Filter by protocol name"),
+    date_from: Optional[datetime] = Query(default=None, description="Filter from date"),
+    date_to: Optional[datetime] = Query(default=None, description="Filter to date"),
+    db: Session = Depends(get_db)
+):
+    """
+    Export production-ready entries as JSON.
+
+    Only includes entries with data_quality='complete'.
+    Clean format matching the entries API.
+    """
+    query = db.query(Message).join(Summary).options(
+        joinedload(Message.summary).joinedload(Summary.category)
+    ).filter(
+        Summary.processing_status == ProcessingStatus.SUCCESS,
+        Summary.data_quality == 'complete'
+    )
+
+    if category:
+        query = query.join(Category).filter(Category.name.ilike(category))
+
+    if protocol:
+        query = query.filter(
+            Summary.entities['protocols'].astext.ilike(f'%{protocol}%')
+        )
+
+    if date_from:
+        query = query.filter(Message.timestamp >= date_from)
+    if date_to:
+        query = query.filter(Message.timestamp <= date_to)
+
+    messages = query.order_by(desc(Message.timestamp)).all()
+
+    entries = []
+    for msg in messages:
+        source = {}
+        protocols = []
+        amounts = []
+
+        if msg.summary and msg.summary.entities:
+            source = msg.summary.entities.get('source', {}) or {}
+            protocols = msg.summary.entities.get('protocols', []) or []
+            amounts = msg.summary.entities.get('amounts', []) or []
+
+        entry = {
+            "id": msg.id,
+            "title": msg.summary.title if msg.summary else None,
+            "summary": msg.summary.summary if msg.summary else None,
+            "category": msg.summary.category.name if msg.summary and msg.summary.category else None,
+            "source": {
+                "url": source.get('url') if isinstance(source, dict) else get_source_url(msg),
+                "name": source.get('name') if isinstance(source, dict) else None,
+                "type": source.get('type') if isinstance(source, dict) else None
+            },
+            "protocols": protocols if isinstance(protocols, list) else [],
+            "amounts": amounts if isinstance(amounts, list) else [],
+            "published_at": msg.timestamp.isoformat() if msg.timestamp else None
+        }
+        entries.append(entry)
+
+    return JSONResponse(
+        content={
+            "export_date": datetime.utcnow().isoformat(),
+            "total_entries": len(entries),
+            "filters": {
+                "category": category,
+                "protocol": protocol,
+                "date_from": date_from.isoformat() if date_from else None,
+                "date_to": date_to.isoformat() if date_to else None
+            },
+            "entries": entries
+        },
+        headers={
+            "Content-Disposition": f"attachment; filename=grantwire_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        }
+    )
