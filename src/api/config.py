@@ -5,13 +5,16 @@ import os
 
 from src.config import settings
 from src.models.database import check_database_health
+from src.services.scheduler import get_scheduler_status
 
 router = APIRouter()
 
 class ConfigStatus(BaseModel):
     database: Dict[str, Any]
     telegram: Dict[str, Any]
+    bot: Dict[str, Any]
     grok: Dict[str, Any]
+    scheduler: Dict[str, Any]
     app: Dict[str, Any]
     environment_hints: Dict[str, str]
 
@@ -27,10 +30,14 @@ async def get_config_status():
         "TELEGRAM_API_HASH": bool(os.getenv("TELEGRAM_API_HASH")),
         "TELEGRAM_PHONE": bool(os.getenv("TELEGRAM_PHONE")),
         "TELEGRAM_CHANNEL_USERNAME": bool(os.getenv("TELEGRAM_CHANNEL_USERNAME")),
+        "TELEGRAM_BOT_TOKENS": bool(os.getenv("TELEGRAM_BOT_TOKENS")),
         "GROK_API_KEY": bool(os.getenv("GROK_API_KEY")),
         "SECRET_KEY": bool(os.getenv("SECRET_KEY")),
         "PORT": bool(os.getenv("PORT"))
     }
+
+    # Get scheduler status
+    scheduler_status = get_scheduler_status()
     
     status = {
         "database": {
@@ -46,14 +53,28 @@ async def get_config_status():
             "api_hash_set": env_vars["TELEGRAM_API_HASH"],
             "phone_set": env_vars["TELEGRAM_PHONE"],
             "channel_set": env_vars["TELEGRAM_CHANNEL_USERNAME"],
-            "message": "Telegram configured and ready" if settings.is_telegram_configured()
-                      else "Telegram not configured. Import features disabled"
+            "message": "Telegram phone configured" if settings.is_telegram_configured()
+                      else "Phone import disabled (bot mode only)"
+        },
+        "bot": {
+            "configured": settings.is_bot_configured(),
+            "tokens_set": env_vars["TELEGRAM_BOT_TOKENS"],
+            "bot_count": len(settings.get_bot_tokens()),
+            "message": f"Bot configured with {len(settings.get_bot_tokens())} token(s)" if settings.is_bot_configured()
+                      else "Bot not configured. Set TELEGRAM_BOT_TOKENS"
         },
         "grok": {
             "configured": settings.is_grok_configured(),
             "api_key_set": env_vars["GROK_API_KEY"],
             "message": "Grok AI configured and ready" if settings.is_grok_configured()
                       else "Grok AI not configured. AI summary features disabled"
+        },
+        "scheduler": {
+            "running": scheduler_status["is_running"],
+            "sync_interval_hours": settings.sync_interval_hours,
+            "jobs": scheduler_status["jobs"],
+            "message": f"Scheduler running with {len(scheduler_status['jobs'])} jobs" if scheduler_status["is_running"]
+                      else "Scheduler not running"
         },
         "app": {
             "environment": settings.app_env,
