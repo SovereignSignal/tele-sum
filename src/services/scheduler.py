@@ -126,7 +126,8 @@ async def sync_and_process():
                             # Create summary with PENDING status
                             summary = Summary(
                                 message_id=new_msg.id,
-                                processing_status=ProcessingStatus.PENDING
+                                processing_status=ProcessingStatus.PENDING,
+                                processing_attempts=0
                             )
                             db.add(summary)
                             imported += 1
