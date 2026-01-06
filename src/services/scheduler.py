@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from src.config import settings
 from src.models.database import SessionLocal, get_engine
-from src.models.models import ChannelConfig, TelegramBot, ImportMode, Summary, ProcessingStatus
+from src.models.models import ChannelConfig, TelegramBot, ImportMode, Summary, ProcessingStatus, Message
 from src.services.telegram import TelegramService
 from src.services.processor import MessageProcessor
 
