@@ -295,10 +295,16 @@ class BotManager:
             ).first()
             
             if existing:
+                # Bot already registered - return success with existing bot_id
+                # so setup_bot_monitoring can proceed to configure the channel
+                if existing.id not in self.bots:
+                    self.bots[existing.id] = TelegramBotService(bot_token, existing.id)
                 return {
-                    "success": False,
-                    "error": "Bot already registered",
-                    "bot_id": existing.id
+                    "success": True,
+                    "bot_id": existing.id,
+                    "username": existing.bot_username,
+                    "name": existing.bot_name,
+                    "already_registered": True
                 }
             
             # Create bot record
