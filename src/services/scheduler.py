@@ -209,7 +209,8 @@ async def retry_failed_messages():
     """
     logger.info("Checking for failed messages to retry...")
     
-    db = SessionLocal()
+    database.get_engine()
+    db = database.SessionLocal()
     try:
         processor = MessageProcessor()
         count = await processor.retry_failed_messages(

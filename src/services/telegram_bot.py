@@ -8,7 +8,7 @@ from telegram.error import TelegramError
 from sqlalchemy.orm import Session
 
 from src.config import settings
-from src.models.database import SessionLocal
+from src.models import database
 from src.models.models import Message, Summary, SyncStatus, ProcessingStatus, TelegramBot, ChannelConfig, ImportMode
 from src.utils.url_extractor import extract_urls
 
@@ -103,7 +103,8 @@ class TelegramBotService:
             return
         
         # Create a fresh database session for each message to avoid stale connections
-        db = SessionLocal()
+        database.get_engine()
+        db = database.SessionLocal()
         try:
             await self._process_message(update, db)
         except Exception as e:
@@ -275,7 +276,8 @@ class BotManager:
     
     async def register_bot(self, bot_token: str) -> Dict[str, Any]:
         """Register a new bot in the system"""
-        db = SessionLocal()
+        database.get_engine()
+        db = database.SessionLocal()
         try:
             # Validate token
             temp_service = TelegramBotService(bot_token)
@@ -333,7 +335,8 @@ class BotManager:
     
     async def start_bot(self, bot_id: int) -> bool:
         """Start a bot's polling"""
-        db = SessionLocal()
+        database.get_engine()
+        db = database.SessionLocal()
         try:
             if bot_id in self.active_bots:
                 logger.warning(f"Bot {bot_id} is already active")
@@ -388,7 +391,8 @@ class BotManager:
     
     async def start_all_active_bots(self):
         """Start all active bots from database"""
-        db = SessionLocal()
+        database.get_engine()
+        db = database.SessionLocal()
         try:
             active_bots = db.query(TelegramBot).filter(
                 TelegramBot.is_active == True
