@@ -7,7 +7,7 @@ from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy.orm import Session
 
 from src.config import settings
-from src.models.database import SessionLocal, get_engine
+from src.models import database
 from src.models.models import ChannelConfig, TelegramBot, ImportMode, Summary, ProcessingStatus, Message
 from src.services.telegram import TelegramService
 from src.services.processor import MessageProcessor
@@ -42,7 +42,8 @@ async def sync_and_process():
     """
     logger.info("Starting scheduled sync and process task")
     
-    db = SessionLocal()
+    database.get_engine()
+    db = database.SessionLocal()
     try:
         # Check what sync methods are available
         has_phone = settings.is_telegram_configured()
@@ -235,10 +236,11 @@ async def cleanup_stale_processing():
     """
     logger.info("Cleaning up stale processing status...")
 
-    db = SessionLocal()
+    database.get_engine()
+    db = database.SessionLocal()
     try:
         # 10-minute timeout: if a message is still PROCESSING after this, something went wrong
-        cutoff = datetime.utcnow() - timedelta(minutes=10)
+        cutoff = datetime.utcnow() - timedelta(minutes=30)
         
         stale_summaries = db.query(Summary).filter(
             Summary.processing_status == ProcessingStatus.PROCESSING,
@@ -264,7 +266,8 @@ async def log_daily_stats():
     """Log daily processing statistics"""
     logger.info("Generating daily statistics...")
     
-    db = SessionLocal()
+    database.get_engine()
+    db = database.SessionLocal()
     try:
         processor = MessageProcessor()
         stats = await processor.get_processing_stats(db)
@@ -294,6 +297,10 @@ def start_scheduler():
     - cleanup_stale: Reset stuck PROCESSING status (every 1 hour)
     - daily_stats: Log statistics (midnight)
     """
+    # Ensure the DB engine/session factory is initialized before any jobs run.
+    # This is critical in environments where importing SessionLocal too early would freeze it as None.
+    database.get_engine()
+
     # JOB 1: Main sync - fetch new messages from Telegram and process them
     scheduler.add_job(
         sync_and_process,
@@ -351,7 +358,8 @@ async def process_pending_only():
     This keeps the processing queue moving between the main sync_and_process
     jobs. Processes only 10 messages per run to avoid long-running jobs.
     """
-    db = SessionLocal()
+    database.get_engine()
+    db = database.SessionLocal()
     try:
         processor = MessageProcessor()
         processed = await processor.process_batch(db, limit=10, include_retries=True)
