@@ -46,7 +46,7 @@ async def register_bot(
     db: Session = Depends(get_db)
 ):
     """Register a new bot in the system"""
-    result = await hybrid_manager.bot_manager.register_bot(db, request.bot_token)
+    result = await hybrid_manager.bot_manager.register_bot(request.bot_token)
     
     if not result["success"]:
         raise HTTPException(status_code=400, detail=result.get("error", "Failed to register bot"))
@@ -271,7 +271,7 @@ async def start_bot(
 ):
     """Start a bot's polling"""
     
-    success = await hybrid_manager.bot_manager.start_bot(db, bot_id)
+    success = await hybrid_manager.bot_manager.start_bot(bot_id)
     
     if not success:
         raise HTTPException(status_code=400, detail="Failed to start bot")

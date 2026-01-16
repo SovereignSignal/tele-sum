@@ -24,7 +24,7 @@ Key Enums:
 See DATABASE_SCHEMA.md for complete documentation and query examples.
 """
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON, Boolean, Float, Enum as SQLEnum, Index
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON, Boolean, Float, Enum as SQLEnum, Index, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from datetime import datetime
@@ -75,7 +75,7 @@ class Message(Base):
     __tablename__ = "messages"
     
     id = Column(Integer, primary_key=True, index=True)
-    telegram_id = Column(Integer, unique=True, index=True)
+    telegram_id = Column(Integer, index=True)
     channel_id = Column(String(255), index=True)
     bot_id = Column(Integer, ForeignKey("telegram_bots.id"), nullable=True, index=True)  # Track which bot imported
     import_method = Column(String(20), default="phone")  # "phone", "bot", or "file"
@@ -90,6 +90,7 @@ class Message(Base):
     
     # Composite indexes for common query patterns
     __table_args__ = (
+        UniqueConstraint('channel_id', 'telegram_id', name='uq_messages_channel_telegram_id'),
         Index('ix_messages_channel_timestamp', 'channel_id', 'timestamp'),
         Index('ix_messages_bot_timestamp', 'bot_id', 'timestamp'),
     )

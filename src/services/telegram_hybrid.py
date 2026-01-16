@@ -147,7 +147,7 @@ class HybridTelegramManager:
         """Setup bot for ongoing monitoring of a channel"""
         try:
             # Register bot if needed
-            bot_result = await self.bot_manager.register_bot(db, bot_token)
+            bot_result = await self.bot_manager.register_bot(bot_token)
             
             if not bot_result["success"]:
                 return bot_result
@@ -159,34 +159,40 @@ class HybridTelegramManager:
             
             # Check channel access
             access_info = await bot_service.check_channel_access(channel_id)
-            
+
             if not access_info["has_access"]:
                 return {
                     "success": False,
                     "error": f"Bot doesn't have access to channel. Please add the bot as an admin to the channel/group.",
                     "bot_username": bot_result["username"]
                 }
+
+            resolved_channel_id = access_info.get("chat_id") or channel_id
             
             # Update channel config
             channel_config = db.query(ChannelConfig).filter(
-                ChannelConfig.channel_id == channel_id
+                ChannelConfig.channel_id.in_([resolved_channel_id, channel_id])
             ).first()
             
             if not channel_config:
                 channel_config = ChannelConfig(
-                    channel_id=channel_id,
+                    channel_id=resolved_channel_id,
                     channel_username=access_info.get("username"),
                     channel_title=access_info.get("title"),
                     import_mode=ImportMode.BOT,
                     is_active=True
                 )
                 db.add(channel_config)
+
+            # If an existing config was created with an @username or other alias, normalize to numeric chat_id
+            if channel_config.channel_id != resolved_channel_id:
+                channel_config.channel_id = resolved_channel_id
             
             channel_config.bot_id = bot_id
             
             # Update sync status for bot transition
             sync_status = db.query(SyncStatus).filter(
-                SyncStatus.channel_id == channel_id
+                SyncStatus.channel_id == resolved_channel_id
             ).first()
             
             if sync_status:
@@ -196,7 +202,7 @@ class HybridTelegramManager:
             db.commit()
             
             # Start bot polling
-            await self.bot_manager.start_bot(db, bot_id)
+            await self.bot_manager.start_bot(bot_id)
             
             return {
                 "success": True,

@@ -73,11 +73,27 @@ async def sync_and_process():
 
                 bot_tokens = settings.get_bot_tokens()
                 for bot_token in bot_tokens:
+                    # Persist per-bot update offsets to avoid replaying old updates every run
+                    bot_record = db.query(TelegramBot).filter(
+                        TelegramBot.bot_token == bot_token
+                    ).first()
+
+                    if not bot_record:
+                        bot_record = TelegramBot(
+                            bot_token=bot_token,
+                            is_active=True
+                        )
+                        db.add(bot_record)
+                        db.commit()
+                        db.refresh(bot_record)
+
+                    offset = (bot_record.last_update_id or 0) + 1
+
                     async with httpx.AsyncClient(timeout=30.0) as client:
                         # Get updates from Telegram Bot API
                         response = await client.get(
                             f'https://api.telegram.org/bot{bot_token}/getUpdates',
-                            params={'limit': 100}
+                            params={'limit': 100, 'offset': offset}
                         )
                         updates = response.json()
 
@@ -91,14 +107,23 @@ async def sync_and_process():
                         for update in updates['result']:
                             last_update_id = update['update_id']
 
-                            if 'channel_post' not in update:
+                            post = update.get('channel_post') or update.get('message')
+                            if not post:
                                 continue
 
-                            post = update['channel_post']
                             telegram_id = post['message_id']
                             chat_id = str(post['chat']['id'])
-                            text_content = post.get('text', '')
+                            text_content = post.get('text') or post.get('caption') or ''
                             timestamp = post['date']
+
+                            # Only import from channels configured in the database
+                            channel_config = db.query(ChannelConfig).filter(
+                                ChannelConfig.channel_id == chat_id,
+                                ChannelConfig.is_active == True
+                            ).first()
+
+                            if not channel_config:
+                                continue
 
                             # Check if already exists
                             existing = db.query(Message).filter(
@@ -115,6 +140,7 @@ async def sync_and_process():
                             new_msg = Message(
                                 telegram_id=telegram_id,
                                 channel_id=chat_id,
+                                bot_id=bot_record.id,
                                 import_method='bot',
                                 timestamp=datetime.utcfromtimestamp(timestamp),
                                 raw_content=text_content,
@@ -135,12 +161,10 @@ async def sync_and_process():
 
                         db.commit()
 
-                        # Acknowledge updates
-                        if last_update_id:
-                            await client.get(
-                                f'https://api.telegram.org/bot{bot_token}/getUpdates',
-                                params={'offset': last_update_id + 1}
-                            )
+                        # Persist update offset so subsequent runs don't replay old updates
+                        if last_update_id is not None:
+                            bot_record.last_update_id = last_update_id
+                            db.commit()
 
                         if imported > 0:
                             logger.info(f"Bot sync completed: {imported} new messages")
