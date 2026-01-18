@@ -99,23 +99,26 @@ class TelegramBotService:
     
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle incoming messages from Telegram with fresh database session"""
-        if not update.message:
+        # Channel posts come as channel_post, not message
+        msg = update.channel_post or update.message
+        if not msg:
             return
-        
+
+        logger.info(f"Received {'channel_post' if update.channel_post else 'message'} TG#{msg.message_id} from {msg.chat_id}")
+
         # Create a fresh database session for each message to avoid stale connections
         database.get_engine()
         db = database.SessionLocal()
         try:
-            await self._process_message(update, db)
+            await self._process_message(msg, db)
         except Exception as e:
             logger.error(f"Failed to handle message: {e}")
             db.rollback()
         finally:
             db.close()
-    
-    async def _process_message(self, update: Update, db: Session):
+
+    async def _process_message(self, msg, db: Session):
         """Process a single message with the provided database session"""
-        msg = update.message
         channel_id = str(msg.chat_id)
         
         # Check if we're tracking this channel
