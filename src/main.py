@@ -21,7 +21,7 @@ import secrets
 
 from src.api import messages, categories, imports, exports, config, hybrid, entries
 from src.models.database import get_engine, Base
-from src.services.scheduler import start_scheduler, shutdown_scheduler, get_scheduler_status
+from src.services.scheduler import start_scheduler, shutdown_scheduler, get_scheduler_status, sync_and_process
 from src.config import settings
 
 logging.basicConfig(level=logging.INFO)
@@ -100,6 +100,54 @@ async def seed_default_categories_if_empty():
         db.close()
 
 
+async def ensure_channel_config_exists():
+    """
+    Auto-create ChannelConfig from TELEGRAM_CHANNEL_USERNAME if it doesn't exist.
+
+    This simplifies setup - users just need to set the env var and the channel
+    will be automatically configured for bot-based imports.
+    """
+    from src.models.models import ChannelConfig, ImportMode
+    from src.models import database
+
+    if not settings.telegram_channel_username:
+        logger.info("No TELEGRAM_CHANNEL_USERNAME set - skipping auto channel config")
+        return
+
+    db = database.SessionLocal()
+    try:
+        channel_username = settings.telegram_channel_username.lstrip('@')
+
+        # Check if channel config already exists (by username)
+        existing = db.query(ChannelConfig).filter(
+            ChannelConfig.channel_username == channel_username
+        ).first()
+
+        if existing:
+            logger.info(f"✅ Channel config exists for @{channel_username}")
+            return
+
+        # Create new channel config
+        # Note: channel_id will be populated when the bot first receives a message
+        # For now, we use the username as a placeholder
+        new_config = ChannelConfig(
+            channel_id=f"@{channel_username}",  # Placeholder until we get the real ID
+            channel_username=channel_username,
+            channel_title=channel_username,
+            import_mode=ImportMode.BOT if settings.is_bot_configured() else ImportMode.PHONE,
+            is_active=True
+        )
+        db.add(new_config)
+        db.commit()
+        logger.info(f"✅ Auto-created channel config for @{channel_username}")
+
+    except Exception as e:
+        logger.warning(f"Could not auto-create channel config: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifecycle"""
@@ -122,17 +170,42 @@ async def lifespan(app: FastAPI):
     # Seed default categories
     if settings.is_database_configured():
         await seed_default_categories_if_empty()
-    
+
+    # Auto-create channel config from environment if needed
+    if settings.is_database_configured():
+        await ensure_channel_config_exists()
+
     # Start background scheduler for automatic sync
     if settings.is_database_configured() and settings.has_any_telegram_config():
-        start_scheduler()
-        logger.info("✅ Background scheduler started")
-        logger.info(f"   - Telegram sync: every {settings.sync_interval_hours} hours")
-        logger.info(f"   - AI processing: every 2 minutes")
-        logger.info(f"   - Retry failed: every 15 minutes")
+        try:
+            start_scheduler()
+            logger.info("✅ Background scheduler started")
+            logger.info(f"   - Telegram sync: every {settings.sync_interval_hours} hours")
+            logger.info(f"   - AI processing: every 2 minutes")
+            logger.info(f"   - Retry failed: every 15 minutes")
+
+            # Start bot polling if bot mode is enabled
+            if settings.is_bot_configured():
+                try:
+                    from src.services.telegram_bot import start_bot_manager
+                    await start_bot_manager()
+                    logger.info("✅ Bot polling started for registered bots")
+                except Exception as e:
+                    logger.error(f"⚠️  Failed to start bot polling: {e}")
+
+            # Run initial sync on startup (don't wait for first scheduled interval)
+            if settings.run_sync_on_startup:
+                try:
+                    logger.info("🔄 Running initial sync on startup...")
+                    import asyncio
+                    asyncio.create_task(sync_and_process())
+                except Exception as e:
+                    logger.error(f"⚠️  Failed to start initial sync: {e}")
+        except Exception as e:
+            logger.error(f"❌ Failed to start scheduler: {e}")
     else:
         logger.warning("⚠️  Scheduler not started - missing Telegram config")
-    
+
     # Log status
     logger.info("-" * 60)
     logger.info(f"Telegram Phone: {'✅' if settings.is_telegram_configured() else '❌'}")
@@ -142,7 +215,16 @@ async def lifespan(app: FastAPI):
     logger.info("=" * 60)
     
     yield
-    
+
+    # Shutdown bot polling if it was started
+    if settings.is_bot_configured():
+        try:
+            from src.services.telegram_bot import stop_bot_manager
+            await stop_bot_manager()
+            logger.info("✅ Bot polling stopped")
+        except Exception as e:
+            logger.error(f"⚠️  Error stopping bot polling: {e}")
+
     shutdown_scheduler()
     logger.info("Tele-Sum stopped")
 

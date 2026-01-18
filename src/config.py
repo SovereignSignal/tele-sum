@@ -28,6 +28,7 @@ Environment Variables:
         MAX_GROK_REQUESTS_PER_HOUR: Rate limit (default: 100)
         MAX_PROCESSING_RETRIES: Retry attempts before FAILED (default: 3)
         PROCESSING_BATCH_SIZE: Messages per batch (default: 10)
+        RUN_SYNC_ON_STARTUP: Run initial sync on startup (default: true)
 
     Security:
         API_KEY: Optional API key for endpoint protection
@@ -90,6 +91,7 @@ class Settings(BaseSettings):
     # Sync settings
     sync_interval_hours: int = Field(default=6, alias='SYNC_INTERVAL_HOURS')
     max_grok_requests_per_hour: int = Field(default=100, alias='MAX_GROK_REQUESTS_PER_HOUR')
+    run_sync_on_startup: bool = Field(default=True, alias='RUN_SYNC_ON_STARTUP')
     
     # Processing settings
     max_processing_retries: int = Field(default=3, alias='MAX_PROCESSING_RETRIES')
@@ -184,6 +186,7 @@ class Settings(BaseSettings):
         logger.info(f"Telegram Bot: {'✅' if self.is_bot_configured() else '❌'}")
         logger.info(f"Grok AI: {'✅' if self.is_grok_configured() else '❌'}")
         logger.info(f"Sync Interval: {self.sync_interval_hours} hours")
+        logger.info(f"Sync on Startup: {'✅' if self.run_sync_on_startup else '❌'}")
         logger.info(f"Max Retries: {self.max_processing_retries}")
         logger.info("=" * 60)
 

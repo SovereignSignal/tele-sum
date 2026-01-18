@@ -118,10 +118,25 @@ async def sync_and_process():
                             timestamp = post['date']
 
                             # Only import from channels configured in the database
+                            # First try by chat_id, then by username (for newly configured channels)
                             channel_config = db.query(ChannelConfig).filter(
                                 ChannelConfig.channel_id == chat_id,
                                 ChannelConfig.is_active == True
                             ).first()
+
+                            # Also check by username if chat title matches
+                            chat_username = post['chat'].get('username', '')
+                            if not channel_config and chat_username:
+                                channel_config = db.query(ChannelConfig).filter(
+                                    ChannelConfig.channel_username == chat_username,
+                                    ChannelConfig.is_active == True
+                                ).first()
+                                # Update the channel_id to the real numeric ID
+                                if channel_config:
+                                    channel_config.channel_id = chat_id
+                                    channel_config.channel_title = post['chat'].get('title', chat_username)
+                                    db.commit()
+                                    logger.info(f"Updated channel_id for @{chat_username} -> {chat_id}")
 
                             if not channel_config:
                                 continue
@@ -347,8 +362,12 @@ def start_scheduler():
         replace_existing=True
     )
 
-    scheduler.start()
-    logger.info(f"✅ Scheduler started with {settings.sync_interval_hours} hour sync interval")
+    # Only start if not already running (prevents issues on container restarts)
+    if not scheduler.running:
+        scheduler.start()
+        logger.info(f"✅ Scheduler started with {settings.sync_interval_hours} hour sync interval")
+    else:
+        logger.info(f"✅ Scheduler already running with {settings.sync_interval_hours} hour sync interval")
 
 async def process_pending_only():
     """
