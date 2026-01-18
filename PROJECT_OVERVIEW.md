@@ -379,5 +379,8 @@ jobs:
 
 - [Vision & Overview](VISION.md)
 - [Railway Deployment Guide](RAILWAY_DEPLOYMENT.md)
-- [API Documentation](docs/API.md)
-- [Contributing Guidelines](CONTRIBUTING.md)
+- [Database Schema](DATABASE_SCHEMA.md)
+- [Processing Pipeline](PROCESSING.md)
+- [Hybrid Bot Setup](HYBRID_SETUP.md)
+- [Scripts Reference](SCRIPTS.md)
+- [AI Assistant Guide](CLAUDE.md)

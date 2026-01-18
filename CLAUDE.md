@@ -17,13 +17,15 @@ This document provides context for AI assistants working on the Tele-Sum codebas
 
 ## Tech Stack
 
-- **Framework**: FastAPI 0.104.1 with Uvicorn
-- **Database**: PostgreSQL with SQLAlchemy 2.0 ORM
-- **Telegram**: Telethon (phone client) + python-telegram-bot (bot polling)
+- **Runtime**: Python 3.11.5 (specified in `runtime.txt`)
+- **Framework**: FastAPI 0.104.1 with Uvicorn 0.24.0
+- **Database**: PostgreSQL with SQLAlchemy 2.0.23 ORM
+- **Telegram**: Telethon 1.33.1 (phone client) + python-telegram-bot 21.0.1 (bot polling)
 - **AI**: Grok API (x.ai) for content analysis
-- **Background Jobs**: APScheduler with AsyncIOScheduler
-- **Configuration**: Pydantic Settings with environment variables
-- **Templates**: Jinja2 for web UI
+- **Background Jobs**: APScheduler 3.10.4 with AsyncIOScheduler
+- **Configuration**: Pydantic Settings 2.1.0 with environment variables
+- **Templates**: Jinja2 3.1.2 for web UI
+- **HTTP Client**: httpx 0.27.0 for async requests
 - **Deployment**: Railway with NIXPACKS
 
 ## Quick Reference
@@ -90,16 +92,46 @@ tele-sum/
 │   ├── scrapers/                  # Content fetching
 │   │   ├── content_scraper.py     # HTML scraper (BeautifulSoup)
 │   │   └── twitter_scraper.py     # Twitter/X content
+│   ├── scripts/                   # Helper scripts
+│   │   └── initial_import.py      # Initial import helper
 │   └── utils/
 │       └── url_extractor.py       # URL parsing utilities
 ├── templates/                     # Jinja2 HTML templates
+│   ├── base.html                  # Base template layout
+│   ├── index.html                 # Main dashboard
+│   ├── login.html                 # Login page
+│   ├── import.html                # Telegram import interface
+│   ├── categories.html            # Category management
+│   ├── settings.html              # Settings page
+│   └── bots.html                  # Bot management
 ├── static/                        # CSS, JS assets
 ├── migrations/                    # Alembic migrations
+│
+├── # Root-level Scripts
 ├── process_batch.py               # Main batch processing script
-├── batch_runner.py                # Resilient batch runner
-├── sync_new.py                    # Telegram sync only
-├── backfill_*.py                  # Data maintenance scripts
-└── test_*.py                      # Test files
+├── batch_runner.py                # Resilient batch runner with auto-retry
+├── sync_new.py                    # Telegram sync only (no processing)
+├── bot_sync.py                    # Bot-specific sync operations
+│
+├── # URL Recovery Scripts
+├── backfill_source_urls.py        # Search Discourse forums for URLs
+├── extract_x23_urls.py            # Extract x23.ai URLs from entities
+├── reconstruct_urls.py            # Reconstruct forum URLs from x23 patterns
+├── import_recovered_urls.py       # Import manually recovered URLs from CSV
+├── find_real_urls.py              # URL discovery helper
+│
+├── # Reprocessing Scripts
+├── reprocess_with_urls.py         # Reprocess entries with recovered URLs
+├── reprocess_all.py               # Bulk reprocess all entries
+├── reprocess_twitter.py           # Reprocess Twitter-sourced entries
+├── backfill_titles.py             # Generate missing titles
+├── populate_review_queue.py       # Manage manual review queue
+│
+└── # Test Files
+├── test_pydantic_settings.py      # Configuration loading tests
+├── test_railway_compatibility.py  # Deployment compatibility tests
+├── test_url_discovery.py          # URL extraction tests
+└── test_url_search.py             # URL search functionality tests
 ```
 
 ## Database Models
@@ -136,6 +168,21 @@ class ProcessingStatus(enum.Enum):
 class DataQuality(enum.Enum):
     COMPLETE = "complete"    # Production-ready
     INCOMPLETE = "incomplete"  # Missing source URL
+
+class ConfidenceLevel(enum.Enum):
+    CONFIDENT = "confident"  # High confidence AI classification
+    UNCERTAIN = "uncertain"  # Low confidence, may need review
+
+class ImportMode(enum.Enum):
+    PHONE = "phone"          # Phone authentication import
+    BOT = "bot"              # Bot-based import
+    HYBRID = "hybrid"        # Combined phone + bot
+
+class ReviewStatus(enum.Enum):
+    PENDING = "pending"      # Needs review
+    IN_PROGRESS = "in_progress"  # Being worked on
+    CORRECTED = "corrected"  # Fixed and verified
+    SKIPPED = "skipped"      # Intentionally skipped
 ```
 
 ### Production Query Pattern
@@ -209,7 +256,10 @@ TELEGRAM_CHANNEL_USERNAME=your_channel
 ```bash
 TELEGRAM_BOT_TOKENS=token1,token2  # Comma-separated
 ENABLE_BOT_MODE=true
+ENABLE_PHONE_IMPORT=true           # Enable phone-based imports (default: true)
 BOT_POLLING_INTERVAL=2
+WEBHOOK_BASE_URL=https://your-app.railway.app  # For webhook mode (optional)
+TELEGRAM_SESSION_PATH=/app/data/telegram_session  # Session file location
 ```
 
 ### Grok AI
@@ -236,6 +286,7 @@ SYNC_INTERVAL_HOURS=6
 MAX_GROK_REQUESTS_PER_HOUR=100
 MAX_PROCESSING_RETRIES=3
 PROCESSING_BATCH_SIZE=10
+RUN_SYNC_ON_STARTUP=true           # Run initial sync when app starts (default: true)
 ```
 
 ## Code Conventions
@@ -302,10 +353,28 @@ logger.error("❌ Error message")
 | `/api/import` | imports.py | Telegram imports |
 | `/api/export` | exports.py | CSV/JSON/RSS exports |
 | `/api/config` | config.py | Configuration status |
-| `/api/hybrid` | hybrid.py | Bot management |
+| `/api/hybrid` | hybrid.py | Bot management (13 endpoints) |
 | `/api/stats` | main.py | Processing statistics |
 | `/api/trigger-sync` | main.py | Manual sync trigger |
 | `/api/trigger-process` | main.py | Manual process trigger |
+
+### Hybrid Bot Management Endpoints (`/api/hybrid`)
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/bot/register` | Register a new bot |
+| POST | `/bot/validate` | Validate bot token without registering |
+| POST | `/bot/check-access` | Check bot access to a channel |
+| GET | `/bots` | List all registered bots |
+| DELETE | `/bot/{bot_id}` | Remove a bot |
+| POST | `/bot/setup-monitoring` | Setup bot to monitor a channel |
+| POST | `/import/historical` | Import complete channel history |
+| GET | `/channels` | List configured channels |
+| GET | `/channels/{channel_id}/status` | Get channel sync status |
+| POST | `/transition-to-bot` | Transition channel from phone to bot mode |
+| GET | `/setup/wizard` | Get setup wizard status |
+| POST | `/bot/start-polling` | Start bot polling |
+| POST | `/bot/stop-polling` | Stop bot polling |
 
 ## Processing Pipeline
 
@@ -419,3 +488,38 @@ Railway auto-provisions PostgreSQL. Connection via `DATABASE_URL` or individual 
 8. **Respect rate limits** - Grok API has hourly limits (~100 requests)
 9. **Use async patterns** for external API calls
 10. **Keep the graceful degradation pattern** - features should work independently
+
+### Settings Helper Methods
+
+```python
+from src.config import settings
+
+# Check if services are configured
+settings.is_telegram_configured()  # Phone auth available
+settings.is_bot_configured()       # Bot mode available
+settings.has_any_telegram_config() # Either phone or bot
+settings.is_grok_configured()      # Grok AI available
+settings.is_database_configured()  # Valid database connection
+
+# Get configuration values
+settings.get_bot_tokens()          # List of bot tokens
+settings.get_session_path()        # Telegram session file path
+```
+
+### Default Categories
+
+The system seeds default categories on startup (defined in `src/models/models.py`):
+- Announcements, Funding & Grants, Technical, Research, Events
+- Partnerships, Market & Trading, Community, Security, Other
+
+**Note**: Runtime categories may differ as users can create/modify their own.
+
+### Key File Locations
+
+| File | Purpose |
+|------|---------|
+| `src/config.py` | All configuration and environment variables |
+| `src/models/models.py` | All database models and enums |
+| `src/services/processor.py` | Message processing state machine |
+| `src/services/grok.py` | Grok AI prompts and API calls |
+| `src/main.py` | FastAPI app, lifespan, auth, core routes |

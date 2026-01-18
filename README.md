@@ -124,26 +124,39 @@ tele-sum/
 ├── src/
 │   ├── config.py              # Settings and environment
 │   ├── main.py                # FastAPI application
+│   ├── api/                   # Route handlers
+│   │   ├── messages.py        # Message search/retrieval
+│   │   ├── categories.py      # Category CRUD
+│   │   ├── entries.py         # Production data API
+│   │   ├── imports.py         # Telegram import endpoints
+│   │   ├── exports.py         # CSV/JSON/RSS exports
+│   │   ├── config.py          # Configuration status
+│   │   └── hybrid.py          # Bot/phone hybrid mode
 │   ├── models/
 │   │   ├── database.py        # Database connection
 │   │   └── models.py          # SQLAlchemy models
 │   ├── services/
 │   │   ├── grok.py            # Grok AI integration
 │   │   ├── processor.py       # Message processing pipeline
+│   │   ├── scheduler.py       # Background job scheduler
 │   │   ├── telegram.py        # Telegram phone client
-│   │   └── telegram_bot.py    # Telegram bot client
+│   │   ├── telegram_bot.py    # Telegram bot client
+│   │   └── telegram_hybrid.py # Hybrid mode support
 │   ├── scrapers/
 │   │   ├── content_scraper.py # URL content fetching
 │   │   └── twitter_scraper.py # Twitter/X scraping
 │   └── utils/
 │       └── url_extractor.py   # URL parsing utilities
+├── templates/                 # Jinja2 HTML templates
+├── migrations/                # Alembic database migrations
 ├── process_batch.py           # Main batch processing
 ├── batch_runner.py            # Resilient batch runner
 ├── sync_new.py                # Telegram sync only
 ├── backfill_source_urls.py    # URL backfill for x23 entries
 ├── populate_review_queue.py   # Review queue management
 ├── extract_x23_urls.py        # Extract x23.ai URLs
-└── reconstruct_urls.py        # Reconstruct forum URLs
+├── reconstruct_urls.py        # Reconstruct forum URLs
+└── test_*.py                  # Test files
 ```
 
 See [SCRIPTS.md](SCRIPTS.md) for documentation on all utility scripts.

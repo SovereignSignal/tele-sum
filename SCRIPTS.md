@@ -294,6 +294,54 @@ python3 backfill_titles.py run 50
 
 ---
 
+## Additional Scripts
+
+### bot_sync.py
+**Purpose**: Bot-specific synchronization operations for channel monitoring.
+
+```bash
+python3 bot_sync.py
+```
+
+**Use when**:
+- Testing bot connectivity and message retrieval
+- Debugging bot-based imports
+- Running bot sync independently of the main scheduler
+
+---
+
+### find_real_urls.py
+**Purpose**: URL discovery helper for finding actual source URLs.
+
+```bash
+python3 find_real_urls.py
+```
+
+**Use when**:
+- Manually investigating URL patterns
+- Debugging URL extraction issues
+- Testing forum URL reconstruction
+
+---
+
+## Test Files
+
+Test files are located in the root directory:
+
+| File | Purpose |
+|------|---------|
+| `test_pydantic_settings.py` | Tests configuration loading and Pydantic Settings |
+| `test_railway_compatibility.py` | Tests deployment compatibility with Railway |
+| `test_url_discovery.py` | Tests URL extraction from messages |
+| `test_url_search.py` | Tests URL search functionality |
+
+Run tests with:
+```bash
+pytest test_*.py -v
+```
+
+---
+
 ## Database Schema
 
 All scripts use the same database models defined in `src/models/models.py`:
