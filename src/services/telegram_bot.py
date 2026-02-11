@@ -202,35 +202,69 @@ class TelegramBotService:
         logger.info(f"Imported message {msg.message_id} from channel {channel_id}")
     
     async def start_polling(self):
-        """Start polling for messages - no db session passed, fresh sessions created per message"""
+        """Start polling for messages using simple direct polling loop"""
         if self.is_running:
             logger.warning("Bot polling is already running")
             return
         
-        try:
-            # Build application
-            self.application = Application.builder().token(self.bot_token).build()
-            
-            # Use TypeHandler to catch ALL updates unconditionally
-            # MessageHandler doesn't catch channel_post updates even with filters.ALL
-            self.application.add_handler(
-                TypeHandler(Update, self.handle_all_updates)
-            )
-            
-            # Initialize and start polling
-            await self.application.initialize()
-            await self.application.start()
-            await self.application.updater.start_polling(
-                allowed_updates=Update.ALL_TYPES,
-                drop_pending_updates=True
-            )
-            
-            self.is_running = True
-            logger.info(f"Started bot polling for bot ID: {self.bot_id}")
-            
-        except Exception as e:
-            logger.error(f"Failed to start polling: {e}")
-            raise
+        self.is_running = True
+        logger.info(f"Started bot polling for bot ID: {self.bot_id}")
+        
+        # Start the polling loop as a background task
+        asyncio.create_task(self._polling_loop())
+    
+    async def _polling_loop(self):
+        """Simple polling loop that directly calls getUpdates"""
+        offset = None
+        
+        while self.is_running:
+            try:
+                # Get updates directly from Telegram
+                updates = await self.bot.get_updates(
+                    offset=offset,
+                    timeout=30,
+                    allowed_updates=["message", "channel_post"]
+                )
+                
+                for update in updates:
+                    # Update offset to acknowledge this update
+                    offset = update.update_id + 1
+                    
+                    # Get message from either channel_post or message
+                    msg = update.channel_post or update.message
+                    if not msg:
+                        logger.debug(f"Update {update.update_id} has no message/channel_post")
+                        continue
+                    
+                    # Skip non-text messages
+                    if not msg.text and not msg.caption:
+                        logger.debug(f"Skipping non-text update {update.update_id}")
+                        continue
+                    
+                    update_type = "channel_post" if update.channel_post else "message"
+                    logger.info(f"Received {update_type} TG#{msg.message_id} from {msg.chat_id}")
+                    
+                    # Process in fresh database session
+                    database.get_engine()
+                    db = database.SessionLocal()
+                    try:
+                        await self._process_message(msg, db)
+                    except Exception as e:
+                        logger.error(f"Failed to process {update_type}: {e}")
+                        db.rollback()
+                    finally:
+                        db.close()
+                        
+            except TelegramError as e:
+                if "Conflict" in str(e):
+                    logger.warning(f"Polling conflict (another instance?), retrying in 5s")
+                    await asyncio.sleep(5)
+                else:
+                    logger.error(f"Telegram error in polling loop: {e}")
+                    await asyncio.sleep(5)
+            except Exception as e:
+                logger.error(f"Error in polling loop: {e}")
+                await asyncio.sleep(5)
     
     async def stop_polling(self):
         """Stop polling for messages"""
@@ -239,11 +273,6 @@ class TelegramBotService:
             return
         
         try:
-            if self.application:
-                await self.application.updater.stop()
-                await self.application.stop()
-                await self.application.shutdown()
-            
             self.is_running = False
             logger.info(f"Stopped bot polling for bot ID: {self.bot_id}")
             
