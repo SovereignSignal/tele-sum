@@ -237,9 +237,13 @@ async def import_from_file(
             if not telegram_id:
                 continue
             
-            # Check for duplicate
+            # Get channel ID early since we need it for duplicate check
+            channel_id = msg_data.get('channel_id') or msg_data.get('chat_id') or 'imported'
+            
+            # Check for duplicate (must check both channel_id and telegram_id since telegram_id is only unique per channel)
             existing = db.query(Message).filter(
-                Message.telegram_id == telegram_id
+                Message.telegram_id == telegram_id,
+                Message.channel_id == str(channel_id)
             ).first()
             
             if existing:
@@ -268,9 +272,6 @@ async def import_from_file(
             
             # Extract URLs
             urls = msg_data.get('extracted_urls') or msg_data.get('urls') or extract_urls(raw_content)
-            
-            # Get channel ID
-            channel_id = msg_data.get('channel_id') or msg_data.get('chat_id') or 'imported'
             
             # Look up channel config for wire assignment
             channel_config = db.query(ChannelConfig).filter(

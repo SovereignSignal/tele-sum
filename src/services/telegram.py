@@ -149,8 +149,10 @@ class TelegramService:
                     break
                 
                 for tg_msg in telegram_messages:
+                    # Check for duplicate (must check both channel_id and telegram_id since telegram_id is only unique per channel)
                     existing = db.query(Message).filter(
-                        Message.telegram_id == tg_msg.id
+                        Message.telegram_id == tg_msg.id,
+                        Message.channel_id == channel_id
                     ).first()
                     
                     if existing:
@@ -257,8 +259,10 @@ class TelegramService:
             new_messages = 0
             
             for tg_msg in telegram_messages:
+                # Check for duplicate (must check both channel_id and telegram_id since telegram_id is only unique per channel)
                 existing = db.query(Message).filter(
-                    Message.telegram_id == tg_msg.id
+                    Message.telegram_id == tg_msg.id,
+                    Message.channel_id == channel_id
                 ).first()
                 
                 if existing:

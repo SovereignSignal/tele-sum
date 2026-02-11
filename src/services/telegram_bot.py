@@ -138,13 +138,14 @@ class TelegramBotService:
             logger.debug(f"Ignoring message from untracked channel: {channel_id}")
             return
         
-        # Check for duplicate
+        # Check for duplicate (must check both channel_id and telegram_id since telegram_id is only unique per channel)
         existing = db.query(Message).filter(
-            Message.telegram_id == msg.message_id
+            Message.telegram_id == msg.message_id,
+            Message.channel_id == channel_id
         ).first()
         
         if existing:
-            logger.debug(f"Skipping duplicate message: {msg.message_id}")
+            logger.debug(f"Skipping duplicate message: {msg.message_id} in channel {channel_id}")
             return
         
         # Extract message content
