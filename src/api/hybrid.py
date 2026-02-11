@@ -22,6 +22,7 @@ class BotRegisterRequest(BaseModel):
 class BotSetupRequest(BaseModel):
     bot_token: str
     channel_identifier: str  # Can be @username or chat_id
+    wire: Optional[str] = None  # Optional: 'crypto', 'ai', or 'oss'
 
 class HistoricalImportRequest(BaseModel):
     channel_username: str
@@ -185,7 +186,8 @@ async def setup_bot_monitoring(
     result = await hybrid_manager.setup_bot_monitoring(
         db,
         request.channel_identifier,
-        request.bot_token
+        request.bot_token,
+        wire=request.wire
     )
     
     if not result["success"]:
