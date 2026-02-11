@@ -3,7 +3,7 @@ import asyncio
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from telegram import Bot, Update
-from telegram.ext import Application, ContextTypes, MessageHandler, filters
+from telegram.ext import Application, ContextTypes, MessageHandler, TypeHandler, filters
 from telegram.error import TelegramError
 from sqlalchemy.orm import Session
 
@@ -211,10 +211,10 @@ class TelegramBotService:
             # Build application
             self.application = Application.builder().token(self.bot_token).build()
             
-            # Add handler for ALL updates - we filter in the handler
-            # Using filters.ALL to catch everything including channel posts
+            # Use TypeHandler to catch ALL updates unconditionally
+            # MessageHandler doesn't catch channel_post updates even with filters.ALL
             self.application.add_handler(
-                MessageHandler(filters.ALL, self.handle_all_updates)
+                TypeHandler(Update, self.handle_all_updates)
             )
             
             # Initialize and start polling
