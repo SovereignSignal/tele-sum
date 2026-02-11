@@ -97,14 +97,37 @@ class TelegramBotService:
                 "error": str(e)
             }
     
+    async def handle_channel_post(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle channel posts specifically (TypeHandler catches all updates)"""
+        # Only process channel posts, skip everything else
+        if not update.channel_post:
+            return
+        
+        msg = update.channel_post
+        if not msg.text and not msg.caption:
+            return
+            
+        logger.info(f"Received channel_post TG#{msg.message_id} from {msg.chat_id}")
+        
+        # Create a fresh database session
+        database.get_engine()
+        db = database.SessionLocal()
+        try:
+            await self._process_message(msg, db)
+        except Exception as e:
+            logger.error(f"Failed to handle channel post: {e}")
+            db.rollback()
+        finally:
+            db.close()
+    
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle incoming messages from Telegram with fresh database session"""
-        # Channel posts come as channel_post, not message
-        msg = update.channel_post or update.message
+        # Channel posts are handled by handle_channel_post
+        msg = update.message
         if not msg:
             return
 
-        logger.info(f"Received {'channel_post' if update.channel_post else 'message'} TG#{msg.message_id} from {msg.chat_id}")
+        logger.info(f"Received message TG#{msg.message_id} from {msg.chat_id}")
 
         # Create a fresh database session for each message to avoid stale connections
         database.get_engine()
@@ -204,13 +227,15 @@ class TelegramBotService:
             # Build application
             self.application = Application.builder().token(self.bot_token).build()
             
-            # Add message handler for regular messages and channel posts
-            # filters.UpdateType.CHANNEL_POST needed for channel posts in v20+
+            # Add handler for regular messages
             self.application.add_handler(
-                MessageHandler(
-                    filters.TEXT & ~filters.COMMAND & (filters.UpdateType.MESSAGE | filters.UpdateType.CHANNEL_POST),
-                    self.handle_message
-                )
+                MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message)
+            )
+            
+            # Add separate handler for channel posts (they don't match filters.TEXT)
+            from telegram.ext import TypeHandler
+            self.application.add_handler(
+                TypeHandler(Update, self.handle_channel_post)
             )
             
             # Initialize and start polling
