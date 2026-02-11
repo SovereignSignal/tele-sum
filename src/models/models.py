@@ -49,9 +49,10 @@ class ConfidenceLevel(enum.Enum):
 
 class Wire(enum.Enum):
     """Grant Wire vertical - crypto, AI, or open source"""
-    CRYPTO = "crypto"
-    AI = "ai"
-    OSS = "oss"
+    # Names must be lowercase to match PostgreSQL enum values
+    crypto = "crypto"
+    ai = "ai"
+    oss = "oss"
 
 class User(Base):
     __tablename__ = "users"
