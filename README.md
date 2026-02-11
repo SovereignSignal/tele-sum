@@ -1,13 +1,23 @@
-# Grant Wire Archive
+# Sovereign Signal - Grant Wire Archive
 
-AI-powered Telegram channel summarization system that transforms message streams into structured, searchable data using Grok AI. Built for [The Grant Wire](https://t.me/thegrantwire), a curated channel aggregating crypto grants, governance proposals, and funding opportunities.
+AI-powered Telegram channel summarization system that transforms message streams into structured, searchable data using Grok AI. Powers the **Sovereign Signal** ecosystem of Grant Wire properties:
+
+- **[Crypto Grant Wire](https://t.me/cryptograntwire)** — Crypto grants, governance, funding
+- **[AI Grant Wire](https://t.me/aigrantwire)** — AI research grants, fellowships, hackathons
+- **OSS Grant Wire** *(coming soon)* — Open source funding opportunities
 
 ## Current Status
 
+| Wire | Entries | Status |
+|------|---------|--------|
+| Crypto | 3,146 | ✅ Active |
+| AI | 0 | ✅ Configured, ingesting |
+| OSS | 0 | ⏳ Placeholder |
+
 | Metric | Value |
 |--------|-------|
-| Total Entries | 3,069 |
-| Production Ready | 3,069 (100%) |
+| Total Entries | 3,146+ |
+| Production Ready | 100% |
 | Quality Score | 100% acceptable (95% excellent) |
 | Average Summary | 404 characters |
 
@@ -21,6 +31,21 @@ Tele-Sum solves the problem of Telegram channels being write-only archives where
 - **Extracts entities** like protocols, amounts, dates, and key terms
 - **Stores everything** in PostgreSQL for search and analysis
 - **Filters by quality** - production queries exclude incomplete entries
+
+### Multi-Wire Architecture
+
+The system supports multiple "wires" — independent content verticals that share the same infrastructure:
+
+| Wire | Channel | Description |
+|------|---------|-------------|
+| `crypto` | @cryptograntwire | Crypto/Web3 grants and governance |
+| `ai` | @aigrantwire | AI research grants and fellowships |
+| `oss` | @ossgrantwire | Open source funding opportunities |
+
+Each wire has its own:
+- Telegram channel for input
+- Content filtered by `wire` column
+- Same categories, same AI processing
 
 ### Categories
 
@@ -98,12 +123,22 @@ python3 batch_runner.py 1001 1100 25
 Always filter by `data_quality = 'complete'` for production use:
 
 ```sql
-SELECT s.id, s.title, s.summary,
+-- All wires
+SELECT s.id, s.title, s.summary, s.wire,
        s.entities->'source'->>'url' as source_url,
        m.timestamp
 FROM summaries s
 JOIN messages m ON s.message_id = m.id
 WHERE s.processing_status = 'SUCCESS'
+  AND s.data_quality = 'complete'
+ORDER BY m.timestamp DESC;
+
+-- Filter by wire (crypto, ai, oss)
+SELECT s.id, s.title, s.summary
+FROM summaries s
+JOIN messages m ON s.message_id = m.id
+WHERE s.wire = 'ai'  -- or 'crypto' or 'oss'
+  AND s.processing_status = 'SUCCESS'
   AND s.data_quality = 'complete'
 ORDER BY m.timestamp DESC;
 ```

@@ -31,7 +31,7 @@ ORDER BY m.timestamp DESC;
 
 ### messages
 
-Raw Telegram messages imported from the Grant Wire channel.
+Raw Telegram messages imported from Grant Wire channels.
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -40,6 +40,7 @@ Raw Telegram messages imported from the Grant Wire channel.
 | channel_id | VARCHAR(255) | Telegram channel ID |
 | bot_id | INTEGER | FK to telegram_bots (if bot import) |
 | import_method | VARCHAR(20) | `phone_initial`, `phone_sync`, `x23`, `bot`, `file` |
+| wire | ENUM | Grant Wire vertical: `crypto`, `ai`, `oss` |
 | timestamp | TIMESTAMP | When message was posted on Telegram |
 | raw_content | TEXT | Original message text |
 | extracted_urls | JSON | Array of URLs found in message |
@@ -50,6 +51,7 @@ Raw Telegram messages imported from the Grant Wire channel.
 - `ix_messages_telegram_id` (unique)
 - `ix_messages_channel_timestamp` (channel_id, timestamp)
 - `ix_messages_bot_timestamp` (bot_id, timestamp)
+- `ix_messages_wire`
 
 ---
 
@@ -66,6 +68,7 @@ AI-generated summaries and metadata for each message.
 | entities | JSON | Structured metadata (see below) |
 | category_id | INTEGER | FK to categories.id |
 | confidence | ENUM | `confident` or `uncertain` |
+| wire | ENUM | Grant Wire vertical: `crypto`, `ai`, `oss` |
 | processing_status | ENUM | `PENDING`, `PROCESSING`, `SUCCESS`, `FAILED`, `RETRY` |
 | data_quality | VARCHAR(20) | `complete` or `incomplete` |
 | error_log | TEXT | Error details if processing failed |
@@ -77,6 +80,7 @@ AI-generated summaries and metadata for each message.
 **Indexes:**
 - `ix_summaries_processing_status`
 - `ix_summaries_data_quality`
+- `ix_summaries_wire`
 - `ix_summaries_status_processed` (processing_status, last_processed_at)
 - `ix_summaries_category_created` (category_id, created_at)
 
@@ -115,6 +119,24 @@ AI-generated summaries and metadata for each message.
 | `SUCCESS` | Successfully processed with summary |
 | `RETRY` | Failed but will be retried |
 | `FAILED` | Max retries exceeded, needs manual intervention |
+
+#### `wire` Values
+
+The system supports multiple Grant Wire verticals:
+
+| Value | Channel | Description |
+|-------|---------|-------------|
+| `crypto` | @cryptograntwire | Crypto/Web3 grants, governance, funding |
+| `ai` | @aigrantwire | AI research grants, fellowships, hackathons |
+| `oss` | @ossgrantwire | Open source funding opportunities |
+
+Wire is inherited from channel configuration at import time:
+1. `channel_configs.wire` → `messages.wire` → `summaries.wire`
+
+To filter by wire in queries:
+```sql
+WHERE s.wire = 'ai'  -- or 'crypto' or 'oss'
+```
 
 ---
 
@@ -212,7 +234,7 @@ Bot configuration for channel monitoring.
 
 ### channel_configs
 
-Channel import configuration.
+Channel import configuration. Each channel belongs to a wire (crypto, ai, oss).
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -220,6 +242,7 @@ Channel import configuration.
 | channel_id | VARCHAR(255) | Telegram channel ID |
 | channel_username | VARCHAR(100) | Channel username |
 | channel_title | VARCHAR(255) | Display title |
+| wire | ENUM | Grant Wire vertical: `crypto`, `ai`, `oss` |
 | import_mode | ENUM | `phone`, `bot`, `hybrid` |
 | historical_import_complete | BOOLEAN | Whether historical import is done |
 | historical_import_date | TIMESTAMP | When historical import completed |
@@ -228,6 +251,14 @@ Channel import configuration.
 | is_active | BOOLEAN | Whether channel is active |
 | created_at | TIMESTAMP | When created |
 | updated_at | TIMESTAMP | Last modification |
+
+**Current Channels:**
+
+| Wire | Username | Status |
+|------|----------|--------|
+| crypto | @cryptograntwire | Active |
+| ai | @aigrantwire | Active |
+| oss | @ossgrantwire | Placeholder |
 
 ---
 
