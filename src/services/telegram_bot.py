@@ -226,6 +226,12 @@ class TelegramBotService:
                     allowed_updates=["message", "channel_post"]
                 )
                 
+                # DEBUG: Log what we received
+                if updates:
+                    logger.info(f"Received {len(updates)} updates from Telegram")
+                    for u in updates:
+                        logger.info(f"  Update {u.update_id}: channel_post={u.channel_post is not None}, message={u.message is not None}")
+                
                 for update in updates:
                     # Update offset to acknowledge this update
                     offset = update.update_id + 1
