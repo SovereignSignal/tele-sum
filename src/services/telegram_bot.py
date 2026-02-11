@@ -204,9 +204,13 @@ class TelegramBotService:
             # Build application
             self.application = Application.builder().token(self.bot_token).build()
             
-            # Add message handler - uses self.handle_message which creates fresh sessions
+            # Add message handler for regular messages and channel posts
+            # filters.UpdateType.CHANNEL_POST needed for channel posts in v20+
             self.application.add_handler(
-                MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message)
+                MessageHandler(
+                    filters.TEXT & ~filters.COMMAND & (filters.UpdateType.MESSAGE | filters.UpdateType.CHANNEL_POST),
+                    self.handle_message
+                )
             )
             
             # Initialize and start polling
