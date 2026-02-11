@@ -158,6 +158,7 @@ async def sync_and_process():
                                 channel_id=chat_id,
                                 bot_id=bot_record.id,
                                 import_method='bot',
+                                wire=channel_config.wire,  # Set wire from channel configuration
                                 timestamp=datetime.utcfromtimestamp(timestamp),
                                 raw_content=text_content,
                                 extracted_urls=urls
@@ -165,9 +166,10 @@ async def sync_and_process():
                             db.add(new_msg)
                             db.flush()
 
-                            # Create summary with PENDING status
+                            # Create summary with PENDING status (inherit wire from channel)
                             summary = Summary(
                                 message_id=new_msg.id,
+                                wire=channel_config.wire,  # Set wire from channel configuration
                                 processing_status=ProcessingStatus.PENDING,
                                 processing_attempts=0
                             )

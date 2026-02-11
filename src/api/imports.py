@@ -8,7 +8,7 @@ import logging
 from datetime import datetime
 
 from src.models.database import get_db
-from src.models.models import Message, Summary, SyncStatus, ProcessingStatus
+from src.models.models import Message, Summary, SyncStatus, ProcessingStatus, ChannelConfig
 from src.services.telegram import TelegramService
 from src.services.processor import MessageProcessor
 from src.utils.url_extractor import extract_urls
@@ -272,10 +272,18 @@ async def import_from_file(
             # Get channel ID
             channel_id = msg_data.get('channel_id') or msg_data.get('chat_id') or 'imported'
             
+            # Look up channel config for wire assignment
+            channel_config = db.query(ChannelConfig).filter(
+                ChannelConfig.channel_id == str(channel_id),
+                ChannelConfig.is_active == True
+            ).first()
+            wire_value = channel_config.wire if channel_config else None
+            
             # Create message
             message = Message(
                 telegram_id=telegram_id,
                 channel_id=str(channel_id),
+                wire=wire_value,  # Set wire from channel configuration
                 timestamp=timestamp,
                 raw_content=raw_content,
                 extracted_urls=urls if isinstance(urls, list) else [],
@@ -288,6 +296,7 @@ async def import_from_file(
             # Create summary record
             summary = Summary(
                 message_id=message.id,
+                wire=wire_value,  # Set wire from channel configuration
                 processing_status=ProcessingStatus.PENDING
             )
             db.add(summary)

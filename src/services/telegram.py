@@ -9,7 +9,7 @@ from telethon.tl.types import Message as TelegramMessage
 from sqlalchemy.orm import Session
 
 from src.config import settings
-from src.models.models import Message, Summary, SyncStatus, ProcessingStatus
+from src.models.models import Message, Summary, SyncStatus, ProcessingStatus, ChannelConfig
 from src.utils.url_extractor import extract_urls
 
 logger = logging.getLogger(__name__)
@@ -104,6 +104,19 @@ class TelegramService:
             channel = await self.get_channel(channel_username)
             channel_id = str(channel.id)
             
+            # Look up channel config for wire assignment
+            channel_config = db.query(ChannelConfig).filter(
+                ChannelConfig.channel_id == channel_id,
+                ChannelConfig.is_active == True
+            ).first()
+            # Also try by username if not found
+            if not channel_config:
+                channel_config = db.query(ChannelConfig).filter(
+                    ChannelConfig.channel_username == channel_username,
+                    ChannelConfig.is_active == True
+                ).first()
+            wire_value = channel_config.wire if channel_config else None
+            
             sync_status = db.query(SyncStatus).filter(
                 SyncStatus.channel_id == channel_id
             ).first()
@@ -150,6 +163,7 @@ class TelegramService:
                         telegram_id=tg_msg.id,
                         channel_id=channel_id,
                         import_method="phone",
+                        wire=wire_value,  # Set wire from channel configuration
                         timestamp=tg_msg.date,
                         raw_content=tg_msg.message,
                         extracted_urls=urls
@@ -160,6 +174,7 @@ class TelegramService:
                     
                     summary = Summary(
                         message_id=message.id,
+                        wire=wire_value,  # Set wire from channel configuration
                         processing_status=ProcessingStatus.PENDING
                     )
                     db.add(summary)
@@ -212,6 +227,18 @@ class TelegramService:
             channel = await self.get_channel(channel_username)
             channel_id = str(channel.id)
             
+            # Look up channel config for wire assignment
+            channel_config = db.query(ChannelConfig).filter(
+                ChannelConfig.channel_id == channel_id,
+                ChannelConfig.is_active == True
+            ).first()
+            if not channel_config:
+                channel_config = db.query(ChannelConfig).filter(
+                    ChannelConfig.channel_username == channel_username,
+                    ChannelConfig.is_active == True
+                ).first()
+            wire_value = channel_config.wire if channel_config else None
+            
             sync_status = db.query(SyncStatus).filter(
                 SyncStatus.channel_id == channel_id
             ).first()
@@ -243,6 +270,7 @@ class TelegramService:
                     telegram_id=tg_msg.id,
                     channel_id=channel_id,
                     import_method="phone",
+                    wire=wire_value,  # Set wire from channel configuration
                     timestamp=tg_msg.date,
                     raw_content=tg_msg.message,
                     extracted_urls=urls
@@ -253,6 +281,7 @@ class TelegramService:
                 
                 summary = Summary(
                     message_id=message.id,
+                    wire=wire_value,  # Set wire from channel configuration
                     processing_status=ProcessingStatus.PENDING
                 )
                 db.add(summary)
