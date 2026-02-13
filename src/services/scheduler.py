@@ -138,6 +138,18 @@ async def sync_and_process():
                                     db.commit()
                                     logger.info(f"Updated channel_id for @{chat_username} -> {chat_id}")
 
+                            # Also check for @username placeholder (auto-created configs)
+                            if not channel_config and chat_username:
+                                channel_config = db.query(ChannelConfig).filter(
+                                    ChannelConfig.channel_id == f"@{chat_username}",
+                                    ChannelConfig.is_active == True
+                                ).first()
+                                if channel_config:
+                                    channel_config.channel_id = chat_id
+                                    channel_config.channel_title = post['chat'].get('title', chat_username)
+                                    db.commit()
+                                    logger.info(f"Resolved placeholder @{chat_username} -> {chat_id}")
+
                             if not channel_config:
                                 continue
 

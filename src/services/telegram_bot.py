@@ -121,19 +121,49 @@ class TelegramBotService:
         """Process a single message with the provided database session"""
         channel_id = str(msg.chat_id)
         
-        # Check if we're tracking this channel
+        # Check if we're tracking this channel - first by numeric channel_id
         channel_config = db.query(ChannelConfig).filter(
             ChannelConfig.channel_id == channel_id,
             ChannelConfig.is_active == True
         ).first()
         
+        # Fallback: check by username if channel_id didn't match
+        # This handles auto-created configs that use @username as placeholder
+        chat_username = getattr(msg.chat, 'username', '') or ''
+        if not channel_config and chat_username:
+            channel_config = db.query(ChannelConfig).filter(
+                ChannelConfig.channel_username == chat_username,
+                ChannelConfig.is_active == True
+            ).first()
+            if channel_config:
+                # Update to real numeric channel_id for future lookups
+                old_id = channel_config.channel_id
+                channel_config.channel_id = channel_id
+                channel_config.channel_title = getattr(msg.chat, 'title', chat_username)
+                db.commit()
+                logger.info(f"Updated channel_id for @{chat_username}: {old_id} -> {channel_id}")
+        
+        # Also check if channel_id starts with @ (placeholder from auto-create)
         if not channel_config:
-            logger.debug(f"Ignoring message from untracked channel: {channel_id}")
+            channel_config = db.query(ChannelConfig).filter(
+                ChannelConfig.channel_id == f"@{chat_username}",
+                ChannelConfig.is_active == True
+            ).first()
+            if channel_config:
+                channel_config.channel_id = channel_id
+                channel_config.channel_title = getattr(msg.chat, 'title', chat_username)
+                db.commit()
+                logger.info(f"Resolved placeholder @{chat_username} -> {channel_id}")
+        
+        if not channel_config:
+            logger.debug(f"Ignoring message from untracked channel: {channel_id} (@{chat_username})")
             return
         
         # Check for duplicate
+        # Include channel_id in duplicate check for multi-channel support
         existing = db.query(Message).filter(
-            Message.telegram_id == msg.message_id
+            Message.telegram_id == msg.message_id,
+            Message.channel_id == channel_id
         ).first()
         
         if existing:
@@ -203,8 +233,9 @@ class TelegramBotService:
             self.application = Application.builder().token(self.bot_token).build()
             
             # Add message handler - uses self.handle_message which creates fresh sessions
+            # Handle ALL updates including channel posts with captions/media
             self.application.add_handler(
-                MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message)
+                MessageHandler(filters.ALL & ~filters.COMMAND, self.handle_message)
             )
             
             # Initialize and start polling
