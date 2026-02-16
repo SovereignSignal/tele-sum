@@ -295,3 +295,90 @@ async def auto_create_channel_configs(db: Session = Depends(get_db)):
         "created": len(created),
         "channel_ids": created
     }
+
+
+@router.post("/backfill")
+async def backfill_channel_links(db: Session = Depends(get_db)):
+    """
+    Full backfill operation:
+    1. Ensures channel_config_id column exists (via raw SQL)
+    2. Creates ChannelConfig entries for unconfigured channels
+    3. Links all messages to their ChannelConfig
+    
+    Call this endpoint after deploying channel segmentation updates.
+    """
+    from sqlalchemy import text
+    
+    results = {
+        "schema_updated": False,
+        "configs_created": 0,
+        "messages_linked": 0,
+        "channels": []
+    }
+    
+    # Step 1: Ensure column exists (safe to run multiple times)
+    try:
+        db.execute(text("""
+            ALTER TABLE messages 
+            ADD COLUMN IF NOT EXISTS channel_config_id INTEGER REFERENCES channel_configs(id)
+        """))
+        db.execute(text("""
+            CREATE INDEX IF NOT EXISTS ix_messages_channel_config_id 
+            ON messages(channel_config_id)
+        """))
+        db.commit()
+        results["schema_updated"] = True
+    except Exception as e:
+        # Column might already exist or DB doesn't support IF NOT EXISTS
+        db.rollback()
+        results["schema_note"] = str(e)
+    
+    # Step 2: Create missing ChannelConfigs
+    message_channels = db.query(Message.channel_id).distinct().all()
+    message_channel_ids = {c[0] for c in message_channels if c[0]}
+    
+    config_channels = db.query(ChannelConfig.channel_id).all()
+    config_channel_ids = {c[0] for c in config_channels}
+    
+    unconfigured = message_channel_ids - config_channel_ids
+    
+    for channel_id in unconfigured:
+        config = ChannelConfig(
+            channel_id=channel_id,
+            channel_title=f"Channel {channel_id}",
+            is_active=True
+        )
+        db.add(config)
+        results["configs_created"] += 1
+    
+    db.commit()
+    
+    # Step 3: Link messages to configs
+    configs = db.query(ChannelConfig).all()
+    config_map = {c.channel_id: c.id for c in configs}
+    
+    for channel_id, config_id in config_map.items():
+        # Count and update unlinked messages
+        unlinked_count = db.query(Message).filter(
+            Message.channel_id == channel_id,
+            Message.channel_config_id.is_(None)
+        ).count()
+        
+        if unlinked_count > 0:
+            db.query(Message).filter(
+                Message.channel_id == channel_id,
+                Message.channel_config_id.is_(None)
+            ).update(
+                {Message.channel_config_id: config_id},
+                synchronize_session=False
+            )
+            results["messages_linked"] += unlinked_count
+            results["channels"].append({
+                "channel_id": channel_id,
+                "config_id": config_id,
+                "messages_linked": unlinked_count
+            })
+    
+    db.commit()
+    
+    return results
