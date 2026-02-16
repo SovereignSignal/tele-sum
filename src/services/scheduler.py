@@ -168,6 +168,7 @@ async def sync_and_process():
                             new_msg = Message(
                                 telegram_id=telegram_id,
                                 channel_id=chat_id,
+                                channel_config_id=channel_config.id,  # Link to channel config
                                 bot_id=bot_record.id,
                                 import_method='bot',
                                 timestamp=datetime.utcfromtimestamp(timestamp),

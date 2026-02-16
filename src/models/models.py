@@ -77,6 +77,7 @@ class Message(Base):
     id = Column(Integer, primary_key=True, index=True)
     telegram_id = Column(Integer, index=True)
     channel_id = Column(String(255), index=True)
+    channel_config_id = Column(Integer, ForeignKey("channel_configs.id"), nullable=True, index=True)  # Link to channel metadata
     bot_id = Column(Integer, ForeignKey("telegram_bots.id"), nullable=True, index=True)  # Track which bot imported
     import_method = Column(String(20), default="phone")  # "phone", "bot", or "file"
     timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
@@ -87,6 +88,7 @@ class Message(Base):
     
     summary = relationship("Summary", back_populates="message", uselist=False, cascade="all, delete-orphan")
     bot = relationship("TelegramBot")
+    channel_config = relationship("ChannelConfig", back_populates="messages")
     
     # Composite indexes for common query patterns
     __table_args__ = (
@@ -159,6 +161,7 @@ class ChannelConfig(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     bot = relationship("TelegramBot", back_populates="channel_configs")
+    messages = relationship("Message", back_populates="channel_config")
     sync_status = relationship("SyncStatus", back_populates="channel_config", uselist=False, cascade="all, delete-orphan")
 
 class SyncStatus(Base):

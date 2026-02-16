@@ -9,7 +9,7 @@ from telethon.tl.types import Message as TelegramMessage
 from sqlalchemy.orm import Session
 
 from src.config import settings
-from src.models.models import Message, Summary, SyncStatus, ProcessingStatus
+from src.models.models import Message, Summary, SyncStatus, ChannelConfig, ProcessingStatus
 from src.utils.url_extractor import extract_urls
 
 logger = logging.getLogger(__name__)
@@ -116,6 +116,21 @@ class TelegramService:
                 db.add(sync_status)
                 db.commit()
             
+            # Get or create channel config for FK linking
+            channel_config = db.query(ChannelConfig).filter(
+                ChannelConfig.channel_id == channel_id
+            ).first()
+            
+            if not channel_config:
+                channel_config = ChannelConfig(
+                    channel_id=channel_id,
+                    channel_title=getattr(channel, 'title', None) or channel_username,
+                    channel_username=channel_username.lstrip('@') if channel_username else None,
+                    is_active=True
+                )
+                db.add(channel_config)
+                db.commit()
+            
             total_imported = 0
             duplicates = 0
             offset_id = 0
@@ -151,6 +166,7 @@ class TelegramService:
                     message = Message(
                         telegram_id=tg_msg.id,
                         channel_id=channel_id,
+                        channel_config_id=channel_config.id,  # Link to channel config
                         import_method="phone",
                         timestamp=tg_msg.date,
                         raw_content=tg_msg.message,
@@ -229,6 +245,11 @@ class TelegramService:
                 channel_username=channel_username
             )
             
+            # Get channel config for FK linking
+            channel_config = db.query(ChannelConfig).filter(
+                ChannelConfig.channel_id == channel_id
+            ).first()
+            
             new_messages = 0
             
             for tg_msg in telegram_messages:
@@ -246,6 +267,7 @@ class TelegramService:
                 message = Message(
                     telegram_id=tg_msg.id,
                     channel_id=channel_id,
+                    channel_config_id=channel_config.id if channel_config else None,
                     import_method="phone",
                     timestamp=tg_msg.date,
                     raw_content=tg_msg.message,

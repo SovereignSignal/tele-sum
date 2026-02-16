@@ -19,7 +19,7 @@ import logging
 import os
 import secrets
 
-from src.api import messages, categories, imports, exports, config, hybrid, entries
+from src.api import messages, categories, imports, exports, config, hybrid, entries, channels
 from src.models.database import get_engine, Base
 from src.services.scheduler import start_scheduler, shutdown_scheduler, get_scheduler_status, sync_and_process
 from src.config import settings
@@ -392,6 +392,14 @@ app.include_router(
     entries.router,
     prefix="/api/entries",
     tags=["entries"],
+    dependencies=[Depends(auth_required)]
+)
+
+# Channels API for multi-channel support
+app.include_router(
+    channels.router,
+    prefix="/api/channels",
+    tags=["channels"],
     dependencies=[Depends(auth_required)]
 )
 

@@ -13,7 +13,7 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from src.models.database import get_db
-from src.models.models import Message, Summary, Category, ProcessingStatus
+from src.models.models import Message, Summary, Category, ChannelConfig, ProcessingStatus
 
 router = APIRouter()
 
@@ -27,12 +27,19 @@ class SourceInfo(BaseModel):
     name: Optional[str] = None
     type: Optional[str] = None
 
+class ChannelInfo(BaseModel):
+    """Channel information for an entry"""
+    id: Optional[str] = None
+    username: Optional[str] = None
+    title: Optional[str] = None
+
 class EntryResponse(BaseModel):
     """A single Grant Wire entry"""
     id: int
     title: Optional[str] = None
     summary: Optional[str] = None
     category: Optional[str] = None
+    channel: Optional[ChannelInfo] = None
     source: SourceInfo
     url: Optional[str] = None
     protocols: List[str] = []
@@ -75,7 +82,15 @@ class StatsResponse(BaseModel):
 # Helper Functions
 # =============================================================================
 
-def entry_from_message(msg: Message) -> EntryResponse:
+def get_channel_configs_map(db: Session, channel_ids: List[str]) -> dict:
+    """Get a map of channel_id -> ChannelConfig for efficient lookup"""
+    if not channel_ids:
+        return {}
+    configs = db.query(ChannelConfig).filter(ChannelConfig.channel_id.in_(channel_ids)).all()
+    return {c.channel_id: c for c in configs}
+
+
+def entry_from_message(msg: Message, channel_config: Optional[ChannelConfig] = None) -> EntryResponse:
     """Convert a Message/Summary to EntryResponse"""
     source_info = SourceInfo()
     url = None
@@ -103,11 +118,24 @@ def entry_from_message(msg: Message) -> EntryResponse:
     if not url and msg.extracted_urls:
         url = msg.extracted_urls[0] if msg.extracted_urls else None
 
+    # Build channel info
+    channel_info = None
+    if channel_config:
+        channel_info = ChannelInfo(
+            id=channel_config.channel_id,
+            username=channel_config.channel_username,
+            title=channel_config.channel_title
+        )
+    elif msg.channel_id:
+        # Fallback to just channel_id if no config
+        channel_info = ChannelInfo(id=msg.channel_id)
+
     return EntryResponse(
         id=msg.id,
         title=msg.summary.title if msg.summary else None,
         summary=msg.summary.summary if msg.summary else None,
         category=msg.summary.category.name if msg.summary and msg.summary.category else None,
+        channel=channel_info,
         source=source_info,
         url=url,
         protocols=protocols if isinstance(protocols, list) else [],
@@ -124,6 +152,7 @@ def entry_from_message(msg: Message) -> EntryResponse:
 async def list_entries(
     q: Optional[str] = Query(default=None, description="Search in title and summary"),
     category: Optional[str] = Query(default=None, description="Filter by category name"),
+    channel: Optional[str] = Query(default=None, description="Filter by channel (ID, username, or title)"),
     protocol: Optional[str] = Query(default=None, description="Filter by protocol name"),
     date_from: Optional[datetime] = Query(default=None, description="Filter from date (ISO format)"),
     date_to: Optional[datetime] = Query(default=None, description="Filter to date (ISO format)"),
@@ -143,6 +172,22 @@ async def list_entries(
         Summary.processing_status == ProcessingStatus.SUCCESS,
         Summary.data_quality == 'complete'
     )
+
+    # Channel filter
+    if channel:
+        # Try to match by channel_id, username, or title
+        channel_config = db.query(ChannelConfig).filter(
+            or_(
+                ChannelConfig.channel_id == channel,
+                ChannelConfig.channel_username.ilike(channel.lstrip('@')),
+                ChannelConfig.channel_title.ilike(f"%{channel}%")
+            )
+        ).first()
+        if channel_config:
+            query = query.filter(Message.channel_id == channel_config.channel_id)
+        else:
+            # Direct channel_id filter if no config found
+            query = query.filter(Message.channel_id == channel)
 
     # Search filter
     if q:
@@ -181,12 +226,16 @@ async def list_entries(
     # Get entries
     messages = query.order_by(desc(Message.timestamp)).offset(offset).limit(per_page).all()
 
+    # Get channel configs for all messages
+    channel_ids = list(set(m.channel_id for m in messages if m.channel_id))
+    channel_map = get_channel_configs_map(db, channel_ids)
+
     return EntryListResponse(
         total=total,
         page=page,
         per_page=per_page,
         pages=pages,
-        entries=[entry_from_message(msg) for msg in messages]
+        entries=[entry_from_message(msg, channel_map.get(msg.channel_id)) for msg in messages]
     )
 
 
@@ -224,12 +273,16 @@ async def search_entries(
 
     messages = query.order_by(desc(Message.timestamp)).offset(offset).limit(per_page).all()
 
+    # Get channel configs for all messages
+    channel_ids = list(set(m.channel_id for m in messages if m.channel_id))
+    channel_map = get_channel_configs_map(db, channel_ids)
+
     return EntryListResponse(
         total=total,
         page=page,
         per_page=per_page,
         pages=pages,
-        entries=[entry_from_message(msg) for msg in messages]
+        entries=[entry_from_message(msg, channel_map.get(msg.channel_id)) for msg in messages]
     )
 
 
@@ -248,7 +301,11 @@ async def recent_entries(
         Summary.data_quality == 'complete'
     ).order_by(desc(Message.timestamp)).limit(limit).all()
 
-    return [entry_from_message(msg) for msg in messages]
+    # Get channel configs for all messages
+    channel_ids = list(set(m.channel_id for m in messages if m.channel_id))
+    channel_map = get_channel_configs_map(db, channel_ids)
+
+    return [entry_from_message(msg, channel_map.get(msg.channel_id)) for msg in messages]
 
 
 @router.get("/stats", response_model=StatsResponse)

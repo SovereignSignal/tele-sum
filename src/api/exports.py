@@ -15,7 +15,7 @@ import io
 import json
 
 from src.models.database import get_db
-from src.models.models import Message, Summary, Category, ProcessingStatus, ConfidenceLevel
+from src.models.models import Message, Summary, Category, ChannelConfig, ProcessingStatus, ConfidenceLevel
 
 router = APIRouter()
 
@@ -30,10 +30,24 @@ def get_source_url(msg: Message) -> str:
         return msg.extracted_urls[0]
     return ""
 
+def get_channel_filter(db: Session, channel: str):
+    """Get channel_id from channel parameter (ID, username, or title)"""
+    from sqlalchemy import or_
+    config = db.query(ChannelConfig).filter(
+        or_(
+            ChannelConfig.channel_id == channel,
+            ChannelConfig.channel_username.ilike(channel.lstrip('@')),
+            ChannelConfig.channel_title.ilike(f"%{channel}%")
+        )
+    ).first()
+    return config.channel_id if config else channel
+
+
 def build_query(
     db: Session,
     q: Optional[str] = None,
     category_id: Optional[int] = None,
+    channel: Optional[str] = None,
     confidence: Optional[str] = None,
     status: Optional[str] = None,
     date_from: Optional[datetime] = None,
@@ -49,6 +63,10 @@ def build_query(
             Summary.summary.ilike(f"%{q}%")
         )
         query = query.join(Summary, isouter=True).filter(search_filter)
+    
+    if channel:
+        channel_id = get_channel_filter(db, channel)
+        query = query.filter(Message.channel_id == channel_id)
     
     if category_id:
         query = query.join(Summary).filter(Summary.category_id == category_id)
@@ -96,6 +114,7 @@ def flatten_entities(entities: dict) -> dict:
 async def export_csv(
     q: Optional[str] = Query(None),
     category_id: Optional[int] = Query(None),
+    channel: Optional[str] = Query(None, description="Filter by channel (ID, username, or title)"),
     confidence: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     date_from: Optional[datetime] = Query(None),
@@ -103,7 +122,7 @@ async def export_csv(
     db: Session = Depends(get_db)
 ):
     """Export messages as CSV with flattened entities"""
-    query = build_query(db, q, category_id, confidence, status, date_from, date_to)
+    query = build_query(db, q, category_id, channel, confidence, status, date_from, date_to)
     messages = query.all()
     
     output = io.StringIO()
@@ -158,6 +177,7 @@ async def export_csv(
 async def export_json(
     q: Optional[str] = Query(None),
     category_id: Optional[int] = Query(None),
+    channel: Optional[str] = Query(None, description="Filter by channel (ID, username, or title)"),
     confidence: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     date_from: Optional[datetime] = Query(None),
@@ -165,7 +185,7 @@ async def export_json(
     db: Session = Depends(get_db)
 ):
     """Export messages as JSON"""
-    query = build_query(db, q, category_id, confidence, status, date_from, date_to)
+    query = build_query(db, q, category_id, channel, confidence, status, date_from, date_to)
     messages = query.all()
     
     data = []
@@ -296,6 +316,7 @@ async def export_stats(
 async def export_rss(
     request: Request,
     category: Optional[str] = Query(default=None, description="Filter by category name"),
+    channel: Optional[str] = Query(default=None, description="Filter by channel (ID, username, or title)"),
     limit: int = Query(default=50, ge=1, le=200, description="Number of entries"),
     db: Session = Depends(get_db)
 ):
@@ -314,6 +335,10 @@ async def export_rss(
         Summary.processing_status == ProcessingStatus.SUCCESS,
         Summary.data_quality == 'complete'
     )
+
+    if channel:
+        channel_id = get_channel_filter(db, channel)
+        query = query.filter(Message.channel_id == channel_id)
 
     if category:
         query = query.join(Category).filter(Category.name.ilike(category))
@@ -363,6 +388,7 @@ async def export_rss(
 async def export_atom(
     request: Request,
     category: Optional[str] = Query(default=None, description="Filter by category name"),
+    channel: Optional[str] = Query(default=None, description="Filter by channel (ID, username, or title)"),
     limit: int = Query(default=50, ge=1, le=200, description="Number of entries"),
     db: Session = Depends(get_db)
 ):
@@ -379,6 +405,10 @@ async def export_atom(
         Summary.processing_status == ProcessingStatus.SUCCESS,
         Summary.data_quality == 'complete'
     )
+
+    if channel:
+        channel_id = get_channel_filter(db, channel)
+        query = query.filter(Message.channel_id == channel_id)
 
     if category:
         query = query.join(Category).filter(Category.name.ilike(category))
@@ -429,6 +459,7 @@ async def export_atom(
 @router.get("/production/csv")
 async def export_production_csv(
     category: Optional[str] = Query(default=None, description="Filter by category name"),
+    channel: Optional[str] = Query(default=None, description="Filter by channel (ID, username, or title)"),
     protocol: Optional[str] = Query(default=None, description="Filter by protocol name"),
     date_from: Optional[datetime] = Query(default=None, description="Filter from date"),
     date_to: Optional[datetime] = Query(default=None, description="Filter to date"),
@@ -446,6 +477,10 @@ async def export_production_csv(
         Summary.processing_status == ProcessingStatus.SUCCESS,
         Summary.data_quality == 'complete'
     )
+
+    if channel:
+        channel_id = get_channel_filter(db, channel)
+        query = query.filter(Message.channel_id == channel_id)
 
     if category:
         query = query.join(Category).filter(Category.name.ilike(category))
@@ -510,6 +545,7 @@ async def export_production_csv(
 @router.get("/production/json")
 async def export_production_json(
     category: Optional[str] = Query(default=None, description="Filter by category name"),
+    channel: Optional[str] = Query(default=None, description="Filter by channel (ID, username, or title)"),
     protocol: Optional[str] = Query(default=None, description="Filter by protocol name"),
     date_from: Optional[datetime] = Query(default=None, description="Filter from date"),
     date_to: Optional[datetime] = Query(default=None, description="Filter to date"),
@@ -527,6 +563,10 @@ async def export_production_json(
         Summary.processing_status == ProcessingStatus.SUCCESS,
         Summary.data_quality == 'complete'
     )
+
+    if channel:
+        channel_id = get_channel_filter(db, channel)
+        query = query.filter(Message.channel_id == channel_id)
 
     if category:
         query = query.join(Category).filter(Category.name.ilike(category))
