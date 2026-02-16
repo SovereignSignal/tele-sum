@@ -15,7 +15,7 @@ import io
 import json
 
 from src.models.database import get_db
-from src.models.models import Message, Summary, Category, ChannelConfig, ProcessingStatus, ConfidenceLevel
+from src.models.models import Message, Summary, Category, ChannelConfig, ProcessingStatus, ConfidenceLevel, Wire
 
 router = APIRouter()
 
@@ -48,6 +48,7 @@ def build_query(
     q: Optional[str] = None,
     category_id: Optional[int] = None,
     channel: Optional[str] = None,
+    wire: Optional[str] = None,
     confidence: Optional[str] = None,
     status: Optional[str] = None,
     date_from: Optional[datetime] = None,
@@ -67,6 +68,13 @@ def build_query(
     if channel:
         channel_id = get_channel_filter(db, channel)
         query = query.filter(Message.channel_id == channel_id)
+    
+    if wire:
+        try:
+            wire_enum = Wire(wire.lower())
+            query = query.join(Summary, isouter=True).filter(Summary.wire == wire_enum)
+        except ValueError:
+            pass  # Invalid wire value, ignore filter
     
     if category_id:
         query = query.join(Summary).filter(Summary.category_id == category_id)
@@ -115,6 +123,7 @@ async def export_csv(
     q: Optional[str] = Query(None),
     category_id: Optional[int] = Query(None),
     channel: Optional[str] = Query(None, description="Filter by channel (ID, username, or title)"),
+    wire: Optional[str] = Query(None, description="Filter by wire vertical (crypto, ai, oss)"),
     confidence: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     date_from: Optional[datetime] = Query(None),
@@ -122,7 +131,7 @@ async def export_csv(
     db: Session = Depends(get_db)
 ):
     """Export messages as CSV with flattened entities"""
-    query = build_query(db, q, category_id, channel, confidence, status, date_from, date_to)
+    query = build_query(db, q, category_id, channel, wire, confidence, status, date_from, date_to)
     messages = query.all()
     
     output = io.StringIO()
@@ -178,6 +187,7 @@ async def export_json(
     q: Optional[str] = Query(None),
     category_id: Optional[int] = Query(None),
     channel: Optional[str] = Query(None, description="Filter by channel (ID, username, or title)"),
+    wire: Optional[str] = Query(None, description="Filter by wire vertical (crypto, ai, oss)"),
     confidence: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     date_from: Optional[datetime] = Query(None),
@@ -185,7 +195,7 @@ async def export_json(
     db: Session = Depends(get_db)
 ):
     """Export messages as JSON"""
-    query = build_query(db, q, category_id, channel, confidence, status, date_from, date_to)
+    query = build_query(db, q, category_id, channel, wire, confidence, status, date_from, date_to)
     messages = query.all()
     
     data = []
@@ -317,6 +327,7 @@ async def export_rss(
     request: Request,
     category: Optional[str] = Query(default=None, description="Filter by category name"),
     channel: Optional[str] = Query(default=None, description="Filter by channel (ID, username, or title)"),
+    wire: Optional[str] = Query(default=None, description="Filter by wire vertical (crypto, ai, oss)"),
     limit: int = Query(default=50, ge=1, le=200, description="Number of entries"),
     db: Session = Depends(get_db)
 ):
@@ -339,6 +350,13 @@ async def export_rss(
     if channel:
         channel_id = get_channel_filter(db, channel)
         query = query.filter(Message.channel_id == channel_id)
+
+    if wire:
+        try:
+            wire_enum = Wire(wire.lower())
+            query = query.filter(Summary.wire == wire_enum)
+        except ValueError:
+            pass
 
     if category:
         query = query.join(Category).filter(Category.name.ilike(category))
@@ -389,6 +407,7 @@ async def export_atom(
     request: Request,
     category: Optional[str] = Query(default=None, description="Filter by category name"),
     channel: Optional[str] = Query(default=None, description="Filter by channel (ID, username, or title)"),
+    wire: Optional[str] = Query(default=None, description="Filter by wire vertical (crypto, ai, oss)"),
     limit: int = Query(default=50, ge=1, le=200, description="Number of entries"),
     db: Session = Depends(get_db)
 ):
@@ -409,6 +428,13 @@ async def export_atom(
     if channel:
         channel_id = get_channel_filter(db, channel)
         query = query.filter(Message.channel_id == channel_id)
+
+    if wire:
+        try:
+            wire_enum = Wire(wire.lower())
+            query = query.filter(Summary.wire == wire_enum)
+        except ValueError:
+            pass
 
     if category:
         query = query.join(Category).filter(Category.name.ilike(category))
@@ -460,6 +486,7 @@ async def export_atom(
 async def export_production_csv(
     category: Optional[str] = Query(default=None, description="Filter by category name"),
     channel: Optional[str] = Query(default=None, description="Filter by channel (ID, username, or title)"),
+    wire: Optional[str] = Query(default=None, description="Filter by wire vertical (crypto, ai, oss)"),
     protocol: Optional[str] = Query(default=None, description="Filter by protocol name"),
     date_from: Optional[datetime] = Query(default=None, description="Filter from date"),
     date_to: Optional[datetime] = Query(default=None, description="Filter to date"),
@@ -481,6 +508,13 @@ async def export_production_csv(
     if channel:
         channel_id = get_channel_filter(db, channel)
         query = query.filter(Message.channel_id == channel_id)
+
+    if wire:
+        try:
+            wire_enum = Wire(wire.lower())
+            query = query.filter(Summary.wire == wire_enum)
+        except ValueError:
+            pass
 
     if category:
         query = query.join(Category).filter(Category.name.ilike(category))
@@ -546,6 +580,7 @@ async def export_production_csv(
 async def export_production_json(
     category: Optional[str] = Query(default=None, description="Filter by category name"),
     channel: Optional[str] = Query(default=None, description="Filter by channel (ID, username, or title)"),
+    wire: Optional[str] = Query(default=None, description="Filter by wire vertical (crypto, ai, oss)"),
     protocol: Optional[str] = Query(default=None, description="Filter by protocol name"),
     date_from: Optional[datetime] = Query(default=None, description="Filter from date"),
     date_to: Optional[datetime] = Query(default=None, description="Filter to date"),
@@ -567,6 +602,13 @@ async def export_production_json(
     if channel:
         channel_id = get_channel_filter(db, channel)
         query = query.filter(Message.channel_id == channel_id)
+
+    if wire:
+        try:
+            wire_enum = Wire(wire.lower())
+            query = query.filter(Summary.wire == wire_enum)
+        except ValueError:
+            pass
 
     if category:
         query = query.join(Category).filter(Category.name.ilike(category))

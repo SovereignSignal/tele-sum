@@ -13,7 +13,7 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from src.models.database import get_db
-from src.models.models import Message, Summary, ChannelConfig, ProcessingStatus
+from src.models.models import Message, Summary, ChannelConfig, ProcessingStatus, Wire
 
 router = APIRouter()
 
@@ -28,6 +28,7 @@ class ChannelResponse(BaseModel):
     channel_id: str
     username: Optional[str] = None
     title: Optional[str] = None
+    wire: Optional[str] = None
     is_active: bool
     total_messages: int
     complete_entries: int
@@ -36,6 +37,11 @@ class ChannelResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+class SetWireRequest(BaseModel):
+    """Request to set wire value on a channel"""
+    wire: str  # 'crypto', 'ai', or 'oss'
 
 
 class ChannelListResponse(BaseModel):
@@ -106,6 +112,7 @@ async def list_channels(
             channel_id=config.channel_id,
             username=config.channel_username,
             title=config.channel_title,
+            wire=config.wire.value if config.wire else None,
             is_active=config.is_active,
             total_messages=total_messages,
             complete_entries=complete_entries,
@@ -297,6 +304,48 @@ async def auto_create_channel_configs(db: Session = Depends(get_db)):
     }
 
 
+@router.patch("/{channel_id}/wire")
+async def set_channel_wire(
+    channel_id: str,
+    request: SetWireRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Set the wire vertical (crypto, ai, oss) for a channel.
+    
+    After setting wire on channels, call /backfill_wire to propagate
+    the wire value to existing messages and summaries.
+    """
+    # Find channel config by ID or channel_id string
+    config = None
+    if channel_id.isdigit():
+        config = db.query(ChannelConfig).filter(ChannelConfig.id == int(channel_id)).first()
+    
+    if not config:
+        config = db.query(ChannelConfig).filter(ChannelConfig.channel_id == channel_id).first()
+    
+    if not config:
+        raise HTTPException(status_code=404, detail=f"Channel not found: {channel_id}")
+    
+    # Validate and set wire value
+    try:
+        wire_enum = Wire(request.wire.lower())
+        config.wire = wire_enum
+        db.commit()
+        
+        return {
+            "success": True,
+            "channel_id": config.channel_id,
+            "channel_title": config.channel_title,
+            "wire": wire_enum.value
+        }
+    except ValueError:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Invalid wire value: {request.wire}. Must be 'crypto', 'ai', or 'oss'"
+        )
+
+
 @router.post("/backfill")
 async def backfill_channel_links(db: Session = Depends(get_db)):
     """
@@ -378,6 +427,114 @@ async def backfill_channel_links(db: Session = Depends(get_db)):
                 "config_id": config_id,
                 "messages_linked": unlinked_count
             })
+    
+    db.commit()
+    
+    return results
+
+
+@router.post("/backfill_wire")
+async def backfill_wire_values(db: Session = Depends(get_db)):
+    """
+    Backfill wire values from ChannelConfig to Messages and Summaries.
+    
+    This endpoint:
+    1. Ensures wire column exists on messages and summaries tables
+    2. Updates messages.wire based on their channel_config.wire
+    3. Updates summaries.wire based on their message.wire
+    
+    Call this endpoint after setting wire values on channel configs.
+    """
+    from sqlalchemy import text
+    
+    results = {
+        "schema_updated": False,
+        "messages_updated": 0,
+        "summaries_updated": 0,
+        "channels_processed": []
+    }
+    
+    # Step 1: Ensure wire columns exist (safe to run multiple times)
+    try:
+        # Check if wire enum type exists, create if not
+        db.execute(text("""
+            DO $$ BEGIN
+                CREATE TYPE wire AS ENUM ('crypto', 'ai', 'oss');
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
+        """))
+        
+        # Add wire column to messages if not exists
+        db.execute(text("""
+            ALTER TABLE messages 
+            ADD COLUMN IF NOT EXISTS wire wire
+        """))
+        db.execute(text("""
+            CREATE INDEX IF NOT EXISTS ix_messages_wire ON messages(wire)
+        """))
+        
+        # Add wire column to summaries if not exists
+        db.execute(text("""
+            ALTER TABLE summaries 
+            ADD COLUMN IF NOT EXISTS wire wire
+        """))
+        db.execute(text("""
+            CREATE INDEX IF NOT EXISTS ix_summaries_wire ON summaries(wire)
+        """))
+        
+        # Add wire column to channel_configs if not exists
+        db.execute(text("""
+            ALTER TABLE channel_configs 
+            ADD COLUMN IF NOT EXISTS wire wire
+        """))
+        db.execute(text("""
+            CREATE INDEX IF NOT EXISTS ix_channel_configs_wire ON channel_configs(wire)
+        """))
+        
+        db.commit()
+        results["schema_updated"] = True
+    except Exception as e:
+        db.rollback()
+        results["schema_note"] = str(e)
+    
+    # Step 2: Update messages.wire from channel_config.wire
+    configs_with_wire = db.query(ChannelConfig).filter(
+        ChannelConfig.wire.isnot(None)
+    ).all()
+    
+    for config in configs_with_wire:
+        # Update messages linked to this channel config
+        updated = db.query(Message).filter(
+            Message.channel_config_id == config.id,
+            Message.wire.is_(None)
+        ).update(
+            {Message.wire: config.wire},
+            synchronize_session=False
+        )
+        
+        if updated > 0:
+            results["messages_updated"] += updated
+            results["channels_processed"].append({
+                "channel_id": config.channel_id,
+                "channel_title": config.channel_title,
+                "wire": config.wire.value,
+                "messages_updated": updated
+            })
+    
+    db.commit()
+    
+    # Step 3: Update summaries.wire from their message.wire
+    summaries_updated = db.execute(text("""
+        UPDATE summaries 
+        SET wire = messages.wire
+        FROM messages 
+        WHERE summaries.message_id = messages.id 
+        AND messages.wire IS NOT NULL 
+        AND summaries.wire IS NULL
+    """))
+    
+    results["summaries_updated"] = summaries_updated.rowcount
     
     db.commit()
     

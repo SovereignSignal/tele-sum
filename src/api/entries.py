@@ -13,7 +13,7 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from src.models.database import get_db
-from src.models.models import Message, Summary, Category, ChannelConfig, ProcessingStatus
+from src.models.models import Message, Summary, Category, ChannelConfig, ProcessingStatus, Wire
 
 router = APIRouter()
 
@@ -153,6 +153,7 @@ async def list_entries(
     q: Optional[str] = Query(default=None, description="Search in title and summary"),
     category: Optional[str] = Query(default=None, description="Filter by category name"),
     channel: Optional[str] = Query(default=None, description="Filter by channel (ID, username, or title)"),
+    wire: Optional[str] = Query(default=None, description="Filter by wire vertical (crypto, ai, oss)"),
     protocol: Optional[str] = Query(default=None, description="Filter by protocol name"),
     date_from: Optional[datetime] = Query(default=None, description="Filter from date (ISO format)"),
     date_to: Optional[datetime] = Query(default=None, description="Filter to date (ISO format)"),
@@ -188,6 +189,14 @@ async def list_entries(
         else:
             # Direct channel_id filter if no config found
             query = query.filter(Message.channel_id == channel)
+
+    # Wire filter (crypto, ai, oss)
+    if wire:
+        try:
+            wire_enum = Wire(wire.lower())
+            query = query.filter(Summary.wire == wire_enum)
+        except ValueError:
+            pass  # Invalid wire value, ignore filter
 
     # Search filter
     if q:
