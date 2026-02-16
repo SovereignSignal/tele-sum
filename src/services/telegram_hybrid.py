@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from src.services.telegram import TelegramService
 from src.services.telegram_bot import TelegramBotService, BotManager
-from src.models.models import ChannelConfig, SyncStatus, ImportMode, TelegramBot
+from src.models.models import ChannelConfig, SyncStatus, ImportMode, TelegramBot, Wire
 from src.config import settings
 
 logger = logging.getLogger(__name__)
@@ -143,9 +143,17 @@ class HybridTelegramManager:
                 "error": str(e)
             }
     
-    async def setup_bot_monitoring(self, db: Session, channel_id: str, bot_token: str) -> Dict[str, Any]:
+    async def setup_bot_monitoring(self, db: Session, channel_id: str, bot_token: str, wire: Optional[str] = None) -> Dict[str, Any]:
         """Setup bot for ongoing monitoring of a channel"""
         try:
+            # Parse wire parameter
+            wire_enum = None
+            if wire:
+                try:
+                    wire_enum = Wire(wire.lower())
+                except ValueError:
+                    logger.warning(f"Invalid wire value: {wire}. Must be 'crypto', 'ai', or 'oss'")
+            
             # Register bot if needed
             bot_result = await self.bot_manager.register_bot(bot_token)
             
@@ -179,18 +187,24 @@ class HybridTelegramManager:
                     channel_id=resolved_channel_id,
                     channel_username=access_info.get("username"),
                     channel_title=access_info.get("title"),
+                    wire=wire_enum,
                     import_mode=ImportMode.BOT,
                     is_active=True
                 )
                 db.add(channel_config)
+                db.flush()  # Get the ID for linking
 
             # If an existing config was created with an @username or other alias, normalize to numeric chat_id
             if channel_config.channel_id != resolved_channel_id:
                 channel_config.channel_id = resolved_channel_id
             
+            # Update wire if provided and not already set
+            if wire_enum and not channel_config.wire:
+                channel_config.wire = wire_enum
+            
             channel_config.bot_id = bot_id
             
-            # Update sync status for bot transition
+            # Get or create sync status for this channel
             sync_status = db.query(SyncStatus).filter(
                 SyncStatus.channel_id == resolved_channel_id
             ).first()
@@ -198,6 +212,16 @@ class HybridTelegramManager:
             if sync_status:
                 sync_status.transition_to_bot_complete = True
                 sync_status.last_bot_sync_id = sync_status.last_message_id
+            else:
+                # Create new sync_status for tracking this channel
+                sync_status = SyncStatus(
+                    channel_id=resolved_channel_id,
+                    channel_config_id=channel_config.id,
+                    total_messages_synced=0,
+                    is_initial_import_complete=False
+                )
+                db.add(sync_status)
+                logger.info(f"Created sync_status for new channel: {resolved_channel_id}")
             
             db.commit()
             

@@ -8,7 +8,7 @@ import logging
 from datetime import datetime
 
 from src.models.database import get_db
-from src.models.models import Message, Summary, SyncStatus, ProcessingStatus
+from src.models.models import Message, Summary, SyncStatus, ProcessingStatus, ChannelConfig
 from src.services.telegram import TelegramService
 from src.services.processor import MessageProcessor
 from src.utils.url_extractor import extract_urls
@@ -237,9 +237,13 @@ async def import_from_file(
             if not telegram_id:
                 continue
             
-            # Check for duplicate
+            # Get channel ID early since we need it for duplicate check
+            channel_id = msg_data.get('channel_id') or msg_data.get('chat_id') or 'imported'
+            
+            # Check for duplicate (must check both channel_id and telegram_id since telegram_id is only unique per channel)
             existing = db.query(Message).filter(
-                Message.telegram_id == telegram_id
+                Message.telegram_id == telegram_id,
+                Message.channel_id == str(channel_id)
             ).first()
             
             if existing:
@@ -269,13 +273,18 @@ async def import_from_file(
             # Extract URLs
             urls = msg_data.get('extracted_urls') or msg_data.get('urls') or extract_urls(raw_content)
             
-            # Get channel ID
-            channel_id = msg_data.get('channel_id') or msg_data.get('chat_id') or 'imported'
+            # Look up channel config for wire assignment
+            channel_config = db.query(ChannelConfig).filter(
+                ChannelConfig.channel_id == str(channel_id),
+                ChannelConfig.is_active == True
+            ).first()
+            wire_value = channel_config.wire if channel_config else None
             
             # Create message
             message = Message(
                 telegram_id=telegram_id,
                 channel_id=str(channel_id),
+                wire=wire_value,  # Set wire from channel configuration
                 timestamp=timestamp,
                 raw_content=raw_content,
                 extracted_urls=urls if isinstance(urls, list) else [],
@@ -288,6 +297,7 @@ async def import_from_file(
             # Create summary record
             summary = Summary(
                 message_id=message.id,
+                wire=wire_value,  # Set wire from channel configuration
                 processing_status=ProcessingStatus.PENDING
             )
             db.add(summary)

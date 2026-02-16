@@ -47,6 +47,13 @@ class ConfidenceLevel(enum.Enum):
     CONFIDENT = "confident"
     UNCERTAIN = "uncertain"
 
+class Wire(enum.Enum):
+    """Grant Wire vertical - crypto, AI, or open source"""
+    # Names must be lowercase to match PostgreSQL enum values
+    crypto = "crypto"
+    ai = "ai"
+    oss = "oss"
+
 class User(Base):
     __tablename__ = "users"
     
@@ -80,6 +87,7 @@ class Message(Base):
     channel_config_id = Column(Integer, ForeignKey("channel_configs.id"), nullable=True, index=True)  # Link to channel metadata
     bot_id = Column(Integer, ForeignKey("telegram_bots.id"), nullable=True, index=True)  # Track which bot imported
     import_method = Column(String(20), default="phone")  # "phone", "bot", or "file"
+    wire = Column(SQLEnum(Wire), nullable=True, index=True)  # Grant Wire vertical (crypto, ai, oss)
     timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
     raw_content = Column(Text, nullable=False)
     extracted_urls = Column(JSON, default=list)
@@ -107,6 +115,7 @@ class Summary(Base):
     entities = Column(JSON, default=dict)
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
     confidence = Column(SQLEnum(ConfidenceLevel), nullable=True)
+    wire = Column(SQLEnum(Wire), nullable=True, index=True)  # Grant Wire vertical (crypto, ai, oss)
     processing_status = Column(SQLEnum(ProcessingStatus), default=ProcessingStatus.PENDING, index=True)
     error_log = Column(Text, nullable=True)
     processing_attempts = Column(Integer, default=0)
@@ -151,6 +160,7 @@ class ChannelConfig(Base):
     channel_id = Column(String(255), unique=True, index=True)
     channel_username = Column(String(100), nullable=True)
     channel_title = Column(String(255), nullable=True)
+    wire = Column(SQLEnum(Wire), nullable=True, index=True)  # Grant Wire vertical (crypto, ai, oss)
     import_mode = Column(SQLEnum(ImportMode), default=ImportMode.BOT)
     historical_import_complete = Column(Boolean, default=False)
     historical_import_date = Column(DateTime(timezone=True), nullable=True)
