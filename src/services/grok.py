@@ -171,7 +171,7 @@ class GrokService:
     "url": "null if no URL available, otherwise the source URL"
   },
   "entities": {
-    "protocols": ["protocols/projects mentioned - use official names"],
+    "orgs": ["organizations/projects mentioned - use official names"],
     "amounts": ["funding amounts with currency, e.g., '$5M', '100,000 OP'"],
     "deadlines": ["specific deadlines in YYYY-MM-DD format when possible"],
     "key_terms": ["important domain-specific terms"]
@@ -375,7 +375,7 @@ class GrokService:
             entities = {}
 
         # Ensure all entity lists are actually lists
-        for key in ["protocols", "amounts", "deadlines", "key_terms"]:
+        for key in ["orgs", "amounts", "deadlines", "key_terms"]:
             if key not in entities:
                 entities[key] = []
             elif not isinstance(entities[key], list):

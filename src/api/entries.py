@@ -42,7 +42,7 @@ class EntryResponse(BaseModel):
     channel: Optional[ChannelInfo] = None
     source: SourceInfo
     url: Optional[str] = None
-    protocols: List[str] = []
+    orgs: List[str] = []
     amounts: List[str] = []
     published_at: datetime
 
@@ -57,8 +57,8 @@ class EntryListResponse(BaseModel):
     pages: int
     entries: List[EntryResponse]
 
-class ProtocolResponse(BaseModel):
-    """Protocol with entry count"""
+class OrgResponse(BaseModel):
+    """Organization with entry count"""
     name: str
     count: int
 
@@ -110,8 +110,8 @@ def entry_from_message(msg: Message, channel_config: Optional[ChannelConfig] = N
             )
             url = source.get('url')
 
-        # Extract protocols and amounts
-        protocols = entities.get('protocols', [])
+        # Extract orgs and amounts (dual-read: prefer orgs, fallback to protocols for migration)
+        orgs = entities.get('orgs', []) or entities.get('protocols', [])
         amounts = entities.get('amounts', [])
 
     # Get URL from extracted_urls if not in entities
@@ -138,7 +138,7 @@ def entry_from_message(msg: Message, channel_config: Optional[ChannelConfig] = N
         channel=channel_info,
         source=source_info,
         url=url,
-        protocols=protocols if isinstance(protocols, list) else [],
+        orgs=orgs if isinstance(orgs, list) else [],
         amounts=amounts if isinstance(amounts, list) else [],
         published_at=msg.timestamp
     )
@@ -154,7 +154,7 @@ async def list_entries(
     category: Optional[str] = Query(default=None, description="Filter by category name"),
     channel: Optional[str] = Query(default=None, description="Filter by channel (ID, username, or title)"),
     wire: Optional[str] = Query(default=None, description="Filter by wire vertical (crypto, ai, oss)"),
-    protocol: Optional[str] = Query(default=None, description="Filter by protocol name"),
+    org: Optional[str] = Query(default=None, description="Filter by organization name"),
     date_from: Optional[datetime] = Query(default=None, description="Filter from date (ISO format)"),
     date_to: Optional[datetime] = Query(default=None, description="Filter to date (ISO format)"),
     page: int = Query(default=1, ge=1, description="Page number"),
@@ -213,10 +213,13 @@ async def list_entries(
     if category:
         query = query.join(Category).filter(Category.name.ilike(category))
 
-    # Protocol filter (search in entities JSON)
-    if protocol:
+    # Org filter (search in entities JSON - dual-read for migration)
+    if org:
         query = query.filter(
-            Summary.entities['protocols'].astext.ilike(f'%{protocol}%')
+            or_(
+                Summary.entities['orgs'].astext.ilike(f'%{org}%'),
+                Summary.entities['protocols'].astext.ilike(f'%{org}%')
+            )
         )
 
     # Date filters
@@ -375,41 +378,41 @@ async def get_stats(db: Session = Depends(get_db)):
     )
 
 
-@router.get("/protocols", response_model=List[ProtocolResponse])
-async def list_protocols(
+@router.get("/orgs", response_model=List[OrgResponse])
+async def list_orgs(
     limit: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db)
 ):
     """
-    List all protocols mentioned in entries with counts.
+    List all organizations mentioned in entries with counts.
 
-    Note: This extracts protocols from the entities JSON field.
+    Note: This extracts orgs from the entities JSON field (dual-read for migration).
     """
-    # Get all summaries with protocols
+    # Get all summaries with orgs/protocols
     summaries = db.query(Summary).filter(
         Summary.processing_status == ProcessingStatus.SUCCESS,
         Summary.data_quality == 'complete',
         Summary.entities.isnot(None)
     ).all()
 
-    # Count protocols
-    protocol_counts = {}
+    # Count orgs (dual-read: prefer orgs, fallback to protocols)
+    org_counts = {}
     for summary in summaries:
-        protocols = summary.entities.get('protocols', []) if summary.entities else []
-        for protocol in protocols:
-            if protocol:
-                protocol_counts[protocol] = protocol_counts.get(protocol, 0) + 1
+        orgs = (summary.entities.get('orgs', []) or summary.entities.get('protocols', [])) if summary.entities else []
+        for org in orgs:
+            if org:
+                org_counts[org] = org_counts.get(org, 0) + 1
 
     # Sort by count and return
-    sorted_protocols = sorted(
-        protocol_counts.items(),
+    sorted_orgs = sorted(
+        org_counts.items(),
         key=lambda x: x[1],
         reverse=True
     )[:limit]
 
     return [
-        ProtocolResponse(name=name, count=count)
-        for name, count in sorted_protocols
+        OrgResponse(name=name, count=count)
+        for name, count in sorted_orgs
     ]
 
 
