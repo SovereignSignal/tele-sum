@@ -94,7 +94,7 @@ def entry_from_message(msg: Message, channel_config: Optional[ChannelConfig] = N
     """Convert a Message/Summary to EntryResponse"""
     source_info = SourceInfo()
     url = None
-    protocols = []
+    orgs = []
     amounts = []
 
     if msg.summary and msg.summary.entities:

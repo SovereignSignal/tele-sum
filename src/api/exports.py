@@ -105,14 +105,16 @@ def flatten_entities(entities: dict) -> dict:
     """Flatten entities dictionary for CSV export"""
     if not entities:
         return {
-            "protocols": "",
+            "orgs": "",
             "amounts": "",
             "dates": "",
             "key_terms": ""
         }
     
+    # Dual-read: prefer orgs, fallback to protocols for migration
+    orgs = entities.get("orgs", []) or entities.get("protocols", [])
     return {
-        "protocols": "; ".join(entities.get("protocols", [])),
+        "orgs": "; ".join(orgs) if orgs else "",
         "amounts": "; ".join(entities.get("amounts", [])),
         "dates": "; ".join(entities.get("dates", [])),
         "key_terms": "; ".join(entities.get("key_terms", []))
@@ -140,7 +142,7 @@ async def export_csv(
         fieldnames=[
             "id", "telegram_id", "channel_id", "timestamp", "raw_content", 
             "urls", "summary", "category", "confidence", 
-            "processing_status", "protocols", "amounts", "dates", "key_terms"
+            "processing_status", "orgs", "amounts", "dates", "key_terms"
         ]
     )
     writer.writeheader()
@@ -487,7 +489,7 @@ async def export_production_csv(
     category: Optional[str] = Query(default=None, description="Filter by category name"),
     channel: Optional[str] = Query(default=None, description="Filter by channel (ID, username, or title)"),
     wire: Optional[str] = Query(default=None, description="Filter by wire vertical (crypto, ai, oss)"),
-    protocol: Optional[str] = Query(default=None, description="Filter by protocol name"),
+    org: Optional[str] = Query(default=None, description="Filter by organization name"),
     date_from: Optional[datetime] = Query(default=None, description="Filter from date"),
     date_to: Optional[datetime] = Query(default=None, description="Filter to date"),
     db: Session = Depends(get_db)
@@ -519,9 +521,13 @@ async def export_production_csv(
     if category:
         query = query.join(Category).filter(Category.name.ilike(category))
 
-    if protocol:
+    # Org filter (dual-read for migration)
+    if org:
         query = query.filter(
-            Summary.entities['protocols'].astext.ilike(f'%{protocol}%')
+            or_(
+                Summary.entities['orgs'].astext.ilike(f'%{org}%'),
+                Summary.entities['protocols'].astext.ilike(f'%{org}%')
+            )
         )
 
     if date_from:
@@ -536,19 +542,20 @@ async def export_production_csv(
         output,
         fieldnames=[
             "id", "title", "summary", "category", "source_url", "source_name",
-            "source_type", "protocols", "amounts", "published_at"
+            "source_type", "orgs", "amounts", "published_at"
         ]
     )
     writer.writeheader()
 
     for msg in messages:
         source = {}
-        protocols = []
+        orgs = []
         amounts = []
 
         if msg.summary and msg.summary.entities:
             source = msg.summary.entities.get('source', {}) or {}
-            protocols = msg.summary.entities.get('protocols', []) or []
+            # Dual-read: prefer orgs, fallback to protocols
+            orgs = msg.summary.entities.get('orgs', []) or msg.summary.entities.get('protocols', []) or []
             amounts = msg.summary.entities.get('amounts', []) or []
 
         row = {
@@ -559,7 +566,7 @@ async def export_production_csv(
             "source_url": source.get('url', '') if isinstance(source, dict) else get_source_url(msg),
             "source_name": source.get('name', '') if isinstance(source, dict) else "",
             "source_type": source.get('type', '') if isinstance(source, dict) else "",
-            "protocols": "; ".join(protocols) if isinstance(protocols, list) else "",
+            "orgs": "; ".join(orgs) if isinstance(orgs, list) else "",
             "amounts": "; ".join(amounts) if isinstance(amounts, list) else "",
             "published_at": msg.timestamp.isoformat() if msg.timestamp else ""
         }
@@ -581,7 +588,7 @@ async def export_production_json(
     category: Optional[str] = Query(default=None, description="Filter by category name"),
     channel: Optional[str] = Query(default=None, description="Filter by channel (ID, username, or title)"),
     wire: Optional[str] = Query(default=None, description="Filter by wire vertical (crypto, ai, oss)"),
-    protocol: Optional[str] = Query(default=None, description="Filter by protocol name"),
+    org: Optional[str] = Query(default=None, description="Filter by organization name"),
     date_from: Optional[datetime] = Query(default=None, description="Filter from date"),
     date_to: Optional[datetime] = Query(default=None, description="Filter to date"),
     db: Session = Depends(get_db)
@@ -613,9 +620,13 @@ async def export_production_json(
     if category:
         query = query.join(Category).filter(Category.name.ilike(category))
 
-    if protocol:
+    # Org filter (dual-read for migration)
+    if org:
         query = query.filter(
-            Summary.entities['protocols'].astext.ilike(f'%{protocol}%')
+            or_(
+                Summary.entities['orgs'].astext.ilike(f'%{org}%'),
+                Summary.entities['protocols'].astext.ilike(f'%{org}%')
+            )
         )
 
     if date_from:
@@ -628,12 +639,13 @@ async def export_production_json(
     entries = []
     for msg in messages:
         source = {}
-        protocols = []
+        orgs = []
         amounts = []
 
         if msg.summary and msg.summary.entities:
             source = msg.summary.entities.get('source', {}) or {}
-            protocols = msg.summary.entities.get('protocols', []) or []
+            # Dual-read: prefer orgs, fallback to protocols
+            orgs = msg.summary.entities.get('orgs', []) or msg.summary.entities.get('protocols', []) or []
             amounts = msg.summary.entities.get('amounts', []) or []
 
         entry = {
@@ -646,7 +658,7 @@ async def export_production_json(
                 "name": source.get('name') if isinstance(source, dict) else None,
                 "type": source.get('type') if isinstance(source, dict) else None
             },
-            "protocols": protocols if isinstance(protocols, list) else [],
+            "orgs": orgs if isinstance(orgs, list) else [],
             "amounts": amounts if isinstance(amounts, list) else [],
             "published_at": msg.timestamp.isoformat() if msg.timestamp else None
         }
@@ -658,7 +670,7 @@ async def export_production_json(
             "total_entries": len(entries),
             "filters": {
                 "category": category,
-                "protocol": protocol,
+                "org": org,
                 "date_from": date_from.isoformat() if date_from else None,
                 "date_to": date_to.isoformat() if date_to else None
             },

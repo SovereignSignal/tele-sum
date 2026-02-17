@@ -63,14 +63,16 @@
             </div>
             {% endif %}
             
-            {% if msg.entities and (msg.entities.protocols or msg.entities.amounts or msg.entities.dates or msg.entities.key_terms) %}
+            {# Dual-read: prefer orgs, fallback to protocols for migration #}
+            {% set entity_orgs = msg.entities.orgs or msg.entities.protocols if msg.entities else [] %}
+            {% if msg.entities and (entity_orgs or msg.entities.amounts or msg.entities.dates or msg.entities.key_terms) %}
             <div class="border-t pt-3">
                 <p class="text-xs font-medium text-gray-500 mb-2">Entities:</p>
                 <div class="flex flex-wrap gap-2">
-                    {% if msg.entities.protocols %}
-                    {% for protocol in msg.entities.protocols %}
+                    {% if entity_orgs %}
+                    {% for org in entity_orgs %}
                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                        <i class="fas fa-cube mr-1"></i>{{ protocol }}
+                        <i class="fas fa-cube mr-1"></i>{{ org }}
                     </span>
                     {% endfor %}
                     {% endif %}
