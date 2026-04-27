@@ -22,16 +22,69 @@ See PROCESSING.md for the full state machine and retry logic documentation.
 
 import logging
 import asyncio
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Tuple
 from datetime import datetime, timedelta
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from src.models.models import Message, Summary, Category, ProcessingStatus, ConfidenceLevel
 from src.services.ai import AIService
 from src.scrapers.content_scraper import ContentScraper
 from src.scrapers.twitter_scraper import TwitterScraper
-from src.utils.url_extractor import is_twitter_url
+from src.utils.url_extractor import is_twitter_url, normalize_url
 from src.config import settings
+
+
+def _check_seen(db: Session, urls: List[str], wire_value: Optional[str]) -> Optional[Dict]:
+    """Look up message URLs in the shared seen_urls table (per-wire scoped).
+
+    Returns a dict describing the first match, or None.
+    No-ops without a wire (the unique index requires wire NOT NULL).
+    """
+    if not urls or not wire_value:
+        return None
+    for raw in urls:
+        norm = normalize_url(raw)
+        if not norm:
+            continue
+        row = db.execute(
+            text(
+                "SELECT id, first_seen_entry_id, first_seen_date "
+                "FROM seen_urls WHERE normalized_url = :n AND wire = :w LIMIT 1"
+            ),
+            {"n": norm, "w": wire_value},
+        ).first()
+        if row:
+            return {
+                "seen_urls_id": row[0],
+                "first_seen_entry_id": row[1],
+                "first_seen_date": str(row[2]) if row[2] else None,
+                "matched_url": raw,
+                "normalized_url": norm,
+            }
+    return None
+
+
+def _record_seen(db: Session, urls: List[str], wire_value: Optional[str]) -> None:
+    """Insert message URLs into seen_urls (idempotent via unique index)."""
+    if not urls or not wire_value:
+        return
+    for raw in urls:
+        norm = normalize_url(raw)
+        if not norm:
+            continue
+        try:
+            db.execute(
+                text(
+                    "INSERT INTO seen_urls (url, normalized_url, wire, first_seen_date) "
+                    "VALUES (:url, :norm, :wire, CURRENT_DATE) "
+                    "ON CONFLICT (normalized_url, wire) DO NOTHING"
+                ),
+                {"url": raw, "norm": norm, "wire": wire_value},
+            )
+        except Exception as e:
+            logger.warning(f"seen_urls insert failed for {norm} (non-fatal): {e}")
+            db.rollback()
 
 logger = logging.getLogger(__name__)
 
@@ -91,13 +144,28 @@ class MessageProcessor:
         summary.processing_attempts += 1
         summary.last_processed_at = datetime.utcnow()
         db.commit()
-        
+
+        # DEDUP: any URL already in seen_urls (per-wire scoped)? If yes, skip AI.
+        urls = message.extracted_urls or []
+        wire_value = message.wire.value if message.wire else None
+        seen = _check_seen(db, urls, wire_value)
+        if seen:
+            summary.entities = {"duplicate_of": seen, "urls": urls}
+            summary.data_quality = "duplicate"
+            summary.processing_status = ProcessingStatus.SUCCESS
+            summary.error_log = None
+            db.commit()
+            logger.info(
+                f"Message {message.id} is a duplicate of seen_urls#{seen['seen_urls_id']} "
+                f"(matched {seen['matched_url']}); skipping AI"
+            )
+            return True
+
         try:
             # Get categories for classification
             categories = db.query(Category).filter(Category.user_id == 1).all()
-            
+
             # Separate URLs by type
-            urls = message.extracted_urls or []
             twitter_urls = [url for url in urls if is_twitter_url(url)]
             other_urls = [url for url in urls if not is_twitter_url(url)]
 
@@ -116,7 +184,6 @@ class MessageProcessor:
                 url_contents.update(other_contents)
 
             # Call AI provider
-            wire_value = message.wire.value if message.wire else None
             result = await self.ai_service.analyze_content(
                 message.raw_content,
                 urls,
@@ -158,6 +225,10 @@ class MessageProcessor:
                 # STATE TRANSITION: PROCESSING -> SUCCESS
                 summary.processing_status = ProcessingStatus.SUCCESS
                 summary.error_log = None
+                db.commit()
+
+                # Register URLs in the shared seen_urls table for cross-app dedup.
+                _record_seen(db, urls, wire_value)
                 db.commit()
 
                 logger.info(f"Successfully processed message {message.id}")

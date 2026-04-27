@@ -1,6 +1,58 @@
 import re
 from typing import List
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode
+
+# Tracking params stripped during normalization. Mirrors wire-room-ops/src/utils/url.ts.
+_TRACKING_PARAMS = {
+    "s", "t", "ref", "ref_src",
+    "utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term",
+    "fbclid", "gclid",
+}
+
+
+def normalize_url(url: str) -> str:
+    """Canonical URL form for deduplication.
+
+    Mirrors the sibling app's `normalizeUrl` (wire-room-ops src/utils/url.ts) so the
+    shared `seen_urls` table sees the same key from both apps.
+
+    Rules: strip markdown link artifacts and trailing punctuation, collapse
+    twitter.com/www.x.com to x.com, drop tracking params, drop trailing slashes,
+    lowercase. Falls back to raw lowercase on parse error.
+    """
+    if not url:
+        return ""
+
+    # "url](url" markdown artifact — keep the part before "](".
+    md = url.find("](")
+    if md != -1:
+        url = url[:md]
+    # Trailing markdown/punctuation junk.
+    url = re.sub(r"[\])\.,;:]+$", "", url)
+
+    try:
+        u = urlparse(url)
+        host = (u.hostname or "").lower()
+        if host in ("twitter.com", "www.twitter.com"):
+            host = "x.com"
+        elif host == "www.x.com":
+            host = "x.com"
+
+        # Reassemble netloc (preserve port if present).
+        if u.port:
+            netloc = f"{host}:{u.port}"
+        else:
+            netloc = host
+
+        # Strip tracking params, preserve order/dupes for non-tracking ones.
+        params = [(k, v) for k, v in parse_qsl(u.query, keep_blank_values=True) if k.lower() not in _TRACKING_PARAMS]
+        query = urlencode(params)
+
+        path = u.path.rstrip("/")
+        normalized = urlunparse((u.scheme.lower(), netloc, path, u.params, query, ""))
+        return normalized.lower()
+    except Exception:
+        return url.lower().strip()
 
 def extract_urls(text: str) -> List[str]:
     if not text:
