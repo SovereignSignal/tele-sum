@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from src.config import settings
 from src.models import database
-from src.models.models import ChannelConfig, TelegramBot, Summary, ProcessingStatus, Message
+from src.models.models import Summary, ProcessingStatus
 from src.services.processor import MessageProcessor
 
 logger = logging.getLogger(__name__)
@@ -31,178 +31,32 @@ scheduler = AsyncIOScheduler()
 
 async def sync_and_process():
     """
-    Main sync job: Sync new messages from Telegram and process them.
+    Backlog drain: process up to 200 PENDING/RETRY messages in batches of 20.
 
-    Runs every sync_interval_hours (default: 6 hours).
-    1. Syncs new messages from Telegram (phone or bot mode)
-    2. Processes messages in batches of 20
-    3. Processes up to 10 batches (200 messages max per run)
-    4. 5 second pause between batches to avoid overwhelming Grok API
+    Bot ingest is handled by start_bot_manager()'s continuous getUpdates polling
+    (in src/services/telegram_bot.py). This job complements process_pending_only
+    (which handles 10 at a time every 2 min) for clearing larger backlogs after
+    AI/Telegram outages clear.
+
+    Runs every sync_interval_hours (default 6h).
     """
-    logger.info("Starting scheduled sync and process task")
-    
+    logger.info("Starting scheduled backlog drain")
     database.get_engine()
     db = database.SessionLocal()
     try:
-        if settings.is_bot_configured():
-            try:
-                import httpx
-                from src.utils.url_extractor import extract_urls
-                from datetime import datetime
-
-                bot_tokens = settings.get_bot_tokens()
-                for bot_token in bot_tokens:
-                    # Persist per-bot update offsets to avoid replaying old updates every run
-                    bot_record = db.query(TelegramBot).filter(
-                        TelegramBot.bot_token == bot_token
-                    ).first()
-
-                    if not bot_record:
-                        bot_record = TelegramBot(
-                            bot_token=bot_token,
-                            is_active=True
-                        )
-                        db.add(bot_record)
-                        db.commit()
-                        db.refresh(bot_record)
-
-                    offset = (bot_record.last_update_id or 0) + 1
-
-                    async with httpx.AsyncClient(timeout=30.0) as client:
-                        # Get updates from Telegram Bot API
-                        response = await client.get(
-                            f'https://api.telegram.org/bot{bot_token}/getUpdates',
-                            params={'limit': 100, 'offset': offset}
-                        )
-                        updates = response.json()
-
-                        if not updates.get('ok'):
-                            logger.error(f"Bot API error: {updates}")
-                            continue
-
-                        imported = 0
-                        last_update_id = None
-
-                        for update in updates['result']:
-                            last_update_id = update['update_id']
-
-                            post = update.get('channel_post') or update.get('message')
-                            if not post:
-                                continue
-
-                            telegram_id = post['message_id']
-                            chat_id = str(post['chat']['id'])
-                            text_content = post.get('text') or post.get('caption') or ''
-                            timestamp = post['date']
-
-                            # Only import from channels configured in the database
-                            # First try by chat_id, then by username (for newly configured channels)
-                            channel_config = db.query(ChannelConfig).filter(
-                                ChannelConfig.channel_id == chat_id,
-                                ChannelConfig.is_active == True
-                            ).first()
-
-                            # Also check by username if chat title matches
-                            chat_username = post['chat'].get('username', '')
-                            if not channel_config and chat_username:
-                                channel_config = db.query(ChannelConfig).filter(
-                                    ChannelConfig.channel_username == chat_username,
-                                    ChannelConfig.is_active == True
-                                ).first()
-                                # Update the channel_id to the real numeric ID
-                                if channel_config:
-                                    channel_config.channel_id = chat_id
-                                    channel_config.channel_title = post['chat'].get('title', chat_username)
-                                    db.commit()
-                                    logger.info(f"Updated channel_id for @{chat_username} -> {chat_id}")
-
-                            # Also check for @username placeholder (auto-created configs)
-                            if not channel_config and chat_username:
-                                channel_config = db.query(ChannelConfig).filter(
-                                    ChannelConfig.channel_id == f"@{chat_username}",
-                                    ChannelConfig.is_active == True
-                                ).first()
-                                if channel_config:
-                                    channel_config.channel_id = chat_id
-                                    channel_config.channel_title = post['chat'].get('title', chat_username)
-                                    db.commit()
-                                    logger.info(f"Resolved placeholder @{chat_username} -> {chat_id}")
-
-                            if not channel_config:
-                                continue
-
-                            # Check if already exists
-                            existing = db.query(Message).filter(
-                                Message.telegram_id == telegram_id,
-                                Message.channel_id == chat_id
-                            ).first()
-
-                            if existing:
-                                continue
-
-                            # Extract URLs and create message
-                            urls = extract_urls(text_content) if text_content else []
-
-                            new_msg = Message(
-                                telegram_id=telegram_id,
-                                channel_id=chat_id,
-                                channel_config_id=channel_config.id,  # Link to channel config
-                                bot_id=bot_record.id,
-                                import_method='bot',
-                                wire=channel_config.wire,  # Set wire from channel configuration
-                                timestamp=datetime.utcfromtimestamp(timestamp),
-                                raw_content=text_content,
-                                extracted_urls=urls
-                            )
-                            db.add(new_msg)
-                            db.flush()
-
-                            # Create summary with PENDING status (inherit wire from channel)
-                            summary = Summary(
-                                message_id=new_msg.id,
-                                wire=channel_config.wire,  # Set wire from channel configuration
-                                processing_status=ProcessingStatus.PENDING,
-                                processing_attempts=0
-                            )
-                            db.add(summary)
-                            imported += 1
-                            logger.info(f"Bot imported TG#{telegram_id}")
-
-                        db.commit()
-
-                        # Persist update offset so subsequent runs don't replay old updates
-                        if last_update_id is not None:
-                            bot_record.last_update_id = last_update_id
-                            db.commit()
-
-                        if imported > 0:
-                            logger.info(f"Bot sync completed: {imported} new messages")
-
-            except Exception as e:
-                logger.error(f"Error in bot sync: {e}")
-        
-        # Process pending messages
         processor = MessageProcessor()
         processed = 0
-        batch_size = 20   # Messages per batch
-        max_batches = 10  # Maximum batches per sync (20 * 10 = 200 messages max)
-
-        # Process in batches until we run out of pending messages or hit max_batches
+        batch_size = 20
+        max_batches = 10  # 20 * 10 = 200 messages max per run
         for _ in range(max_batches):
             batch_processed = await processor.process_batch(db, limit=batch_size, include_retries=True)
             processed += batch_processed
-
-            # If batch wasn't full, we've processed all pending messages
             if batch_processed < batch_size:
                 break
-
-            # Pause between batches to avoid rate limiting Grok API
             await asyncio.sleep(5)
-        
-        logger.info(f"Processed {processed} messages")
-        
+        logger.info(f"Drained {processed} messages")
     except Exception as e:
-        logger.error(f"Error in scheduled task: {e}")
+        logger.error(f"Error in scheduled drain: {e}")
     finally:
         db.close()
 

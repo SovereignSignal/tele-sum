@@ -179,25 +179,26 @@ class TelegramBotService:
         # Extract URLs
         urls = extract_urls(message_text)
         
-        # Create message record
+        # Create message record (inherit wire from channel config)
         message = Message(
             telegram_id=msg.message_id,
             channel_id=channel_id,
-            channel_config_id=channel_config.id,  # Link to channel config
+            channel_config_id=channel_config.id,
             bot_id=self.bot_id,
             import_method="bot",
+            wire=channel_config.wire,
             timestamp=msg.date,
             raw_content=message_text,
-            extracted_urls=urls
+            extracted_urls=urls,
         )
-        
+
         db.add(message)
         db.flush()
-        
-        # Create summary record for processing
+
         summary = Summary(
             message_id=message.id,
-            processing_status=ProcessingStatus.PENDING
+            wire=channel_config.wire,
+            processing_status=ProcessingStatus.PENDING,
         )
         db.add(summary)
         
