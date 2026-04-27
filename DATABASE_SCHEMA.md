@@ -1,13 +1,28 @@
-# Grant Wire Database Schema
+# Tele-Sum Database Schema
 
-Complete database schema reference for the Grant Wire summarization system.
+Reference for the 9 tables tele-sum owns, plus the two integration points it shares with the sibling app on the same Postgres.
 
-## Quick Reference: Production Queries
+The full ORM is in [`src/models/models.py`](src/models/models.py). Migrations live in [`migrations/versions/`](migrations/versions/) — current head is `backfill_protocols_to_orgs`.
 
-**Always filter by `data_quality = 'complete'` for production use:**
+## Shared database
+
+The Postgres instance lives in the `wire-room-db` Railway project and is shared with a sibling app. Tele-sum stays in a tight lane:
+
+| Table | Owner | Tele-sum access |
+|-------|-------|-----------------|
+| `api_providers` | sibling app | **read-only** — `AIService._resolve_config_from_db()` looks up the active provider row when no `AI_*` env override is set |
+| `api_usage_log` | sibling app | **write-only** — every `AIService.analyze_content()` call inserts one row (provider, model, purpose='summarize', tokens_in, tokens_out, wire, duration_ms, success, error_message) |
+
+Tele-sum never reads or writes any other tables outside the 9 listed below.
+
+## Production query pattern
+
+Always require both `processing_status = 'SUCCESS'` and `data_quality = 'complete'`:
 
 ```sql
-SELECT s.id, s.title, s.summary, s.entities, m.timestamp
+SELECT s.id, s.title, s.summary, s.wire,
+       s.entities->'source'->>'url' AS source_url,
+       m.timestamp
 FROM summaries s
 JOIN messages m ON s.message_id = m.id
 WHERE s.processing_status = 'SUCCESS'
@@ -15,430 +30,207 @@ WHERE s.processing_status = 'SUCCESS'
 ORDER BY m.timestamp DESC;
 ```
 
-## Current Statistics
-
-| Metric | Value |
-|--------|-------|
-| Total entries | 3,069 |
-| Complete (production-ready) | 3,069 (100%) |
-| Incomplete (missing URL) | 0 (0%) |
-| Average title length | 34 characters |
-| Average summary length | 404 characters |
+The `/api/entries` router in [`src/api/entries.py`](src/api/entries.py) applies these filters automatically.
 
 ---
 
-## Core Tables
+## Core tables
 
 ### messages
 
-Raw Telegram messages imported from Grant Wire channels.
+Raw Telegram channel posts. One row per `(channel_id, telegram_id)`.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | INTEGER | Primary key |
-| telegram_id | INTEGER | Unique Telegram message ID |
-| channel_id | VARCHAR(255) | Telegram channel ID |
-| bot_id | INTEGER | FK to telegram_bots (if bot import) |
-| import_method | VARCHAR(20) | `phone_initial`, `phone_sync`, `x23`, `bot`, `file` |
-| wire | ENUM | Grant Wire vertical: `crypto`, `ai`, `oss` |
-| timestamp | TIMESTAMP | When message was posted on Telegram |
-| raw_content | TEXT | Original message text |
-| extracted_urls | JSON | Array of URLs found in message |
-| created_at | TIMESTAMP | When imported into database |
-| updated_at | TIMESTAMP | Last modification time |
+| Column | Type | Notes |
+|--------|------|-------|
+| id | INTEGER PK | |
+| telegram_id | INTEGER | Telegram message id |
+| channel_id | VARCHAR(255) | Telegram chat id (numeric, as string) |
+| channel_config_id | INTEGER FK → channel_configs.id | Links to wire metadata |
+| bot_id | INTEGER FK → telegram_bots.id | Which bot ingested |
+| import_method | VARCHAR(20) | `bot` (live) or `file` (one-off backfill). Legacy rows may say `phone` |
+| wire | ENUM(`crypto`,`ai`,`oss`) | Inherited from channel config |
+| timestamp | TIMESTAMPTZ | Message post time |
+| raw_content | TEXT | |
+| extracted_urls | JSON | Array of URL strings |
+| created_at / updated_at | TIMESTAMPTZ | |
 
-**Indexes:**
-- `ix_messages_telegram_id` (unique)
-- `ix_messages_channel_timestamp` (channel_id, timestamp)
-- `ix_messages_bot_timestamp` (bot_id, timestamp)
-- `ix_messages_wire`
-
----
+Indexes: `uq_messages_channel_telegram_id` (unique), `ix_messages_channel_timestamp`, `ix_messages_bot_timestamp`.
 
 ### summaries
 
-AI-generated summaries and metadata for each message.
+AI output for each message. 1:1 with `messages` via `message_id`.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | INTEGER | Primary key |
-| message_id | INTEGER | FK to messages.id (unique) |
-| title | VARCHAR(100) | Short 4-6 word title |
-| summary | TEXT | AI-generated summary (200-600 chars typical) |
-| entities | JSON | Structured metadata (see below) |
-| category_id | INTEGER | FK to categories.id |
-| confidence | ENUM | `confident` or `uncertain` |
-| wire | ENUM | Grant Wire vertical: `crypto`, `ai`, `oss` |
-| processing_status | ENUM | `PENDING`, `PROCESSING`, `SUCCESS`, `FAILED`, `RETRY` |
+| Column | Type | Notes |
+|--------|------|-------|
+| id | INTEGER PK | |
+| message_id | INTEGER FK → messages.id (unique) | |
+| title | VARCHAR(100) | 4–5 word title |
+| summary | TEXT | 3–4 sentence factual summary |
+| entities | JSON | See shape below |
+| category_id | INTEGER FK → categories.id | |
+| confidence | ENUM(`confident`,`uncertain`) | |
+| wire | ENUM(`crypto`,`ai`,`oss`) | Mirrors `messages.wire` |
+| processing_status | ENUM(`PENDING`,`PROCESSING`,`SUCCESS`,`RETRY`,`FAILED`) | |
 | data_quality | VARCHAR(20) | `complete` or `incomplete` |
-| error_log | TEXT | Error details if processing failed |
-| processing_attempts | INTEGER | Number of processing attempts |
-| last_processed_at | TIMESTAMP | Last processing attempt time |
-| created_at | TIMESTAMP | When record was created |
-| updated_at | TIMESTAMP | Last modification time |
+| processing_attempts | INTEGER | |
+| last_processed_at | TIMESTAMPTZ | |
+| error_log | TEXT | Last failure reason, truncated to 1000 chars |
+| created_at / updated_at | TIMESTAMPTZ | |
 
-**Indexes:**
-- `ix_summaries_processing_status`
-- `ix_summaries_data_quality`
-- `ix_summaries_wire`
-- `ix_summaries_status_processed` (processing_status, last_processed_at)
-- `ix_summaries_category_created` (category_id, created_at)
+Indexes: `ix_summaries_status_processed`, `ix_summaries_category_created`, plus column indexes on `processing_status`, `wire`, `data_quality`.
 
-#### The `entities` JSON Structure
+#### `entities` JSON shape
+
+Validated on write by `EntitiesPayload` in [`src/schemas/entities.py`](src/schemas/entities.py):
 
 ```json
 {
   "source": {
-    "url": "https://forum.example.com/t/topic/123",
+    "name": "Optimism Governance Forum",
     "type": "forum",
-    "name": "Arbitrum Governance Forum",
     "original_date": "2024-01-15",
-    "x23_url": "https://app.x23.ai/arbitrum/discussions/topic/123/slug"
+    "url": "https://gov.optimism.io/...",
+    "note": null
   },
-  "urls": ["https://forum.example.com/t/topic/123"],
-  "protocols": ["Arbitrum", "Optimism"],
-  "amounts": ["$500K", "1M ARB"],
+  "orgs":      ["Optimism", "Coinbase"],
+  "amounts":   ["$5M", "100,000 OP"],
   "deadlines": ["2024-02-01"],
-  "key_terms": ["grants", "funding", "proposal"]
+  "key_terms": ["retroactive funding"],
+  "urls":      ["https://gov.optimism.io/..."]
 }
 ```
 
-#### `data_quality` Values
+`source.type` is one of: `forum | twitter | blog | governance | news | substack | mirror | medium | github | discord | other`.
 
-| Value | Count | Description |
-|-------|-------|-------------|
-| `complete` | 3,069 | Full data with verified source URL - **use for production** |
-| `incomplete` | 0 | Missing or unverified source URL - excluded from production |
-
-#### `processing_status` Values
-
-| Value | Description |
-|-------|-------------|
-| `PENDING` | New message, never processed |
-| `PROCESSING` | Currently being processed by Grok AI |
-| `SUCCESS` | Successfully processed with summary |
-| `RETRY` | Failed but will be retried |
-| `FAILED` | Max retries exceeded, needs manual intervention |
-
-#### `wire` Values
-
-The system supports multiple Grant Wire verticals:
-
-| Value | Channel | Description |
-|-------|---------|-------------|
-| `crypto` | @cryptograntwire | Crypto/Web3 grants, governance, funding |
-| `ai` | @aigrantwire | AI research grants, fellowships, hackathons |
-| `oss` | @ossgrantwire | Open source funding opportunities |
-
-Wire is inherited from channel configuration at import time:
-1. `channel_configs.wire` → `messages.wire` → `summaries.wire`
-
-To filter by wire in queries:
-```sql
-WHERE s.wire = 'ai'  -- or 'crypto' or 'oss'
-```
-
----
+> **Note**: the key was renamed from `protocols` to `orgs` in migration `backfill_protocols_to_orgs`. All existing rows have been backfilled.
 
 ### categories
 
-User-defined classification categories.
+User-defined classification categories. Default categories are seeded on startup by `seed_default_categories_if_empty()` in [`src/main.py`](src/main.py:63).
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | INTEGER | Primary key |
-| user_id | INTEGER | FK to users.id |
-| name | VARCHAR(100) | Category name |
-| description | TEXT | Category description |
-| keywords | JSON | Keywords for AI classification hints |
-| created_at | TIMESTAMP | When created |
-| updated_at | TIMESTAMP | Last modification |
-
-**Current categories:**
-
-| Category | Count | Percentage |
-|----------|-------|------------|
-| Governance & Treasury | 1,210 | 39.4% |
-| Funding Opportunities | 691 | 22.5% |
-| Grant Programs | 507 | 16.5% |
-| Research & Analysis | 305 | 9.9% |
-| Tools & Infrastructure | 222 | 7.2% |
-| Incentives | 134 | 4.4% |
-
----
-
-### review_queue
-
-Tracks entries needing manual review for URL correction.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | INTEGER | Primary key |
-| summary_id | INTEGER | FK to summaries.id (unique) |
-| issue_type | VARCHAR(50) | `search_failed`, `no_forum`, `unknown_protocol`, `url_mismatch` |
-| our_title | VARCHAR(255) | Title we generated |
-| matched_url | TEXT | URL we matched (if any) |
-| matched_page_title | VARCHAR(255) | Title of matched page |
-| protocol | VARCHAR(100) | Detected protocol name |
-| notes | TEXT | Additional context |
-| status | ENUM | `pending`, `in_progress`, `corrected`, `skipped` |
-| corrected_url | TEXT | Manually corrected URL |
-| reviewed_by | VARCHAR(100) | Who reviewed it |
-| reviewed_at | TIMESTAMP | When reviewed |
-| created_at | TIMESTAMP | When added to queue |
-| updated_at | TIMESTAMP | Last modification |
-
-**Current review queue:**
-
-| Status | Count |
-|--------|-------|
-| pending | 0 |
-| corrected | 0 |
-
-*Note: The review queue is empty. All 259 entries that required manual URL recovery have been corrected and removed.*
-
----
-
-## Supporting Tables
+| Column | Type | Notes |
+|--------|------|-------|
+| id | INTEGER PK | |
+| user_id | INTEGER FK → users.id | |
+| name | VARCHAR(100) | |
+| description | TEXT | |
+| keywords | JSON | List of keyword hints for the LLM |
+| created_at / updated_at | TIMESTAMPTZ | |
 
 ### users
 
-Multi-tenant user support.
+Multi-tenant scaffold. In practice, all categories use `user_id = 1`.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | INTEGER | Primary key |
-| username | VARCHAR(255) | Unique username |
-| created_at | TIMESTAMP | When created |
-| updated_at | TIMESTAMP | Last modification |
+### review_queue
+
+Tracks summaries that need a human to fix the source URL.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | INTEGER PK | |
+| summary_id | INTEGER FK → summaries.id (unique) | |
+| issue_type | VARCHAR(50) | `url_mismatch`, `url_missing`, `search_failed`, `unknown_protocol`, `no_forum` |
+| our_title, matched_url, matched_page_title, protocol, notes | various | Diagnostic context |
+| status | ENUM(`pending`,`in_progress`,`corrected`,`skipped`) | |
+| corrected_url, reviewed_by, reviewed_at | various | Audit trail |
+| created_at / updated_at | TIMESTAMPTZ | |
 
 ---
+
+## Telegram-side tables
 
 ### telegram_bots
 
-Bot configuration for channel monitoring.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | INTEGER | Primary key |
-| bot_token | VARCHAR(500) | Encrypted bot token |
-| bot_username | VARCHAR(100) | Bot username |
-| bot_name | VARCHAR(100) | Display name |
-| is_active | BOOLEAN | Whether bot is active |
-| webhook_url | VARCHAR(500) | Webhook URL if using webhooks |
-| last_update_id | INTEGER | For polling mode |
-| created_at | TIMESTAMP | When created |
-| updated_at | TIMESTAMP | Last modification |
-
----
+| Column | Type | Notes |
+|--------|------|-------|
+| id | INTEGER PK | |
+| bot_token | VARCHAR(500) unique | |
+| bot_username, bot_name | VARCHAR | |
+| is_active | BOOLEAN | |
+| webhook_url | VARCHAR(500) | Unused — polling only |
+| last_update_id | INTEGER | Per-bot offset for `getUpdates` long-poll |
+| created_at / updated_at | TIMESTAMPTZ | |
 
 ### channel_configs
 
-Channel import configuration. Each channel belongs to a wire (crypto, ai, oss).
+One row per Telegram channel tele-sum ingests from. The system currently runs three: `cryptograntwire`, `aigrantwire`, `ossgrantwire`.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | INTEGER | Primary key |
-| channel_id | VARCHAR(255) | Telegram channel ID |
-| channel_username | VARCHAR(100) | Channel username |
-| channel_title | VARCHAR(255) | Display title |
-| wire | ENUM | Grant Wire vertical: `crypto`, `ai`, `oss` |
-| import_mode | ENUM | `phone`, `bot`, `hybrid` |
-| historical_import_complete | BOOLEAN | Whether historical import is done |
-| historical_import_date | TIMESTAMP | When historical import completed |
-| last_historical_message_id | INTEGER | Last imported message ID |
-| bot_id | INTEGER | FK to telegram_bots |
-| is_active | BOOLEAN | Whether channel is active |
-| created_at | TIMESTAMP | When created |
-| updated_at | TIMESTAMP | Last modification |
-
-**Current Channels:**
-
-| Wire | Username | Status |
-|------|----------|--------|
-| crypto | @cryptograntwire | Active |
-| ai | @aigrantwire | Active |
-| oss | @ossgrantwire | Placeholder |
-
----
+| Column | Type | Notes |
+|--------|------|-------|
+| id | INTEGER PK | |
+| channel_id | VARCHAR(255) unique | Numeric Telegram chat id |
+| channel_username, channel_title | VARCHAR | |
+| wire | ENUM(`crypto`,`ai`,`oss`) | Stamped onto every imported message |
+| import_mode | ENUM(`phone`,`bot`,`hybrid`) | Always `bot` for new configs; older enum values retained for schema stability |
+| historical_import_complete | BOOLEAN | |
+| historical_import_date | TIMESTAMPTZ | |
+| last_historical_message_id | INTEGER | |
+| bot_id | INTEGER FK → telegram_bots.id | |
+| is_active | BOOLEAN | |
+| created_at / updated_at | TIMESTAMPTZ | |
 
 ### sync_status
 
-Tracks Telegram sync state for incremental imports.
+Per-channel cursor for incremental imports.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | INTEGER | Primary key |
-| channel_id | VARCHAR(255) | Telegram channel ID |
-| channel_config_id | INTEGER | FK to channel_configs |
-| last_message_id | INTEGER | Last synced message ID |
-| last_phone_sync_id | INTEGER | Last phone import ID |
-| last_bot_sync_id | INTEGER | Last bot import ID |
-| last_sync_at | TIMESTAMP | Last sync time |
-| total_messages_synced | INTEGER | Total messages synced |
-| is_initial_import_complete | BOOLEAN | Historical import done |
-| transition_to_bot_complete | BOOLEAN | Transitioned to bot mode |
-| created_at | TIMESTAMP | When created |
-| updated_at | TIMESTAMP | Last modification |
+| Column | Type | Notes |
+|--------|------|-------|
+| id | INTEGER PK | |
+| channel_id | VARCHAR(255) unique | |
+| channel_config_id | INTEGER FK → channel_configs.id | |
+| last_message_id, last_phone_sync_id, last_bot_sync_id | INTEGER | Cursors |
+| last_sync_at | TIMESTAMPTZ | |
+| total_messages_synced | INTEGER | |
+| is_initial_import_complete, transition_to_bot_complete | BOOLEAN | Legacy flags from earlier import strategies |
+| created_at / updated_at | TIMESTAMPTZ | |
 
----
+### grok_usage *(read-only, legacy)*
 
-### grok_usage
-
-Tracks Grok API usage for monitoring.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | INTEGER | Primary key |
-| timestamp | TIMESTAMP | When request was made |
-| tokens_used | INTEGER | Tokens consumed |
-| request_type | VARCHAR(50) | `analysis`, `retry`, etc. |
-| success | BOOLEAN | Whether request succeeded |
-| error_message | TEXT | Error if failed |
+Pre-`api_usage_log` telemetry table. Tele-sum no longer writes to it; new telemetry goes to the shared `api_usage_log` (see top of doc). The model is retained for historical queries — see [`src/models/models.py:238`](src/models/models.py:238).
 
 ---
 
-## Common Queries
-
-### Get all production-ready entries
+## Common queries
 
 ```sql
-SELECT
-    s.id,
-    s.title,
-    s.summary,
-    s.entities->>'category' as category,
-    s.entities->'source'->>'url' as source_url,
-    s.entities->'source'->>'type' as source_type,
-    m.timestamp as published_at
-FROM summaries s
-JOIN messages m ON s.message_id = m.id
-WHERE s.processing_status = 'SUCCESS'
-  AND s.data_quality = 'complete'
-ORDER BY m.timestamp DESC;
-```
-
-### Get entries by category
-
-```sql
-SELECT s.title, s.summary, m.timestamp
-FROM summaries s
-JOIN messages m ON s.message_id = m.id
-JOIN categories c ON s.category_id = c.id
-WHERE s.processing_status = 'SUCCESS'
-  AND s.data_quality = 'complete'
-  AND c.name = 'Grant Programs'
-ORDER BY m.timestamp DESC;
-```
-
-### Search by protocol
-
-```sql
-SELECT s.title, s.summary, s.entities->'source'->>'url' as url
-FROM summaries s
-JOIN messages m ON s.message_id = m.id
-WHERE s.processing_status = 'SUCCESS'
-  AND s.data_quality = 'complete'
-  AND (
-    s.entities->'source'->>'protocol' ILIKE '%arbitrum%'
-    OR s.entities::text ILIKE '%arbitrum%'
-  )
-ORDER BY m.timestamp DESC;
-```
-
-### Full-text search
-
-```sql
-SELECT s.title, s.summary, m.timestamp
-FROM summaries s
-JOIN messages m ON s.message_id = m.id
-WHERE s.processing_status = 'SUCCESS'
-  AND s.data_quality = 'complete'
-  AND (
-    s.title ILIKE '%grants%'
-    OR s.summary ILIKE '%grants%'
-  )
-ORDER BY m.timestamp DESC;
-```
-
-### Get processing statistics
-
-```sql
-SELECT
-    processing_status,
-    data_quality,
-    COUNT(*) as count
+-- Per-wire counts of production-ready entries
+SELECT wire, COUNT(*) AS n
 FROM summaries
-GROUP BY processing_status, data_quality
-ORDER BY processing_status, data_quality;
+WHERE processing_status = 'SUCCESS' AND data_quality = 'complete'
+GROUP BY wire;
+
+-- Failed summaries with error text
+SELECT m.id, s.error_log, s.processing_attempts
+FROM summaries s JOIN messages m ON s.message_id = m.id
+WHERE s.processing_status = 'FAILED';
+
+-- Entities containing a specific org
+SELECT title, summary, entities->'source'->>'url' AS url
+FROM summaries
+WHERE processing_status = 'SUCCESS'
+  AND data_quality = 'complete'
+  AND entities->'orgs' @> '["Arbitrum"]'::jsonb;
+
+-- AI usage over the last hour (shared table)
+SELECT provider, model, COUNT(*) AS calls,
+       SUM(tokens_in) AS tin, SUM(tokens_out) AS tout
+FROM api_usage_log
+WHERE created_at > NOW() - INTERVAL '1 hour'
+  AND purpose = 'summarize'
+GROUP BY provider, model;
 ```
 
-### Get entries by import method
-
-```sql
-SELECT
-    m.import_method,
-    COUNT(*) as total,
-    COUNT(CASE WHEN s.data_quality = 'complete' THEN 1 END) as complete,
-    COUNT(CASE WHEN s.data_quality = 'incomplete' THEN 1 END) as incomplete
-FROM messages m
-JOIN summaries s ON s.message_id = m.id
-WHERE s.processing_status = 'SUCCESS'
-GROUP BY m.import_method;
-```
-
-### Get review queue by issue type
-
-```sql
-SELECT
-    rq.issue_type,
-    rq.protocol,
-    COUNT(*) as count
-FROM review_queue rq
-WHERE rq.status = 'pending'
-GROUP BY rq.issue_type, rq.protocol
-ORDER BY count DESC;
-```
-
----
-
-## ORM Usage (Python)
-
-### Filter for production use
+## ORM helper
 
 ```python
-from src.models.models import Summary, Message
-from sqlalchemy.orm import Session
+from src.models.models import Summary, Message, ProcessingStatus
 
-def get_production_entries(db: Session, limit: int = 100):
-    return db.query(Summary).join(Message).filter(
-        Summary.processing_status == 'SUCCESS',
-        Summary.data_quality == 'complete'
-    ).order_by(Message.timestamp.desc()).limit(limit).all()
+def production_entries(db, limit=100):
+    return (
+        db.query(Summary).join(Message)
+          .filter(Summary.processing_status == ProcessingStatus.SUCCESS,
+                  Summary.data_quality == "complete")
+          .order_by(Message.timestamp.desc())
+          .limit(limit).all()
+    )
 ```
-
-### Check data quality
-
-```python
-def get_quality_stats(db: Session):
-    complete = db.query(Summary).filter(
-        Summary.data_quality == 'complete'
-    ).count()
-
-    incomplete = db.query(Summary).filter(
-        Summary.data_quality == 'incomplete'
-    ).count()
-
-    return {'complete': complete, 'incomplete': incomplete}
-```
-
----
-
-## Best Practices
-
-1. **Always filter by `data_quality = 'complete'`** for production/public use
-2. **Always filter by `processing_status = 'SUCCESS'`** to exclude unprocessed entries
-3. **Use the `entities` JSON** for structured queries on category, protocol, amounts
-4. **Join with `messages`** to get the original timestamp and raw content
-5. **Use indexes** - all filter columns have indexes for efficient queries
-6. **Paginate results** for large datasets using LIMIT/OFFSET or keyset pagination

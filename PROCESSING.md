@@ -1,336 +1,117 @@
-# Processing System Documentation
+# Processing Pipeline
 
-This document explains how the batch processing, retry logic, and background scheduler work in Tele-Sum.
+How tele-sum gets a Telegram post from "just arrived" to a validated `Summary` row.
 
-## Table of Contents
-- [Processing Status State Machine](#processing-status-state-machine)
-- [Batch Processing Workflow](#batch-processing-workflow)
-- [Background Scheduler Jobs](#background-scheduler-jobs)
-- [Configuration Reference](#configuration-reference)
-- [Manual Operations](#manual-operations)
-- [Troubleshooting](#troubleshooting)
+## Pipeline stages
 
----
+For each message:
 
-## Processing Status State Machine
+1. **Ingest** — `sync_and_process()` in [`src/services/scheduler.py:32`](src/services/scheduler.py:32) calls Telegram Bot API `getUpdates` for each bot token. New posts are inserted into `messages`, with `wire` and `channel_config_id` copied from the matching `channel_configs` row. A blank `Summary` row is created with status `PENDING`.
+2. **URL extraction** — `src/utils/url_extractor.py` pulls URLs out of `raw_content` at insert time.
+3. **Scrape** — `MessageProcessor.process_message()` in [`src/services/processor.py:58`](src/services/processor.py:58) splits URLs into Twitter and non-Twitter. Twitter URLs go through `TwitterScraper` (FxTwitter), others through `ContentScraper` (BeautifulSoup).
+4. **AI call** — `AIService.analyze_content()` in [`src/services/ai.py:271`](src/services/ai.py:271) builds the prompt and dispatches to the configured provider (Anthropic, Ollama Cloud, or any OpenAI-compatible chat-completions endpoint).
+5. **Validate** — the response is parsed as JSON and validated by `AIAnalysis` from [`src/schemas/entities.py`](src/schemas/entities.py). Anything that fails validation is dropped and the row is re-queued.
+6. **Persist** — `Summary` is updated with `title`, `summary`, `category_id`, `confidence`, and `entities`. `processing_status` flips to `SUCCESS`.
+7. **Telemetry** — every AI call writes one row to the shared `api_usage_log` table (provider, model, purpose='summarize', tokens_in, tokens_out, wire, duration_ms, success, error_message).
 
-Every message has an associated `Summary` record that tracks its processing status through these states:
+## State machine
 
 ```
-                    ┌─────────────────────────────────────┐
-                    │                                     │
-                    ▼                                     │
-┌─────────┐    ┌────────────┐    ┌─────────┐             │
-│ PENDING │───▶│ PROCESSING │───▶│ SUCCESS │             │
-└─────────┘    └────────────┘    └─────────┘             │
-                    │                                     │
-                    │ (Grok API error                     │
-                    │  or exception)                      │
-                    ▼                                     │
-               ┌─────────┐                                │
-               │  RETRY  │────────────────────────────────┘
-               └─────────┘        (next processing cycle)
-                    │
-                    │ (max retries exceeded)
-                    ▼
-               ┌─────────┐
-               │ FAILED  │
-               └─────────┘
+PENDING ──▶ PROCESSING ──▶ SUCCESS
+                ├─▶ RETRY  (returned None, validation fail, transient error)
+                └─▶ FAILED (attempts >= MAX_PROCESSING_RETRIES)
+
+RETRY  ──▶ PROCESSING (next cycle)
+FAILED ──▶ RETRY      (retry_failed_messages, within 24h, under cap)
 ```
 
-### State Descriptions
+| Status | Meaning |
+|--------|---------|
+| `PENDING` | Created at ingest, never processed |
+| `PROCESSING` | Currently in flight. Reset to `RETRY` if stuck >30 min |
+| `SUCCESS` | Validated row written |
+| `RETRY` | Eligible to be picked up again |
+| `FAILED` | Hit `MAX_PROCESSING_RETRIES`. Re-queued by `retry_failed_messages` if recent |
 
-| Status | Description |
-|--------|-------------|
-| `PENDING` | New message, never processed. Created when message is synced from Telegram. |
-| `PROCESSING` | Currently being processed by Grok AI. Temporary state during API call. |
-| `SUCCESS` | Successfully processed. Summary, category, and entities extracted. |
-| `RETRY` | Processing failed but will be retried. Attempt count < max retries. |
-| `FAILED` | Processing failed and max retries exceeded. Requires manual intervention. |
+The state transition logic lives in `MessageProcessor.process_message()` and `retry_failed_messages()` in [`src/services/processor.py`](src/services/processor.py).
 
-### State Transitions
+## Scheduler jobs
 
-| From | To | Trigger |
-|------|-----|---------|
-| PENDING | PROCESSING | Message selected for processing |
-| PROCESSING | SUCCESS | Grok API returns valid result |
-| PROCESSING | RETRY | Grok API returns None (rate limit) or exception occurs |
-| PROCESSING | FAILED | Exception occurs AND attempt count >= max_retries |
-| RETRY | PROCESSING | Message selected for processing in next cycle |
-| FAILED | RETRY | `retry_failed_messages()` job re-queues within 24 hours |
+Five APScheduler jobs are registered in `start_scheduler()` ([`src/services/scheduler.py:300`](src/services/scheduler.py:300)):
 
-### Key Fields
+| Job id | Trigger | Function | Purpose |
+|--------|---------|----------|---------|
+| `sync_job` | every `SYNC_INTERVAL_HOURS` (default 6) | `sync_and_process()` | Pull `getUpdates` for each bot, insert new messages, then process up to 200 in batches of 20 |
+| `process_pending` | every 2 min | `process_pending_only()` | Process up to 10 `PENDING`/`RETRY` rows. Keeps queue moving between full syncs |
+| `retry_failed` | every 15 min | `retry_failed_messages()` | Move `FAILED` → `RETRY` for rows with `last_processed_at` within 24h and `attempts < max_retries` |
+| `cleanup_stale` | every 1 hour | `cleanup_stale_processing()` | Reset rows stuck in `PROCESSING` for >30 min back to `RETRY` |
+| `daily_stats` | cron `0 0 * * *` | `log_daily_stats()` | Emit a stats line to logs at midnight UTC |
 
-The `Summary` model tracks:
-- `processing_status`: Current state (enum)
-- `processing_attempts`: Number of times processing was attempted (increments each time)
-- `last_processed_at`: Timestamp of last processing attempt
-- `error_log`: Error message if failed (up to 1000 chars)
+If `RUN_SYNC_ON_STARTUP=true` (default), `sync_and_process()` also fires once on application boot.
 
----
+## Configuration
 
-## Batch Processing Workflow
+| Env var | Default | Effect |
+|---------|---------|--------|
+| `SYNC_INTERVAL_HOURS` | 6 | Interval for `sync_job` |
+| `MAX_AI_REQUESTS_PER_HOUR` | 100 | Cap enforced by `AIService._RateLimiter` (process-local, in-memory) |
+| `MAX_PROCESSING_RETRIES` | 3 | Hard ceiling before `FAILED` |
+| `PROCESSING_BATCH_SIZE` | 10 | Batch size for ad-hoc calls; the scheduler uses 20 in `sync_and_process` and 10 in `process_pending_only` |
+| `RUN_SYNC_ON_STARTUP` | true | Kick off one full sync on boot |
+| `BOT_POLLING_INTERVAL` | 2 | Used by `telegram_bot.py` long-poll loop |
 
-### Message Selection Priority
+## AI provider resolution
 
-When processing a batch, messages are selected in this order:
+`AIService` resolves its provider lazily, in order:
 
-1. **PENDING** messages first (never been processed)
-2. **RETRY** messages second (failed but eligible for retry)
-3. Within each status, **oldest messages first** (by timestamp)
+1. Env override: if `AI_PROVIDER` and `AI_API_KEY` are set, use those (with optional `AI_BASE_URL`, `AI_MODEL`).
+2. DB lookup: select from `api_providers` where `enabled = true`, excluding non-LLM rows (`firecrawl`, `resend`). If `AI_PROVIDER` is set but no key, that provider name is used to filter the lookup.
 
-```python
-# Query logic (simplified)
-messages = db.query(Message).join(Summary).filter(
-    Summary.processing_status.in_([PENDING, RETRY])
-).order_by(
-    Summary.processing_status.desc(),  # PENDING before RETRY
-    Message.timestamp.asc()            # oldest first
-).limit(batch_size)
-```
+Three call paths are implemented in [`src/services/ai.py`](src/services/ai.py):
 
-### Processing Loop
+- `_call_anthropic` — native `/v1/messages`
+- `_call_ollama` — Ollama Cloud `/api/chat` (different shape from OpenAI-compat; uses `format: "json"`)
+- `_call_openai_compat` — `/chat/completions` for everything else (Grok, OpenAI, Perplexity, OpenRouter, Groq, Together, ...)
 
-For each message in the batch:
+If no provider resolves, processing skips silently — messages stay in `PENDING` rather than failing.
 
-1. **Check if already done**: Skip if status is SUCCESS
-2. **Check retry limit**: If attempts >= max_retries, mark as FAILED
-3. **Update status**: Set to PROCESSING, increment attempts, update timestamp
-4. **Extract URLs**: Separate Twitter URLs from other URLs
-5. **Scrape content**: Fetch non-Twitter URLs (Twitter is accessed directly by Grok)
-6. **Call Grok API**: Send message + scraped content for analysis
-7. **Handle result**:
-   - Success → Update summary, set status to SUCCESS
-   - No result → Set status to RETRY
-   - Exception → Set to RETRY or FAILED based on attempt count
-8. **Rate limit delay**: Wait 1-1.5 seconds before next message
-
-### Rate Limiting
-
-- **Between messages**: 1 second delay in `process_batch()`, 1.5 seconds in `process_batch.py`
-- **Grok API limit**: Default 100 requests/hour (configurable)
-- **When limit hit**: Grok service returns None, message goes to RETRY status
-
----
-
-## Background Scheduler Jobs
-
-The scheduler runs 5 background jobs using APScheduler:
-
-| Job ID | Interval | Function | Purpose |
-|--------|----------|----------|---------|
-| `sync_job` | Every N hours (default: 6) | `sync_and_process()` | Full Telegram sync + process up to 200 messages |
-| `process_pending` | Every 2 minutes | `process_pending_only()` | Process 10 pending/retry messages |
-| `retry_failed` | Every 15 minutes | `retry_failed_messages()` | Re-queue FAILED messages (within 24h, under retry limit) |
-| `cleanup_stale` | Every 1 hour | `cleanup_stale_processing()` | Reset stuck PROCESSING → RETRY (>10 min old) |
-| `daily_stats` | Midnight (cron) | `log_daily_stats()` | Log processing statistics |
-
-### Job Details
-
-#### sync_and_process (Main Sync Job)
-- Runs every `sync_interval_hours` (default: 6 hours)
-- First syncs new messages from Telegram (phone or bot)
-- Then processes messages in batches of 20
-- Processes up to 10 batches (200 messages max per run)
-- 5 second pause between batches
-- Stops early if a batch processes fewer than 20 (no more pending)
-
-#### process_pending_only
-- Runs every 2 minutes
-- Processes only 10 messages per run
-- Does NOT sync from Telegram
-- Keeps processing queue moving between main sync jobs
-
-#### retry_failed_messages
-- Runs every 15 minutes
-- Finds FAILED messages where:
-  - `last_processed_at` is within 24 hours
-  - `processing_attempts` < max_retries
-- Changes status from FAILED → RETRY
-- These messages will be picked up by next process_pending run
-
-#### cleanup_stale_processing
-- Runs every 1 hour
-- Finds messages stuck in PROCESSING status for >10 minutes
-- Resets them to RETRY status
-- Prevents messages from being permanently stuck (e.g., after crash)
-
-#### log_daily_stats
-- Runs at midnight (00:00)
-- Logs summary of all processing statistics
-- Includes Grok API rate limit status
-
----
-
-## Configuration Reference
-
-Set these in your `.env` file or environment:
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `SYNC_INTERVAL_HOURS` | 6 | Hours between full Telegram syncs |
-| `MAX_GROK_REQUESTS_PER_HOUR` | 100 | Grok API rate limit |
-| `MAX_PROCESSING_RETRIES` | 3 | Attempts before marking as FAILED |
-| `PROCESSING_BATCH_SIZE` | 10 | Messages per batch in background jobs |
-
-### Tuning Recommendations
-
-**Near real-time (recommended for active monitoring):**
-```
-SYNC_INTERVAL_HOURS=1
-MAX_GROK_REQUESTS_PER_HOUR=100
-PROCESSING_BATCH_SIZE=20
-```
-
-**High-volume channels (>100 messages/day):**
-```
-SYNC_INTERVAL_HOURS=2
-MAX_GROK_REQUESTS_PER_HOUR=100
-PROCESSING_BATCH_SIZE=20
-```
-
-**Low-volume channels (<20 messages/day):**
-```
-SYNC_INTERVAL_HOURS=6
-MAX_GROK_REQUESTS_PER_HOUR=50
-PROCESSING_BATCH_SIZE=5
-```
-
-**Catching up on backlog:**
-```
-MAX_GROK_REQUESTS_PER_HOUR=100
-PROCESSING_BATCH_SIZE=50
-# Run process_batch.py manually with --count 100
-```
-
----
-
-## Manual Operations
-
-### process_batch.py
-
-Process messages with Grok AI. Syncs from Telegram first by default.
+## Triggering manually
 
 ```bash
-# Process 5 messages starting from first unprocessed
-python3 process_batch.py
+# Full sync + process pass (auth required)
+curl -X POST -H "X-API-Key: $API_KEY" \
+  https://web-production-82642.up.railway.app/api/trigger-sync
 
-# Process 20 messages starting from ID 100
-python3 process_batch.py --start 100 --count 20
+# Process-only pass (no Telegram pull)
+curl -X POST -H "X-API-Key: $API_KEY" \
+  https://web-production-82642.up.railway.app/api/trigger-process
 
-# Process without syncing from Telegram first
-python3 process_batch.py --no-sync --count 10
+# Stats
+curl -H "X-API-Key: $API_KEY" \
+  https://web-production-82642.up.railway.app/api/stats
 ```
-
-**Options:**
-- `--start ID`: Start from specific message ID (auto-detects if not set)
-- `--count N`: Number of messages to process (default: 5)
-- `--no-sync`: Skip Telegram sync, process existing messages only
-
-**Output shows:**
-- Message ID and content preview
-- Processing result (SUCCESS/FAILED)
-- Summary, category, source URL, and confidence level
-
-### sync_new.py
-
-Sync new messages from Telegram without processing them.
-
-```bash
-python3 sync_new.py
-```
-
-**Use when:**
-- You want to import messages without using Grok API quota
-- Testing Telegram connectivity
-- Building up a backlog to process later
-
-**Output shows:**
-- Number of new messages found
-- Suggested `process_batch.py` command with count
-
-### Checking Processing Status
-
-Query the database to see current status:
-
-```sql
--- Count by status
-SELECT processing_status, COUNT(*)
-FROM summaries
-GROUP BY processing_status;
-
--- Find failed messages
-SELECT m.id, m.raw_content, s.error_log, s.processing_attempts
-FROM messages m
-JOIN summaries s ON s.message_id = m.id
-WHERE s.processing_status = 'FAILED';
-
--- Find messages stuck in processing
-SELECT m.id, s.last_processed_at
-FROM messages m
-JOIN summaries s ON s.message_id = m.id
-WHERE s.processing_status = 'PROCESSING'
-AND s.last_processed_at < NOW() - INTERVAL '10 minutes';
-```
-
----
 
 ## Troubleshooting
 
-### Messages stuck in PENDING
+**Messages stuck in `PENDING`** — scheduler not running, or no AI provider resolved. Check `GET /health` for scheduler state and the boot log line `AI provider (...): <name> / <model>`. If you see `No AI provider configured`, set `AI_*` env vars or insert a row into `api_providers`.
 
-**Cause:** Scheduler not running or Grok API not configured.
+**Many `FAILED`** — check `error_log` distribution:
 
-**Fix:**
-1. Check scheduler status: `GET /health` should show scheduler running
-2. Verify `GROK_API_KEY` is set
-3. Run manually: `python3 process_batch.py --count 5`
+```sql
+SELECT LEFT(error_log, 80) AS err, COUNT(*)
+FROM summaries WHERE processing_status = 'FAILED'
+GROUP BY 1 ORDER BY 2 DESC;
+```
 
-### Messages stuck in PROCESSING
+Rate-limit errors clear themselves the next hour. Validation errors mean the provider returned shape that didn't match `AIAnalysis` — usually a prompt or model issue.
 
-**Cause:** Process crashed during Grok API call.
-
-**Fix:** The `cleanup_stale_processing` job runs hourly and resets these to RETRY. Or run manually:
+**Stuck in `PROCESSING`** — the `cleanup_stale` job resets these every hour. To force it:
 
 ```sql
 UPDATE summaries
-SET processing_status = 'RETRY', error_log = 'Manual reset'
+SET processing_status = 'RETRY', error_log = 'manual reset'
 WHERE processing_status = 'PROCESSING'
-AND last_processed_at < NOW() - INTERVAL '10 minutes';
+  AND last_processed_at < NOW() - INTERVAL '30 minutes';
 ```
 
-### Many messages in FAILED status
-
-**Cause:** Repeated Grok API failures (rate limit, invalid responses).
-
-**Check:**
-```sql
-SELECT error_log, COUNT(*)
-FROM summaries
-WHERE processing_status = 'FAILED'
-GROUP BY error_log;
-```
-
-**Fix:**
-1. If rate limit: Wait and let `retry_failed_messages` job re-queue them
-2. If API errors: Check Grok API status, verify API key
-3. Manual reset: Change status to RETRY in database
-
-### Processing is slow
-
-**Cause:** Rate limiting or small batch sizes.
-
-**Fix:**
-1. Increase `PROCESSING_BATCH_SIZE` (default: 10)
-2. Check `MAX_GROK_REQUESTS_PER_HOUR` (default: 100)
-3. Run `process_batch.py` with `--count 50` to process faster manually
-
-### No new messages syncing
-
-**Cause:** Telegram authentication expired or channel access lost.
-
-**Fix:**
-1. Check Telegram session: `ls -la telegram_session*`
-2. Re-authenticate if needed
-3. Verify channel username in `TELEGRAM_CHANNEL_USERNAME`
-4. Check bot tokens if using bot mode
+**No new messages arriving** — bot isn't in the channel, or the bot token is wrong. Verify with `curl https://api.telegram.org/bot<TOKEN>/getMe` and check the corresponding `channel_configs.is_active` and `channel_id` values.

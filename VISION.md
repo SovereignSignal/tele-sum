@@ -30,16 +30,16 @@ Most posts in Telegram channels are links without context, making it hard to kno
 
 The system connects to Telegram to retrieve complete message history. Most messages are links with minimal text, so the system also analyzes linked content.
 
-### 2. Grok AI Integration
+### 2. AI Summarization
 
-After extracting messages, Grok analyzes each one and its linked content to generate:
+After extracting messages, a configured LLM analyzes each one and its linked content to generate:
 
 - **Summary**: 2-4 sentence explanation of what the content is about
 - **Category**: Classification into user-defined categories
 - **Entities**: Extracted names, amounts, dates, and key terms
 - **Source metadata**: Original source name, type, date, and URL
 
-**Why Grok?** Grok can directly access X/Twitter content that other AI models cannot see. This is essential since many channel posts are tweets.
+The provider is configurable: Anthropic, Ollama Cloud, or any OpenAI-compatible chat-completions endpoint (Grok, OpenAI, Perplexity, OpenRouter, etc.). Twitter/X content is scraped via FxTwitter before being passed in, so the summarizer doesn't need provider-specific tweet access.
 
 ### 3. User-Defined Categories
 
@@ -71,12 +71,11 @@ Messages store as structured records with:
 
 ## 🛠️ Implementation Approach
 
-1. **Telegram Connection**: Validate access and pull message history
-2. **Grok API Integration**: Critical for reading X/Twitter posts directly
-3. **URL Processing**: Basic scraping for non-Twitter URLs
-4. **AI Pipeline**: Summarization and categorization with clear prompts
-5. **PostgreSQL Storage**: Store everything with proper indexes for search
-6. **Batch Processing**: Handle rate limits with sequential processing
+1. **Telegram Bot Ingest**: A bot in each channel polls `getUpdates` for new posts
+2. **URL Processing**: Twitter/X via FxTwitter, others via BeautifulSoup
+3. **AI Pipeline**: Provider-agnostic summarization with Pydantic-validated output
+4. **PostgreSQL Storage**: Store everything with proper indexes for search
+5. **Batch Processing**: Handle rate limits with sequential processing
 
 ## 💡 Design Principles
 

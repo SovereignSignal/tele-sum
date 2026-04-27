@@ -1,261 +1,111 @@
-# Sovereign Signal - Grant Wire Archive
+# Tele-Sum — Grant Wire Archive
 
-AI-powered Telegram channel summarization system that transforms message streams into structured, searchable data using Grok AI. Powers the **Sovereign Signal** ecosystem of Grant Wire properties:
+AI-powered Telegram channel summarization for the Sovereign Signal Grant Wire properties. Tele-Sum ingests messages from a small set of curated Telegram channels, summarizes the linked content with an LLM, and stores structured rows for search and downstream use.
 
-- **[Crypto Grant Wire](https://t.me/cryptograntwire)** — Crypto grants, governance, funding
-- **[AI Grant Wire](https://t.me/aigrantwire)** — AI research grants, fellowships, hackathons
-- **OSS Grant Wire** *(coming soon)* — Open source funding opportunities
+| Wire | Telegram channel | Description |
+|------|------------------|-------------|
+| `crypto` | [@cryptograntwire](https://t.me/cryptograntwire) | Crypto/Web3 grants and governance |
+| `ai`     | [@aigrantwire](https://t.me/aigrantwire)         | AI research grants and fellowships |
+| `oss`    | [@ossgrantwire](https://t.me/ossgrantwire)       | Open source funding |
 
-## Current Status
+## What it does
 
-| Wire | Entries | Status |
-|------|---------|--------|
-| Crypto | 3,146 | ✅ Active |
-| AI | 0 | ✅ Configured, ingesting |
-| OSS | 0 | ⏳ Placeholder |
+1. A Telegram bot (`@GrantWireScraper_BOT`) sits in each channel and polls `getUpdates`. New posts are inserted into `messages`.
+2. A scheduler picks up `PENDING` rows, scrapes any URLs (Twitter via FxTwitter, others via BeautifulSoup), and sends the whole thing to a configured LLM provider.
+3. The provider response is validated against a Pydantic schema (`src/schemas/entities.py`) and written to `summaries` with `wire`, `category`, `source`, and extracted entities.
+4. Each AI call writes one row to the shared `api_usage_log` table for telemetry. Each call is also rate-limited in process (default 100/hour).
 
-| Metric | Value |
-|--------|-------|
-| Total Entries | 3,146+ |
-| Production Ready | 100% |
-| Quality Score | 100% acceptable (95% excellent) |
-| Average Summary | 404 characters |
+The state machine is `PENDING -> PROCESSING -> SUCCESS | RETRY | FAILED`. Background jobs retry transient failures and reset stuck rows. See [PROCESSING.md](PROCESSING.md).
 
-## What This Does
+## Architecture
 
-Tele-Sum solves the problem of Telegram channels being write-only archives where valuable links and content get buried:
+- **Runtime**: Python 3.12.7, FastAPI 0.115, SQLAlchemy 2.0, Pydantic 2.10
+- **Ingest**: `python-telegram-bot` 21.9 (bot mode only — no phone auth)
+- **AI**: Provider-agnostic `AIService` (`src/services/ai.py`). Supports Anthropic, Ollama Cloud, and any OpenAI-compatible chat-completions endpoint (Grok, Perplexity, OpenRouter, OpenAI, Groq, Together, ...). Currently running on Ollama Cloud with `glm-5.1`.
+- **Storage**: PostgreSQL. Tele-sum owns 9 tables (see [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md)). The DB is shared with a sibling app — tele-sum reads `api_providers` and writes `api_usage_log`, otherwise stays in its own lane.
+- **Deployment**: Railway. Service `web` in project `glorious-prosperity`. See [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md).
 
-- **Imports messages** from any Telegram channel (full historical + ongoing sync)
-- **Summarizes content** using Grok AI (reads linked content including X/Twitter posts)
-- **Categorizes** into user-defined categories
-- **Extracts entities** like protocols, amounts, dates, and key terms
-- **Stores everything** in PostgreSQL for search and analysis
-- **Filters by quality** - production queries exclude incomplete entries
-
-### Multi-Wire Architecture
-
-The system supports multiple "wires" — independent content verticals that share the same infrastructure:
-
-| Wire | Channel | Description |
-|------|---------|-------------|
-| `crypto` | @cryptograntwire | Crypto/Web3 grants and governance |
-| `ai` | @aigrantwire | AI research grants and fellowships |
-| `oss` | @ossgrantwire | Open source funding opportunities |
-
-Each wire has its own:
-- Telegram channel for input
-- Content filtered by `wire` column
-- Same categories, same AI processing
-
-### Categories
-
-- Governance & Treasury (1,210)
-- Funding Opportunities (691)
-- Grant Programs (507)
-- Research & Analysis (305)
-- Tools & Infrastructure (222)
-- Incentives (134)
-
-## Quick Start
-
-### Prerequisites
-
-- Python 3.9+
-- PostgreSQL database
-- Telegram API credentials
-- Grok API key (from x.ai)
-
-### Setup
+## Quick start (local)
 
 ```bash
-git clone https://github.com/yourusername/tele-sum.git
+git clone https://github.com/SovereignSignal/tele-sum.git
 cd tele-sum
+python3.12 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env
-# Edit .env with your credentials
+cp .env.example .env  # then edit
+alembic upgrade head
+uvicorn src.main:app --reload
 ```
 
-### Environment Variables
+The web UI is at `http://localhost:8000` (login with `API_KEY`). Health at `/health`.
+
+## Required environment variables
 
 ```bash
 # Database
 DATABASE_URL=postgresql://user:pass@host:port/db
 
-# Telegram
-TELEGRAM_API_ID=your_api_id
-TELEGRAM_API_HASH=your_api_hash
-TELEGRAM_PHONE=+1234567890
-TELEGRAM_CHANNEL_USERNAME=your_channel
+# Telegram (bot mode only)
+TELEGRAM_BOT_TOKENS=<bot_token>      # comma-separated if multiple
+ENABLE_BOT_MODE=true
 
-# Grok AI
-GROK_API_KEY=your_grok_api_key
-GROK_MODEL=grok-3
+# App
+API_KEY=<random_string>              # protects /api/* and the web UI
+SECRET_KEY=<random_string>           # session cookie; auto-generated if unset
 ```
 
-## Daily Workflow
+### AI provider
 
-### Sync & Process New Messages
+`AIService` resolves config in this order:
+1. **Env vars** — `AI_PROVIDER` + `AI_API_KEY` (+ `AI_BASE_URL`, `AI_MODEL`). Used when both provider name and key are set.
+2. **`api_providers` DB row** — fallback that looks up the provider name (`AI_PROVIDER`) in the shared table. Convenient if you want one source of truth across multiple services; in production we use env vars for clarity.
 
 ```bash
-# Sync + process next batch
-python3 process_batch.py --count 50
-
-# Just sync (no processing)
-python3 sync_new.py
-
-# Process without syncing
-python3 process_batch.py --count 50 --no-sync
+AI_PROVIDER=ollama                   # anthropic | ollama | grok | openai | perplexity | ...
+AI_API_KEY=<provider_key>
+AI_BASE_URL=https://ollama.com/api   # required for ollama / OpenAI-compat; omit for anthropic
+AI_MODEL=glm-5.1
 ```
 
-### Resilient Batch Processing
-
-For large batches with auto-retry on timeouts:
+Optional tuning (defaults shown):
 
 ```bash
-python3 batch_runner.py 1001 1100 25
-# Arguments: <start_id> <end_id> [chunk_size]
+SYNC_INTERVAL_HOURS=6
+MAX_AI_REQUESTS_PER_HOUR=100
+MAX_PROCESSING_RETRIES=3
+PROCESSING_BATCH_SIZE=10
+RUN_SYNC_ON_STARTUP=true
+BOT_POLLING_INTERVAL=2
+APP_ENV=production
 ```
 
-## Using the Data
+## Operating
 
-### Production Queries
-
-Always filter by `data_quality = 'complete'` for production use:
+- **Manual sync**: `POST /api/trigger-sync` (auth required)
+- **Manual processing pass**: `POST /api/trigger-process`
+- **Stats**: `GET /api/stats` and `GET /api/entries/stats`
+- **Production data**: filter by `processing_status = 'SUCCESS'` and `data_quality = 'complete'`. The `/api/entries` router does this for you.
 
 ```sql
--- All wires
 SELECT s.id, s.title, s.summary, s.wire,
-       s.entities->'source'->>'url' as source_url,
+       s.entities->'source'->>'url' AS source_url,
        m.timestamp
 FROM summaries s
 JOIN messages m ON s.message_id = m.id
 WHERE s.processing_status = 'SUCCESS'
   AND s.data_quality = 'complete'
 ORDER BY m.timestamp DESC;
-
--- Filter by wire (crypto, ai, oss)
-SELECT s.id, s.title, s.summary
-FROM summaries s
-JOIN messages m ON s.message_id = m.id
-WHERE s.wire = 'ai'  -- or 'crypto' or 'oss'
-  AND s.processing_status = 'SUCCESS'
-  AND s.data_quality = 'complete'
-ORDER BY m.timestamp DESC;
 ```
-
-### Data Quality Filtering
-
-| Quality | Count | Use Case |
-|---------|-------|----------|
-| `complete` | 3,069 | Production - verified source URLs |
-| `incomplete` | 0 | Review queue - missing/unverified URLs |
-
-See [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) for complete query reference.
-
-## Project Structure
-
-```
-tele-sum/
-├── src/
-│   ├── config.py              # Settings and environment
-│   ├── main.py                # FastAPI application
-│   ├── api/                   # Route handlers
-│   │   ├── messages.py        # Message search/retrieval
-│   │   ├── categories.py      # Category CRUD
-│   │   ├── entries.py         # Production data API
-│   │   ├── imports.py         # Telegram import endpoints
-│   │   ├── exports.py         # CSV/JSON/RSS exports
-│   │   ├── config.py          # Configuration status
-│   │   └── hybrid.py          # Bot/phone hybrid mode
-│   ├── models/
-│   │   ├── database.py        # Database connection
-│   │   └── models.py          # SQLAlchemy models
-│   ├── services/
-│   │   ├── grok.py            # Grok AI integration
-│   │   ├── processor.py       # Message processing pipeline
-│   │   ├── scheduler.py       # Background job scheduler
-│   │   ├── telegram.py        # Telegram phone client
-│   │   ├── telegram_bot.py    # Telegram bot client
-│   │   └── telegram_hybrid.py # Hybrid mode support
-│   ├── scrapers/
-│   │   ├── content_scraper.py # URL content fetching
-│   │   └── twitter_scraper.py # Twitter/X scraping
-│   └── utils/
-│       └── url_extractor.py   # URL parsing utilities
-├── templates/                 # Jinja2 HTML templates
-├── migrations/                # Alembic database migrations
-├── process_batch.py           # Main batch processing
-├── batch_runner.py            # Resilient batch runner
-├── sync_new.py                # Telegram sync only
-├── backfill_source_urls.py    # URL backfill for x23 entries
-├── populate_review_queue.py   # Review queue management
-├── extract_x23_urls.py        # Extract x23.ai URLs
-├── reconstruct_urls.py        # Reconstruct forum URLs
-└── test_*.py                  # Test files
-```
-
-See [SCRIPTS.md](SCRIPTS.md) for documentation on all utility scripts.
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
-| [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) | Complete database schema and query reference |
-| [DATA_SOURCES.md](DATA_SOURCES.md) | Data sources, import methods, URL coverage |
-| [SCRIPTS.md](SCRIPTS.md) | Utility scripts documentation |
-| [PROCESSING.md](PROCESSING.md) | Batch processing, retry logic, scheduler |
-| [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) | Technical architecture |
-| [VISION.md](VISION.md) | Project goals and purpose |
-| [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md) | Production deployment guide |
-| [HYBRID_SETUP.md](HYBRID_SETUP.md) | Bot + Phone hybrid setup |
-
-## How Grok Processes Content
-
-Each message goes through this pipeline:
-
-1. **URL Detection** - Extract URLs from Telegram message
-2. **Content Fetching** - For non-Twitter URLs, scrape the page content
-3. **Grok Analysis** - Send to Grok with message + scraped content + category list
-4. **Response Parsing** - Extract summary, category, confidence, entities
-5. **Storage** - Save to PostgreSQL with source metadata and quality flags
-
-### What Grok Returns
-
-```json
-{
-  "title": "Optimism Grants Council Results",
-  "summary": "3-4 sentence factual summary of the content...",
-  "category": "Grant Programs",
-  "confidence": "confident",
-  "source": {
-    "name": "Optimism Governance Forum",
-    "type": "forum",
-    "url": "https://gov.optimism.io/..."
-  },
-  "entities": {
-    "protocols": ["Optimism"],
-    "amounts": ["$5M", "100,000 OP"],
-    "key_terms": ["retroactive funding", "public goods"]
-  }
-}
-```
-
-## Rate Limits
-
-- **Grok API**: ~100 requests/hour (depends on tier)
-- **Telegram**: No significant limits for reading
-
-When you hit the rate limit, messages are marked as "retry" status. Wait ~1 hour and run again.
-
-## Production Deployment (Railway)
-
-1. Fork this repo
-2. Connect to Railway
-3. Add PostgreSQL service
-4. Configure environment variables
-5. Auto-syncs every 6 hours
-
-See [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md) for full guide.
+| Doc | Purpose |
+|-----|---------|
+| [CLAUDE.md](CLAUDE.md) | Authoritative architecture reference for AI assistants and contributors |
+| [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) | The 9 tele-sum tables + cross-app integration points |
+| [PROCESSING.md](PROCESSING.md) | State machine, scheduler jobs, troubleshooting |
+| [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md) | Deployment topology and env vars |
+| [VISION.md](VISION.md) | Product goals |
 
 ## License
 
