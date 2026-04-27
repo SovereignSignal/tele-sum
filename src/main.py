@@ -19,7 +19,7 @@ import logging
 import os
 import secrets
 
-from src.api import messages, categories, imports, exports, config, hybrid, entries, channels
+from src.api import messages, categories, exports, config, entries, channels
 from src.models.database import get_engine, Base
 from src.services.scheduler import start_scheduler, shutdown_scheduler, get_scheduler_status, sync_and_process
 from src.config import settings
@@ -100,54 +100,6 @@ async def seed_default_categories_if_empty():
         db.close()
 
 
-async def ensure_channel_config_exists():
-    """
-    Auto-create ChannelConfig from TELEGRAM_CHANNEL_USERNAME if it doesn't exist.
-
-    This simplifies setup - users just need to set the env var and the channel
-    will be automatically configured for bot-based imports.
-    """
-    from src.models.models import ChannelConfig, ImportMode
-    from src.models import database
-
-    if not settings.telegram_channel_username:
-        logger.info("No TELEGRAM_CHANNEL_USERNAME set - skipping auto channel config")
-        return
-
-    db = database.SessionLocal()
-    try:
-        channel_username = settings.telegram_channel_username.lstrip('@')
-
-        # Check if channel config already exists (by username)
-        existing = db.query(ChannelConfig).filter(
-            ChannelConfig.channel_username == channel_username
-        ).first()
-
-        if existing:
-            logger.info(f"✅ Channel config exists for @{channel_username}")
-            return
-
-        # Create new channel config
-        # Note: channel_id will be populated when the bot first receives a message
-        # For now, we use the username as a placeholder
-        new_config = ChannelConfig(
-            channel_id=f"@{channel_username}",  # Placeholder until we get the real ID
-            channel_username=channel_username,
-            channel_title=channel_username,
-            import_mode=ImportMode.BOT if settings.is_bot_configured() else ImportMode.PHONE,
-            is_active=True
-        )
-        db.add(new_config)
-        db.commit()
-        logger.info(f"✅ Auto-created channel config for @{channel_username}")
-
-    except Exception as e:
-        logger.warning(f"Could not auto-create channel config: {e}")
-        db.rollback()
-    finally:
-        db.close()
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifecycle"""
@@ -171,12 +123,8 @@ async def lifespan(app: FastAPI):
     if settings.is_database_configured():
         await seed_default_categories_if_empty()
 
-    # Auto-create channel config from environment if needed
-    if settings.is_database_configured():
-        await ensure_channel_config_exists()
-
     # Start background scheduler for automatic sync
-    if settings.is_database_configured() and settings.has_any_telegram_config():
+    if settings.is_database_configured() and settings.is_bot_configured():
         try:
             start_scheduler()
             logger.info("✅ Background scheduler started")
@@ -206,11 +154,9 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning("⚠️  Scheduler not started - missing Telegram config")
 
-    # Log status
     logger.info("-" * 60)
-    logger.info(f"Telegram Phone: {'✅' if settings.is_telegram_configured() else '❌'}")
     logger.info(f"Telegram Bot: {'✅' if settings.is_bot_configured() else '❌'}")
-    logger.info(f"Grok AI: {'✅' if settings.is_grok_configured() else '❌'}")
+    logger.info(f"AI Provider: {'env override' if settings.is_ai_configured() else 'DB (api_providers)'}")
     logger.info(f"API Key: {'✅ Protected' if settings.api_key else '⚠️  UNPROTECTED'}")
     logger.info("=" * 60)
     
@@ -334,11 +280,6 @@ async def categories_page(request: Request):
     return await protected_page(request, "categories.html")
 
 
-@app.get("/import")
-async def import_page(request: Request):
-    return await protected_page(request, "import.html")
-
-
 @app.get("/settings")
 async def settings_page(request: Request):
     return await protected_page(request, "settings.html")
@@ -350,39 +291,27 @@ async def settings_page(request: Request):
 
 # Include API routers with authentication
 app.include_router(
-    messages.router, 
-    prefix="/api/messages", 
+    messages.router,
+    prefix="/api/messages",
     tags=["messages"],
     dependencies=[Depends(auth_required)]
 )
 app.include_router(
-    categories.router, 
-    prefix="/api/categories", 
+    categories.router,
+    prefix="/api/categories",
     tags=["categories"],
     dependencies=[Depends(auth_required)]
 )
 app.include_router(
-    imports.router, 
-    prefix="/api/import", 
-    tags=["import"],
-    dependencies=[Depends(auth_required)]
-)
-app.include_router(
-    exports.router, 
-    prefix="/api/export", 
+    exports.router,
+    prefix="/api/export",
     tags=["export"],
     dependencies=[Depends(auth_required)]
 )
 app.include_router(
-    config.router, 
-    prefix="/api/config", 
+    config.router,
+    prefix="/api/config",
     tags=["configuration"],
-    dependencies=[Depends(auth_required)]
-)
-app.include_router(
-    hybrid.router,
-    prefix="/api/hybrid",
-    tags=["hybrid"],
     dependencies=[Depends(auth_required)]
 )
 

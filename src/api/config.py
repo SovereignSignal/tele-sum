@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Dict, Optional, Any
+from typing import Dict, Any
 import os
 
 from src.config import settings
@@ -9,172 +9,74 @@ from src.services.scheduler import get_scheduler_status
 
 router = APIRouter()
 
+
 class ConfigStatus(BaseModel):
     database: Dict[str, Any]
-    telegram: Dict[str, Any]
     bot: Dict[str, Any]
-    grok: Dict[str, Any]
+    ai: Dict[str, Any]
     scheduler: Dict[str, Any]
     app: Dict[str, Any]
     environment_hints: Dict[str, str]
 
+
 @router.get("/status", response_model=ConfigStatus)
 async def get_config_status():
-    """Get the current configuration status and provide setup guidance"""
-    
-    # Check which environment variables are set
-    env_vars = {
+    """Current configuration status. AI provider config lives in the api_providers DB table; env vars are overrides."""
+    env = {
         "DATABASE_URL": bool(os.getenv("DATABASE_URL")),
-        "PGHOST": bool(os.getenv("PGHOST")),  # Railway PostgreSQL
-        "TELEGRAM_API_ID": bool(os.getenv("TELEGRAM_API_ID")),
-        "TELEGRAM_API_HASH": bool(os.getenv("TELEGRAM_API_HASH")),
-        "TELEGRAM_PHONE": bool(os.getenv("TELEGRAM_PHONE")),
-        "TELEGRAM_CHANNEL_USERNAME": bool(os.getenv("TELEGRAM_CHANNEL_USERNAME")),
+        "PGHOST": bool(os.getenv("PGHOST")),
         "TELEGRAM_BOT_TOKENS": bool(os.getenv("TELEGRAM_BOT_TOKENS")),
-        "GROK_API_KEY": bool(os.getenv("GROK_API_KEY")),
+        "AI_PROVIDER": bool(os.getenv("AI_PROVIDER")),
+        "AI_API_KEY": bool(os.getenv("AI_API_KEY")),
         "SECRET_KEY": bool(os.getenv("SECRET_KEY")),
-        "PORT": bool(os.getenv("PORT"))
     }
+    sched = get_scheduler_status()
 
-    # Get scheduler status
-    scheduler_status = get_scheduler_status()
-    
     status = {
         "database": {
             "configured": settings.is_database_configured(),
-            "url_set": env_vars["DATABASE_URL"],
-            "railway_pg_detected": env_vars["PGHOST"],
-            "message": "Database configured and ready" if settings.is_database_configured() 
-                      else "Database not configured. Add PostgreSQL service in Railway or set DATABASE_URL"
-        },
-        "telegram": {
-            "configured": settings.is_telegram_configured(),
-            "api_id_set": env_vars["TELEGRAM_API_ID"],
-            "api_hash_set": env_vars["TELEGRAM_API_HASH"],
-            "phone_set": env_vars["TELEGRAM_PHONE"],
-            "channel_set": env_vars["TELEGRAM_CHANNEL_USERNAME"],
-            "message": "Telegram phone configured" if settings.is_telegram_configured()
-                      else "Phone import disabled (bot mode only)"
+            "url_set": env["DATABASE_URL"],
+            "railway_pg_detected": env["PGHOST"],
         },
         "bot": {
             "configured": settings.is_bot_configured(),
-            "tokens_set": env_vars["TELEGRAM_BOT_TOKENS"],
+            "tokens_set": env["TELEGRAM_BOT_TOKENS"],
             "bot_count": len(settings.get_bot_tokens()),
-            "message": f"Bot configured with {len(settings.get_bot_tokens())} token(s)" if settings.is_bot_configured()
-                      else "Bot not configured. Set TELEGRAM_BOT_TOKENS"
         },
-        "grok": {
-            "configured": settings.is_grok_configured(),
-            "api_key_set": env_vars["GROK_API_KEY"],
-            "message": "Grok AI configured and ready" if settings.is_grok_configured()
-                      else "Grok AI not configured. AI summary features disabled"
+        "ai": {
+            "env_override": settings.is_ai_configured(),
+            "provider": settings.ai_provider,
+            "model": settings.ai_model,
+            "note": "When env override is false, provider/model/key are read from api_providers table.",
         },
         "scheduler": {
-            "running": scheduler_status["is_running"],
+            "running": sched["is_running"],
             "sync_interval_hours": settings.sync_interval_hours,
-            "jobs": scheduler_status["jobs"],
-            "message": f"Scheduler running with {len(scheduler_status['jobs'])} jobs" if scheduler_status["is_running"]
-                      else "Scheduler not running"
+            "jobs": sched["jobs"],
         },
         "app": {
             "environment": settings.app_env,
             "port": settings.port,
-            "secret_key_set": env_vars["SECRET_KEY"],
-            "message": "App configuration complete" if env_vars["SECRET_KEY"]
-                      else "Using auto-generated secret key. Set SECRET_KEY for production"
+            "secret_key_set": env["SECRET_KEY"],
         },
-        "environment_hints": {}
+        "environment_hints": {},
     }
-    
-    # Add helpful hints for missing configuration
+
     if not settings.is_database_configured():
-        status["environment_hints"]["database"] = (
-            "In Railway: Add a PostgreSQL service from the dashboard. "
-            "Railway will automatically set DATABASE_URL. "
-            "Or manually set DATABASE_URL=postgresql://user:password@host:port/dbname"
-        )
-    
-    if not settings.is_telegram_configured():
-        status["environment_hints"]["telegram"] = (
-            "Get your API credentials from https://my.telegram.org. "
-            "Set: TELEGRAM_API_ID, TELEGRAM_API_HASH, TELEGRAM_PHONE, TELEGRAM_CHANNEL_USERNAME"
-        )
-    
-    if not settings.is_grok_configured():
-        status["environment_hints"]["grok"] = (
-            "Get your API key from https://x.ai. "
-            "Set: GROK_API_KEY=your-api-key"
-        )
-    
-    if not env_vars["SECRET_KEY"]:
-        status["environment_hints"]["secret"] = (
-            "Generate a secure secret key for production. "
-            "Set: SECRET_KEY=your-secure-random-string"
-        )
-    
+        status["environment_hints"]["database"] = "Set DATABASE_URL or Railway PG* vars."
+    if not settings.is_bot_configured():
+        status["environment_hints"]["bot"] = "Set TELEGRAM_BOT_TOKENS (comma-separated)."
+    if not env["SECRET_KEY"]:
+        status["environment_hints"]["secret"] = "Set SECRET_KEY for production session stability."
+
     return ConfigStatus(**status)
 
-@router.get("/required-vars")
-async def get_required_vars():
-    """List all environment variables and their current status"""
-    
-    required = {
-        "critical": {
-            "DATABASE_URL": "PostgreSQL connection string (or Railway auto-configures with PG service)",
-            "PORT": "Server port (Railway provides this automatically)"
-        },
-        "features": {
-            "TELEGRAM_API_ID": "Telegram API ID from https://my.telegram.org",
-            "TELEGRAM_API_HASH": "Telegram API Hash from https://my.telegram.org",  
-            "TELEGRAM_PHONE": "Your phone number for Telegram authentication",
-            "TELEGRAM_CHANNEL_USERNAME": "Username of the channel to import from",
-            "GROK_API_KEY": "Grok AI API key from https://x.ai"
-        },
-        "recommended": {
-            "SECRET_KEY": "Secret key for session security",
-            "APP_ENV": "Environment (development/production)",
-            "SYNC_INTERVAL_HOURS": "Hours between automatic syncs (default: 6)",
-            "MAX_GROK_REQUESTS_PER_HOUR": "Rate limit for Grok API (default: 100)"
-        }
-    }
-    
-    current_status = {}
-    for category, vars in required.items():
-        current_status[category] = {}
-        for var, description in vars.items():
-            current_status[category][var] = {
-                "description": description,
-                "is_set": bool(os.getenv(var)),
-                "value": "***" if os.getenv(var) else None
-            }
-    
-    return {
-        "environment_variables": current_status,
-        "configuration_complete": all([
-            settings.is_database_configured(),
-            settings.is_telegram_configured(), 
-            settings.is_grok_configured()
-        ])
-    }
 
 @router.get("/health/db")
 async def get_database_health():
-    """
-    Check database connectivity and health status.
-    Returns detailed information about the database connection and pool status.
-    """
     if not settings.is_database_configured():
-        raise HTTPException(
-            status_code=503, 
-            detail="Database not configured. Please set DATABASE_URL in Railway environment variables."
-        )
-    
+        raise HTTPException(status_code=503, detail="Database not configured")
     health = check_database_health()
-    
     if health["status"] == "unhealthy":
-        raise HTTPException(
-            status_code=503,
-            detail=f"Database is unhealthy: {health.get('error', 'Unknown error')}"
-        )
-    
+        raise HTTPException(status_code=503, detail=f"Database unhealthy: {health.get('error')}")
     return health

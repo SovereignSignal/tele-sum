@@ -8,8 +8,7 @@ from sqlalchemy.orm import Session
 
 from src.config import settings
 from src.models import database
-from src.models.models import ChannelConfig, TelegramBot, ImportMode, Summary, ProcessingStatus, Message
-from src.services.telegram import TelegramService
+from src.models.models import ChannelConfig, TelegramBot, Summary, ProcessingStatus, Message
 from src.services.processor import MessageProcessor
 
 logger = logging.getLogger(__name__)
@@ -45,28 +44,7 @@ async def sync_and_process():
     database.get_engine()
     db = database.SessionLocal()
     try:
-        # Check what sync methods are available
-        has_phone = settings.is_telegram_configured()
-        has_bots = settings.is_bot_configured()
-        
-        # Handle phone-based sync if configured
-        if has_phone:
-            try:
-                # Get channels configured for phone sync
-                phone_channels = db.query(ChannelConfig).filter(
-                    ChannelConfig.import_mode.in_([ImportMode.PHONE, ImportMode.HYBRID]),
-                    ChannelConfig.is_active == True
-                ).all()
-                
-                if phone_channels:
-                    telegram_service = TelegramService()
-                    result = await telegram_service.sync_new_messages(db)
-                    logger.info(f"Phone sync completed: {result}")
-            except Exception as e:
-                logger.error(f"Error in phone sync: {e}")
-        
-        # Handle bot-based monitoring if configured
-        if has_bots:
+        if settings.is_bot_configured():
             try:
                 import httpx
                 from src.utils.url_extractor import extract_urls
@@ -203,7 +181,7 @@ async def sync_and_process():
             except Exception as e:
                 logger.error(f"Error in bot sync: {e}")
         
-        # Process pending messages regardless of source (phone or bot)
+        # Process pending messages
         processor = MessageProcessor()
         processed = 0
         batch_size = 20   # Messages per batch
@@ -303,15 +281,17 @@ async def log_daily_stats():
         processor = MessageProcessor()
         stats = await processor.get_processing_stats(db)
         
-        logger.info(f"""
-📊 Daily Statistics:
-   Total Messages: {stats['total_messages']}
-   Processed: {stats['success']} ({stats['success_rate']}%)
-   Pending: {stats['pending']}
-   Failed: {stats['failed']}
-   Retry Queue: {stats['retry_queued']}
-   Grok API: {stats['grok_rate_limit']['remaining']}/{stats['grok_rate_limit']['max_per_hour']} requests remaining
-""")
+        ai = stats.get('ai', {})
+        logger.info(
+            "\n📊 Daily Statistics:"
+            f"\n   Total Messages: {stats['total_messages']}"
+            f"\n   Processed: {stats['success']} ({stats['success_rate']}%)"
+            f"\n   Pending: {stats['pending']}"
+            f"\n   Failed: {stats['failed']}"
+            f"\n   Retry Queue: {stats['retry_queued']}"
+            f"\n   AI: {ai.get('provider')} / {ai.get('model')}"
+            f" — {ai.get('rate_limit_remaining')}/{ai.get('rate_limit_max')} hourly remaining"
+        )
     except Exception as e:
         logger.error(f"Error logging daily stats: {e}")
     finally:

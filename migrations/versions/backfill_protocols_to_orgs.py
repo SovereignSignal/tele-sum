@@ -18,27 +18,24 @@ depends_on = None
 
 
 def upgrade() -> None:
-    """
-    Rename entities.protocols to entities.orgs in all existing summaries.
-    
-    This uses jsonb_set to add the 'orgs' key with the value from 'protocols',
-    then removes the 'protocols' key.
-    """
     op.execute("""
         UPDATE summaries
-        SET entities = (entities - 'protocols') || jsonb_build_object('orgs', entities->'protocols')
-        WHERE entities ? 'protocols'
-          AND NOT (entities ? 'orgs')
+        SET entities = (
+            (entities::jsonb - 'protocols')
+            || jsonb_build_object('orgs', entities::jsonb->'protocols')
+        )::json
+        WHERE entities::jsonb ? 'protocols'
+          AND NOT (entities::jsonb ? 'orgs')
     """)
 
 
 def downgrade() -> None:
-    """
-    Revert: rename entities.orgs back to entities.protocols.
-    """
     op.execute("""
         UPDATE summaries
-        SET entities = (entities - 'orgs') || jsonb_build_object('protocols', entities->'orgs')
-        WHERE entities ? 'orgs'
-          AND NOT (entities ? 'protocols')
+        SET entities = (
+            (entities::jsonb - 'orgs')
+            || jsonb_build_object('protocols', entities::jsonb->'orgs')
+        )::json
+        WHERE entities::jsonb ? 'orgs'
+          AND NOT (entities::jsonb ? 'protocols')
     """)

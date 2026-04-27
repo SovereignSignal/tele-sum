@@ -27,7 +27,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 
 from src.models.models import Message, Summary, Category, ProcessingStatus, ConfidenceLevel
-from src.services.grok import GrokService
+from src.services.ai import AIService
 from src.scrapers.content_scraper import ContentScraper
 from src.scrapers.twitter_scraper import TwitterScraper
 from src.utils.url_extractor import is_twitter_url
@@ -49,7 +49,7 @@ class MessageProcessor:
     """
 
     def __init__(self):
-        self.grok_service = GrokService()
+        self.ai_service = AIService()
         self.content_scraper = ContentScraper()
         self.twitter_scraper = TwitterScraper()
         self.max_retries = settings.max_processing_retries  # Default: 3 attempts
@@ -115,37 +115,35 @@ class MessageProcessor:
                 other_contents = await self.content_scraper.scrape_multiple_urls(other_urls)
                 url_contents.update(other_contents)
 
-            # Call Grok API
-            result = await self.grok_service.analyze_content(
+            # Call AI provider
+            wire_value = message.wire.value if message.wire else None
+            result = await self.ai_service.analyze_content(
                 message.raw_content,
                 urls,
                 url_contents,
                 categories,
-                db
+                db,
+                wire=wire_value,
             )
-            
+
             if result:
-                # Update summary with results
                 summary.title = result.get("title")
                 summary.summary = result.get("summary")
-                # Merge source info into entities for storage
-                entities = result.get("entities", {})
-                source = result.get("source", {})
-                # Get URLs from message
+                entities = result.get("entities", {}) or {}
+                source = result.get("source", {}) or {}
                 urls = message.extracted_urls or []
-                # Use message URL if available, otherwise use Grok's source URL (if any)
                 if urls:
                     source["url"] = urls[0]
-                elif source.get("url") and source.get("url") != "null":
-                    # Keep Grok's URL if it provided one
-                    pass
-                else:
+                elif not source.get("url") or source.get("url") == "null":
                     source["url"] = None
                     source["note"] = "Original source link unavailable"
                 entities["source"] = source
                 entities["urls"] = urls
                 summary.entities = entities
-                summary.confidence = result.get("confidence")
+
+                # confidence comes back as a string ("confident"/"uncertain") from AIService.
+                conf_str = (result.get("confidence") or "").lower()
+                summary.confidence = ConfidenceLevel.CONFIDENT if conf_str == "confident" else ConfidenceLevel.UNCERTAIN
                 
                 # Match category
                 category_name = result.get("category")
@@ -165,11 +163,8 @@ class MessageProcessor:
                 logger.info(f"Successfully processed message {message.id}")
                 return True
             else:
-                # STATE TRANSITION: PROCESSING -> RETRY
-                # Grok returned None - typically means rate limit hit or API unavailable
-                # Message will be picked up again in the next processing cycle
                 summary.processing_status = ProcessingStatus.RETRY
-                summary.error_log = "Grok API returned no result - will retry"
+                summary.error_log = "AI provider returned no result - will retry"
                 db.commit()
 
                 logger.warning(f"Message {message.id} queued for retry (attempt {summary.processing_attempts})")
@@ -319,9 +314,8 @@ class MessageProcessor:
             Summary.processing_status == ProcessingStatus.RETRY
         ).count()
         
-        # Get rate limit status
-        rate_limit = self.grok_service.get_rate_limit_status()
-        
+        ai_status = self.ai_service.get_status()
+
         return {
             "total_messages": total,
             "pending": pending,
@@ -330,7 +324,7 @@ class MessageProcessor:
             "failed": failed,
             "retry_queued": retry,
             "success_rate": round(success / total * 100, 1) if total > 0 else 0,
-            "grok_rate_limit": rate_limit
+            "ai": ai_status,
         }
 
 

@@ -1,0 +1,69 @@
+"""
+Typed schemas for the AI summarization output and the Summary.entities JSON blob.
+
+The entities column is JSON (untyped) in the DB. These models validate AI responses
+on ingest so a malformed or drifting prompt response can't poison downstream queries.
+"""
+
+from typing import List, Literal, Optional
+from pydantic import BaseModel, Field, field_validator
+
+SourceType = Literal[
+    "forum", "twitter", "blog", "governance", "news",
+    "substack", "mirror", "medium", "github", "discord", "other",
+]
+
+ConfidenceStr = Literal["confident", "uncertain"]
+
+
+class SourceInfo(BaseModel):
+    name: Optional[str] = "Unknown"
+    type: SourceType = "other"
+    original_date: Optional[str] = None  # YYYY-MM-DD
+    url: Optional[str] = None
+    note: Optional[str] = None
+
+    @field_validator("type", mode="before")
+    @classmethod
+    def coerce_type(cls, v):
+        if not v:
+            return "other"
+        v = str(v).lower().strip()
+        # Pydantic will reject anything not in SourceType — clamp to "other" first.
+        return v if v in {"forum", "twitter", "blog", "governance", "news",
+                          "substack", "mirror", "medium", "github", "discord", "other"} else "other"
+
+
+class EntitiesPayload(BaseModel):
+    """Stored as Summary.entities. Shape is stable across providers."""
+    source: SourceInfo = Field(default_factory=SourceInfo)
+    orgs: List[str] = Field(default_factory=list)
+    amounts: List[str] = Field(default_factory=list)
+    deadlines: List[str] = Field(default_factory=list)
+    key_terms: List[str] = Field(default_factory=list)
+    urls: List[str] = Field(default_factory=list)
+
+    @field_validator("orgs", "amounts", "deadlines", "key_terms", "urls", mode="before")
+    @classmethod
+    def coerce_list(cls, v):
+        if v is None:
+            return []
+        if isinstance(v, list):
+            return [str(x) for x in v if x is not None]
+        return [str(v)]
+
+
+class AIAnalysis(BaseModel):
+    """The full validated AI response. Maps 1:1 to columns on the Summary row."""
+    title: str = ""
+    summary: str = ""
+    category: Optional[str] = None
+    confidence: ConfidenceStr = "uncertain"
+    source: SourceInfo = Field(default_factory=SourceInfo)
+    entities: EntitiesPayload = Field(default_factory=EntitiesPayload)
+
+    @field_validator("confidence", mode="before")
+    @classmethod
+    def coerce_confidence(cls, v):
+        v = str(v or "").lower().strip()
+        return "confident" if v == "confident" else "uncertain"
