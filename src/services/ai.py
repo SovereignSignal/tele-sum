@@ -7,8 +7,9 @@ Provider config is resolved in this order:
 
 Supported providers (selected by name):
     - anthropic            (native /v1/messages API)
+    - ollama               (Ollama Cloud / native /api/chat — base_url ends in /api)
     - any OpenAI-compatible provider (grok, openai, openrouter, perplexity,
-      ollama, groq, together, ...) — uses /chat/completions
+      groq, together, ...) — uses /chat/completions
 
 Validation: AI responses are parsed into pydantic AIAnalysis (src/schemas/entities.py).
 Telemetry: each call writes one row to api_usage_log (raw SQL — owned by the sibling app).
@@ -292,6 +293,8 @@ class AIService:
         try:
             if cfg.provider == "anthropic":
                 content, tokens_in, tokens_out, duration_ms = await self._call_anthropic(cfg, prompt)
+            elif cfg.provider == "ollama":
+                content, tokens_in, tokens_out, duration_ms = await self._call_ollama(cfg, prompt)
             else:
                 content, tokens_in, tokens_out, duration_ms = await self._call_openai_compat(cfg, prompt)
         except Exception as e:
@@ -359,6 +362,39 @@ class AIService:
         content = data["choices"][0]["message"]["content"]
         usage = data.get("usage") or {}
         return content, int(usage.get("prompt_tokens") or 0), int(usage.get("completion_tokens") or 0), duration_ms
+
+    async def _call_ollama(
+        self, cfg: ProviderConfig, prompt: str
+    ) -> Tuple[str, int, int, int]:
+        """Ollama Cloud native /api/chat endpoint. Different shape from OpenAI-compat."""
+        if not cfg.base_url:
+            raise ValueError("Provider 'ollama' requires base_url (e.g. https://ollama.com/api)")
+        url = f"{cfg.base_url.rstrip('/')}/chat"
+        payload = {
+            "model": cfg.model,
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
+            "stream": False,
+            "options": {"temperature": 0.3, "num_predict": 800},
+            "format": "json",  # ask the server to constrain to JSON
+        }
+        headers = {"Authorization": f"Bearer {cfg.api_key}", "Content-Type": "application/json"}
+        t0 = time.monotonic()
+        async with httpx.AsyncClient(timeout=120.0) as client:  # bigger models can be slow
+            r = await client.post(url, headers=headers, json=payload)
+        duration_ms = int((time.monotonic() - t0) * 1000)
+        if r.status_code != 200:
+            raise RuntimeError(f"ollama HTTP {r.status_code}: {r.text[:300]}")
+        data = r.json()
+        content = (data.get("message") or {}).get("content", "")
+        return (
+            content,
+            int(data.get("prompt_eval_count") or 0),
+            int(data.get("eval_count") or 0),
+            duration_ms,
+        )
 
     async def _call_anthropic(
         self, cfg: ProviderConfig, prompt: str
