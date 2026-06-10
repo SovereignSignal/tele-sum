@@ -85,7 +85,9 @@ migrations/versions/       # 3 alembic migrations (head: backfill_protocols_to_o
 | `review_queue` | Manual URL-correction queue |
 | `grok_usage` | **Historical** — read-only; new writes go to `api_usage_log` |
 
-Other tables on the same Postgres instance (e.g. `api_providers`, `api_usage_log`, `model_pricing`, `feeds`, `monitored_accounts`, `scan_*`, `org_profiles`, `grant_entries`, etc.) are owned by **the sibling app**. Tele-sum reads from `api_providers` and writes to `api_usage_log`; otherwise stays out of those lanes.
+Other tables on the same Postgres instance (e.g. `api_providers`, `api_usage_log`, `model_pricing`, `feeds`, `monitored_accounts`, `scan_*`, `org_profiles`, `grant_entries`, etc.) are owned by **the sibling app**. Tele-sum reads from `api_providers` and `distribution_logs`, and writes to `api_usage_log`; otherwise stays out of those lanes.
+
+**Round-trip guard:** wire-room-ops publishes approved entries to the same wire channels this app monitors, and write-through inserts them into `summaries` (rows with `message_id IS NULL`). On import, `src/services/distribution_guard.py` checks `distribution_logs` (`channel='telegram' AND status='success'`, matched on `external_id` = Telegram message id + `wire`) and skips those posts — otherwise every approval would be stored twice and re-summarized for nothing. The guard fails open if the table is missing.
 
 ### Key enums
 

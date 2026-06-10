@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from src.config import settings
 from src.models import database
 from src.models.models import Message, Summary, SyncStatus, ProcessingStatus, TelegramBot, ChannelConfig, ImportMode
+from src.services.distribution_guard import is_distribution_post
 from src.utils.url_extractor import extract_urls
 
 logger = logging.getLogger(__name__)
@@ -169,7 +170,18 @@ class TelegramBotService:
         if existing:
             logger.debug(f"Skipping duplicate message: {msg.message_id}")
             return
-        
+
+        # Posts published to this channel by wire-room-ops already exist in
+        # summaries via its approve write-through — importing them again would
+        # duplicate the entry and burn an AI call (the round-trip loop).
+        wire_value = channel_config.wire.value if channel_config.wire else None
+        if is_distribution_post(db, msg.message_id, wire_value):
+            logger.info(
+                f"⏭️ Skipping wire-room-ops distribution post TG#{msg.message_id} "
+                f"({wire_value} wire) — already in summaries via write-through"
+            )
+            return
+
         # Extract message content
         message_text = msg.text or msg.caption or ""
         if not message_text:
