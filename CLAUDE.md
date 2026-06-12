@@ -56,6 +56,7 @@ src/
 │   └── config.py          # /api/config/status, /api/config/health/db
 ├── services/
 │   ├── ai.py              # Provider-agnostic AI service
+│   ├── distribution_guard.py  # Round-trip guard: skip wire-room-ops distribution posts
 │   ├── processor.py       # Message processing state machine
 │   ├── scheduler.py       # APScheduler job orchestration
 │   └── telegram_bot.py    # python-telegram-bot polling
@@ -69,6 +70,7 @@ src/
     └── url_extractor.py
 templates/                 # base, index, login, categories, settings
 migrations/versions/       # 3 alembic migrations (head: backfill_protocols_to_orgs)
+tests/                     # pytest; run `python3 -m pytest tests/` (conftest.py at repo root)
 ```
 
 ## Database — tele-sum's tables (own this app's lane)

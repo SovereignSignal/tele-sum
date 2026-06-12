@@ -6,7 +6,7 @@ How tele-sum gets a Telegram post from "just arrived" to a validated `Summary` r
 
 For each message:
 
-1. **Ingest** — `sync_and_process()` in [`src/services/scheduler.py:32`](src/services/scheduler.py:32) calls Telegram Bot API `getUpdates` for each bot token. New posts are inserted into `messages`, with `wire` and `channel_config_id` copied from the matching `channel_configs` row. A blank `Summary` row is created with status `PENDING`.
+1. **Ingest** — `sync_and_process()` in [`src/services/scheduler.py:32`](src/services/scheduler.py:32) calls Telegram Bot API `getUpdates` for each bot token. Posts that wire-room-ops itself published to the channel are skipped first by [`src/services/distribution_guard.py`](src/services/distribution_guard.py) (matched against its `distribution_logs` on Telegram message id + wire) — their content already exists in `summaries` via the approve write-through. Surviving posts are inserted into `messages`, with `wire` and `channel_config_id` copied from the matching `channel_configs` row. A blank `Summary` row is created with status `PENDING`.
 2. **URL extraction** — `src/utils/url_extractor.py` pulls URLs out of `raw_content` at insert time.
 3. **Scrape** — `MessageProcessor.process_message()` in [`src/services/processor.py:58`](src/services/processor.py:58) splits URLs into Twitter and non-Twitter. Twitter URLs go through `TwitterScraper` (FxTwitter), others through `ContentScraper` (BeautifulSoup).
 4. **AI call** — `AIService.analyze_content()` in [`src/services/ai.py:271`](src/services/ai.py:271) builds the prompt and dispatches to the configured provider (Anthropic, Ollama Cloud, or any OpenAI-compatible chat-completions endpoint).
