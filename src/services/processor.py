@@ -88,6 +88,19 @@ def _record_seen(db: Session, urls: List[str], wire_value: Optional[str]) -> Non
 
 logger = logging.getLogger(__name__)
 
+KNOWN_PROFILES = {"grant", "digest"}
+
+
+def resolve_profile(channel_config) -> Tuple[str, Optional[str]]:
+    """(profile, prompt_hint) for a channel. Unknown/missing -> the grant default,
+    so a bad config row can never stall ingestion."""
+    profile = (getattr(channel_config, "extraction_profile", None) or "").strip().lower()
+    if profile not in KNOWN_PROFILES:
+        return ("grant", None)
+    hint = getattr(channel_config, "prompt_hint", None) if profile == "digest" else None
+    return (profile, hint)
+
+
 class MessageProcessor:
     """
     Handles the processing of Telegram messages through Grok AI.
@@ -145,21 +158,26 @@ class MessageProcessor:
         summary.last_processed_at = datetime.utcnow()
         db.commit()
 
+        # Resolve per-channel extraction profile BEFORE seen_urls dedup.
+        profile, prompt_hint = resolve_profile(message.channel_config)
+
         # DEDUP: any URL already in seen_urls (per-wire scoped)? If yes, skip AI.
+        # Digest channels are not part of the grants seen-URL space; skip the check for them.
         urls = message.extracted_urls or []
         wire_value = message.wire
-        seen = _check_seen(db, urls, wire_value)
-        if seen:
-            summary.entities = {"duplicate_of": seen, "urls": urls}
-            summary.data_quality = "duplicate"
-            summary.processing_status = ProcessingStatus.SUCCESS
-            summary.error_log = None
-            db.commit()
-            logger.info(
-                f"Message {message.id} is a duplicate of seen_urls#{seen['seen_urls_id']} "
-                f"(matched {seen['matched_url']}); skipping AI"
-            )
-            return True
+        if profile == "grant":
+            seen = _check_seen(db, urls, wire_value)
+            if seen:
+                summary.entities = {"duplicate_of": seen, "urls": urls}
+                summary.data_quality = "duplicate"
+                summary.processing_status = ProcessingStatus.SUCCESS
+                summary.error_log = None
+                db.commit()
+                logger.info(
+                    f"Message {message.id} is a duplicate of seen_urls#{seen['seen_urls_id']} "
+                    f"(matched {seen['matched_url']}); skipping AI"
+                )
+                return True
 
         try:
             # Get categories for classification
@@ -183,53 +201,79 @@ class MessageProcessor:
                 other_contents = await self.content_scraper.scrape_multiple_urls(other_urls)
                 url_contents.update(other_contents)
 
-            # Call AI provider
-            result = await self.ai_service.analyze_content(
-                message.raw_content,
-                urls,
-                url_contents,
-                categories,
-                db,
-                wire=wire_value,
-            )
+            # Branch: dispatch to the appropriate AI extractor based on channel profile.
+            if profile == "digest":
+                result = await self.ai_service.analyze_digest(
+                    message_content=message.raw_content,
+                    urls=urls,
+                    url_contents=url_contents,
+                    prompt_hint=prompt_hint,
+                    db=db,
+                    wire=wire_value,
+                )
+                if result is not None:
+                    summary.title = result.get("title")
+                    summary.summary = result.get("summary")
+                    summary.entities = {
+                        "profile": "digest",
+                        "items": result.get("items", []),
+                        "urls": urls,
+                    }
+                    summary.confidence = (
+                        ConfidenceLevel.CONFIDENT
+                        if result.get("confidence") == "confident"
+                        else ConfidenceLevel.UNCERTAIN
+                    )
+            else:
+                # Grant profile (default): existing analyze_content path — unchanged.
+                result = await self.ai_service.analyze_content(
+                    message.raw_content,
+                    urls,
+                    url_contents,
+                    categories,
+                    db,
+                    wire=wire_value,
+                )
+                if result:
+                    summary.title = result.get("title")
+                    summary.summary = result.get("summary")
+                    entities = result.get("entities", {}) or {}
+                    source = result.get("source", {}) or {}
+                    urls = message.extracted_urls or []
+                    if urls:
+                        source["url"] = urls[0]
+                    elif not source.get("url") or source.get("url") == "null":
+                        source["url"] = None
+                        source["note"] = "Original source link unavailable"
+                    entities["source"] = source
+                    entities["urls"] = urls
+                    summary.entities = entities
 
+                    # confidence comes back as a string ("confident"/"uncertain") from AIService.
+                    conf_str = (result.get("confidence") or "").lower()
+                    summary.confidence = ConfidenceLevel.CONFIDENT if conf_str == "confident" else ConfidenceLevel.UNCERTAIN
+
+                    # Match category
+                    category_name = result.get("category")
+                    if category_name:
+                        category = db.query(Category).filter(
+                            Category.user_id == 1,
+                            Category.name == category_name
+                        ).first()
+                        if category:
+                            summary.category_id = category.id
+
+            # SHARED: state-machine outcome — same for both profiles.
             if result:
-                summary.title = result.get("title")
-                summary.summary = result.get("summary")
-                entities = result.get("entities", {}) or {}
-                source = result.get("source", {}) or {}
-                urls = message.extracted_urls or []
-                if urls:
-                    source["url"] = urls[0]
-                elif not source.get("url") or source.get("url") == "null":
-                    source["url"] = None
-                    source["note"] = "Original source link unavailable"
-                entities["source"] = source
-                entities["urls"] = urls
-                summary.entities = entities
-
-                # confidence comes back as a string ("confident"/"uncertain") from AIService.
-                conf_str = (result.get("confidence") or "").lower()
-                summary.confidence = ConfidenceLevel.CONFIDENT if conf_str == "confident" else ConfidenceLevel.UNCERTAIN
-                
-                # Match category
-                category_name = result.get("category")
-                if category_name:
-                    category = db.query(Category).filter(
-                        Category.user_id == 1,
-                        Category.name == category_name
-                    ).first()
-                    if category:
-                        summary.category_id = category.id
-                
                 # STATE TRANSITION: PROCESSING -> SUCCESS
                 summary.processing_status = ProcessingStatus.SUCCESS
                 summary.error_log = None
                 db.commit()
 
-                # Register URLs in the shared seen_urls table for cross-app dedup.
-                _record_seen(db, urls, wire_value)
-                db.commit()
+                # Register URLs in the shared seen_urls table for cross-app dedup (grant only).
+                if profile == "grant":
+                    _record_seen(db, urls, wire_value)
+                    db.commit()
 
                 logger.info(f"Successfully processed message {message.id}")
                 return True
