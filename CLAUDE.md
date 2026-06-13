@@ -2,15 +2,16 @@
 
 ## What this is
 
-**Tele-Sum** is a Telegram-channel → AI-summarizer → Postgres pipeline. Bot polls registered channels, each new message is summarized by an AI provider, the result is stored in `summaries`. Three "wires" (crypto, ai, oss) channel content into separate verticals.
+**Tele-Sum** is a Telegram-channel → AI-summarizer → Postgres pipeline. Bot polls registered channels, each new message is summarized by an AI provider, the result is stored in `summaries`. Wire slugs (e.g. crypto, ai, oss) label each vertical; they are free-form text config, not an enum.
 
 ## Architecture (as of the 2026-04 rationalization)
 
 - **Bot mode only.** Phone/Telethon and "hybrid" modes were removed. Polling uses `python-telegram-bot` via `getUpdates`.
 - **Provider-agnostic AI.** `src/services/ai.py` reads provider config from the shared `api_providers` Postgres table (anthropic / grok / perplexity / ollama / OpenAI-compatible) or from env overrides (`AI_PROVIDER` + `AI_API_KEY`). One row per provider; one source of truth across this app and its sibling.
-- **Validated AI responses.** `src/schemas/entities.py` defines pydantic schemas (`AIAnalysis`, `EntitiesPayload`, `SourceInfo`) that every AI response must validate against before storage.
+- **Extraction profiles.** Each channel uses either the `grant` profile (one post = one fundable item, validated by `AIAnalysis`) or the `digest` profile (one post = many items, validated by `DigestAnalysis`). Profile is set in `channel_configs.extraction_profile`; unknown values fall back to `grant`.
+- **Validated AI responses.** `src/schemas/entities.py` defines pydantic schemas (`AIAnalysis`, `EntitiesPayload`, `SourceInfo`) for the grant profile; `src/schemas/digest.py` defines `DigestAnalysis`/`DigestItem` for the digest profile. Every AI response must validate before storage.
 - **Telemetry to shared `api_usage_log`.** Each AI call writes one row (provider, model, tokens, wire, duration_ms, success). The legacy `grok_usage` table is read-only (historical rows preserved, no new writes).
-- **In-process scheduler.** APScheduler with 5 jobs: sync (every N hours), process_pending (2 min), retry_failed (15 min), cleanup_stale (1 hour), daily_stats (midnight). It's load-bearing — don't disable it without replacing.
+- **In-process scheduler.** APScheduler with 6 jobs: sync (every N hours), process_pending (2 min), retry_failed (15 min), cleanup_stale (1 hour), daily_stats (midnight), notion_sync (5 min). It's load-bearing — don't disable it without replacing.
 
 ## Tech stack
 
@@ -57,11 +58,13 @@ src/
 ├── services/
 │   ├── ai.py              # Provider-agnostic AI service
 │   ├── distribution_guard.py  # Round-trip guard: skip wire-room-ops distribution posts
+│   ├── notion.py          # Notion REST client + sync logic for digest channels
 │   ├── processor.py       # Message processing state machine
 │   ├── scheduler.py       # APScheduler job orchestration
 │   └── telegram_bot.py    # python-telegram-bot polling
 ├── schemas/
-│   └── entities.py        # Pydantic models for AI response + entities JSONB
+│   ├── entities.py        # Pydantic models for grant AI response + entities JSONB
+│   └── digest.py          # Pydantic models for digest AI response (DigestAnalysis, DigestItem)
 ├── scrapers/              # ContentScraper, TwitterScraper
 ├── models/
 │   ├── database.py        # Engine, session factory, health
@@ -82,9 +85,10 @@ tests/                     # pytest; run `python3 -m pytest tests/` (conftest.py
 | `categories` | User-defined classification categories |
 | `users` | Multi-tenant placeholder (single user today) |
 | `telegram_bots` | Bot tokens & polling offsets |
-| `channel_configs` | Per-channel settings (wire, bot, active, last imported) |
+| `channel_configs` | Per-channel settings (wire, bot, extraction_profile, prompt_hint, notion_database_id, active) |
 | `sync_status` | Per-channel sync bookkeeping |
 | `review_queue` | Manual URL-correction queue |
+| `notion_pages` | One row per Notion page created from a digest item; (summary_id, item_index) idempotency key |
 | `grok_usage` | **Historical** — read-only; new writes go to `api_usage_log` |
 
 Other tables on the same Postgres instance (e.g. `api_providers`, `api_usage_log`, `model_pricing`, `feeds`, `monitored_accounts`, `scan_*`, `org_profiles`, `grant_entries`, etc.) are owned by **the sibling app**. Tele-sum reads from `api_providers` and `distribution_logs`, and writes to `api_usage_log`; otherwise stays out of those lanes.
@@ -103,12 +107,13 @@ class DataQuality(enum.Enum):
 class ConfidenceLevel(enum.Enum):
     CONFIDENT, UNCERTAIN
 
-class Wire(enum.Enum):
-    crypto, ai, oss
-
 class ImportMode(enum.Enum):
     PHONE, BOT, HYBRID   # legacy enum — only BOT is used; PHONE/HYBRID kept for old rows
 ```
+
+**Wire is not an enum.** The `wire` column on `messages`, `summaries`, and `channel_configs` is a `TEXT` column (the enum was dropped in migration `20260612_0001`). Any lowercase slug is valid — it is deployment config, not schema. Common values are `crypto`, `ai`, `oss`.
+
+**Extraction profile** is a `VARCHAR(32)` column on `channel_configs`. Known values: `grant` (default), `digest`. Unknown values fall back to `grant` at runtime.
 
 ### Production query pattern
 
@@ -134,6 +139,11 @@ AI_PROVIDER=grok                 # row name in api_providers (anthropic/grok/per
 AI_API_KEY=...                   # override the DB-stored key
 AI_BASE_URL=https://api.x.ai/v1  # override base URL
 AI_MODEL=grok-3                  # override default model
+```
+
+### Optional integrations
+```bash
+NOTION_API_KEY=ntn_...               # enables Notion sync for digest channels (also readable from api_providers row)
 ```
 
 ### Tuning
@@ -172,7 +182,7 @@ APP_ENV=production
 
 1. **Filter production queries by `data_quality = 'complete'` AND `processing_status = 'SUCCESS'`.**
 2. Provider config lives in the `api_providers` DB row by default. Don't hardcode keys.
-3. AI responses must validate against `AIAnalysis` — if validation fails, return None and let the state machine retry.
+3. AI responses must validate against `AIAnalysis` (grant profile) or `DigestAnalysis` (digest profile) — if validation fails, return None and let the state machine retry.
 4. Don't write to sibling-app tables (anything outside the 9 listed under "tele-sum's tables").
 5. Telemetry: every AI call writes to `api_usage_log`. The `wire` column is critical for cross-app cost analysis.
 6. State machine transitions live in `src/services/processor.py` — preserve PENDING → PROCESSING → SUCCESS/RETRY/FAILED semantics.

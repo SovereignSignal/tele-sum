@@ -14,6 +14,16 @@ For each message:
 6. **Persist** — `Summary` is updated with `title`, `summary`, `category_id`, `confidence`, and `entities`. `processing_status` flips to `SUCCESS`.
 7. **Telemetry** — every AI call writes one row to the shared `api_usage_log` table (provider, model, purpose='summarize', tokens_in, tokens_out, wire, duration_ms, success, error_message).
 
+## Extraction profiles
+
+At step 4 (AI call), `MessageProcessor.process_message()` checks `channel_configs.extraction_profile` via `resolve_profile()` to decide which AI path to take:
+
+**Grant profile** (default) — unchanged pipeline. `AIService.analyze_content()` is called; the response is validated by `AIAnalysis` and stored as a flat `entities` dict (orgs, amounts, deadlines, key_terms, source). URLs are registered in the shared `seen_urls` table for cross-post dedup.
+
+**Digest profile** — `AIService.analyze_digest()` is called instead. The response is validated by `DigestAnalysis` from `src/schemas/digest.py` and stored as `entities = {"profile": "digest", "items": [...], ...}` where each item is a `DigestItem` (title, url, note, category, tags, org). After `processing_status` flips to `SUCCESS`, the `notion_sync` job (every 5 min) picks up any items whose channel has `notion_database_id` set and pushes one Notion page per item. Per-item state is tracked in `notion_pages` for idempotency.
+
+Unknown profile values fall back to `grant` at runtime — a bad config row can never stall ingestion.
+
 ## State machine
 
 ```
@@ -37,15 +47,16 @@ The state transition logic lives in `MessageProcessor.process_message()` and `re
 
 ## Scheduler jobs
 
-Five APScheduler jobs are registered in `start_scheduler()` ([`src/services/scheduler.py:300`](src/services/scheduler.py:300)):
+Six APScheduler jobs are registered in `start_scheduler()` ([`src/services/scheduler.py`](src/services/scheduler.py)):
 
 | Job id | Trigger | Function | Purpose |
 |--------|---------|----------|---------|
-| `sync_job` | every `SYNC_INTERVAL_HOURS` (default 6) | `sync_and_process()` | Pull `getUpdates` for each bot, insert new messages, then process up to 200 in batches of 20 |
+| `sync_job` | every `SYNC_INTERVAL_HOURS` (default 6) | `sync_and_process()` | Backlog drain: process up to 200 `PENDING`/`RETRY` rows in batches of 20. (Live ingest is handled by the continuous bot polling in `telegram_bot.py`, not this job.) |
 | `process_pending` | every 2 min | `process_pending_only()` | Process up to 10 `PENDING`/`RETRY` rows. Keeps queue moving between full syncs |
 | `retry_failed` | every 15 min | `retry_failed_messages()` | Move `FAILED` → `RETRY` for rows with `last_processed_at` within 24h and `attempts < max_retries` |
 | `cleanup_stale` | every 1 hour | `cleanup_stale_processing()` | Reset rows stuck in `PROCESSING` for >30 min back to `RETRY` |
 | `daily_stats` | cron `0 0 * * *` | `log_daily_stats()` | Emit a stats line to logs at midnight UTC |
+| `notion_sync` | every 5 min | `notion_sync_job()` | Push unsynced digest items to their Notion databases |
 
 If `RUN_SYNC_ON_STARTUP=true` (default), `sync_and_process()` also fires once on application boot.
 

@@ -1,6 +1,6 @@
 # Tele-Sum Database Schema
 
-Reference for the 9 tables tele-sum owns, plus the two integration points it shares with the sibling app on the same Postgres.
+Reference for the 10 tables tele-sum owns, plus the two integration points it shares with the sibling app on the same Postgres.
 
 The full ORM is in [`src/models/models.py`](src/models/models.py). Migrations live in [`migrations/versions/`](migrations/versions/) — current head is `backfill_protocols_to_orgs`.
 
@@ -48,7 +48,7 @@ Raw Telegram channel posts. One row per `(channel_id, telegram_id)`.
 | channel_config_id | INTEGER FK → channel_configs.id | Links to wire metadata |
 | bot_id | INTEGER FK → telegram_bots.id | Which bot ingested |
 | import_method | VARCHAR(20) | `bot` (live) or `file` (one-off backfill). Legacy rows may say `phone` |
-| wire | ENUM(`crypto`,`ai`,`oss`) | Inherited from channel config |
+| wire | TEXT | Inherited from channel config. Any slug is valid; common values: `crypto`, `ai`, `oss` |
 | timestamp | TIMESTAMPTZ | Message post time |
 | raw_content | TEXT | |
 | extracted_urls | JSON | Array of URL strings |
@@ -69,7 +69,7 @@ AI output for each message. 1:1 with `messages` via `message_id`.
 | entities | JSON | See shape below |
 | category_id | INTEGER FK → categories.id | |
 | confidence | ENUM(`confident`,`uncertain`) | |
-| wire | ENUM(`crypto`,`ai`,`oss`) | Mirrors `messages.wire` |
+| wire | TEXT | Mirrors `messages.wire`. Any slug is valid |
 | processing_status | ENUM(`PENDING`,`PROCESSING`,`SUCCESS`,`RETRY`,`FAILED`) | |
 | data_quality | VARCHAR(20) | `complete` or `incomplete` |
 | processing_attempts | INTEGER | |
@@ -81,7 +81,7 @@ Indexes: `ix_summaries_status_processed`, `ix_summaries_category_created`, plus 
 
 #### `entities` JSON shape
 
-Validated on write by `EntitiesPayload` in [`src/schemas/entities.py`](src/schemas/entities.py):
+For **grant** channels, validated on write by `EntitiesPayload` in [`src/schemas/entities.py`](src/schemas/entities.py):
 
 ```json
 {
@@ -103,6 +103,21 @@ Validated on write by `EntitiesPayload` in [`src/schemas/entities.py`](src/schem
 `source.type` is one of: `forum | twitter | blog | governance | news | substack | mirror | medium | github | discord | other`.
 
 > **Note**: the key was renamed from `protocols` to `orgs` in migration `backfill_protocols_to_orgs`. All existing rows have been backfilled.
+
+For **digest** channels, `entities` has the shape:
+
+```json
+{
+  "profile": "digest",
+  "items": [
+    { "title": "...", "url": "...", "note": "...", "category": "...", "tags": ["..."], "org": "..." }
+  ],
+  "urls":      ["https://..."],
+  "confidence": "confident"
+}
+```
+
+Validated on write by `DigestAnalysis` in [`src/schemas/digest.py`](src/schemas/digest.py).
 
 ### categories
 
@@ -158,9 +173,12 @@ One row per Telegram channel tele-sum ingests from. The system currently runs th
 | Column | Type | Notes |
 |--------|------|-------|
 | id | INTEGER PK | |
-| channel_id | VARCHAR(255) unique | Numeric Telegram chat id |
+| channel_id | VARCHAR(255) unique | Numeric Telegram chat id; may be `@username` as a placeholder (resolved on first post) |
 | channel_username, channel_title | VARCHAR | |
-| wire | ENUM(`crypto`,`ai`,`oss`) | Stamped onto every imported message |
+| wire | TEXT | Stamped onto every imported message. Any slug is valid |
+| extraction_profile | VARCHAR(32) | `grant` (default) or `digest`. Unknown values fall back to `grant` at runtime |
+| prompt_hint | TEXT (nullable) | Free-text hint passed to the AI for digest channels; ignored for grant |
+| notion_database_id | VARCHAR(64) (nullable) | Notion database to sync digest items into; null means no sync for this channel |
 | import_mode | ENUM(`phone`,`bot`,`hybrid`) | Always `bot` for new configs; older enum values retained for schema stability |
 | historical_import_complete | BOOLEAN | |
 | historical_import_date | TIMESTAMPTZ | |
@@ -183,6 +201,20 @@ Per-channel cursor for incremental imports.
 | total_messages_synced | INTEGER | |
 | is_initial_import_complete, transition_to_bot_complete | BOOLEAN | Legacy flags from earlier import strategies |
 | created_at / updated_at | TIMESTAMPTZ | |
+
+### notion_pages
+
+Tracks Notion pages created from digest items. One row per `(summary_id, item_index)`.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | INTEGER PK | |
+| summary_id | INTEGER FK → summaries.id (CASCADE DELETE) | |
+| item_index | INTEGER | Position of the item in `entities.items[]` |
+| page_id | VARCHAR(64) | Notion page id returned by the API |
+| created_at | TIMESTAMPTZ | |
+
+Unique constraint: `uq_notion_pages_summary_item` on `(summary_id, item_index)` — the idempotency key used by the `notion_sync` job to skip already-created pages.
 
 ### grok_usage *(read-only, legacy)*
 

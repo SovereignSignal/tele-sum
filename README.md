@@ -1,6 +1,6 @@
 # Tele-Sum — Grant Wire Archive
 
-AI-powered Telegram channel summarization for the Sovereign Signal Grant Wire properties. Tele-Sum ingests messages from a small set of curated Telegram channels, summarizes the linked content with an LLM, and stores structured rows for search and downstream use.
+AI-powered Telegram channel summarization for the Sovereign Signal Grant Wire properties. Tele-sum ingests messages from a small set of curated Telegram channels, summarizes the linked content with an LLM, and stores structured rows for search and downstream use.
 
 | Wire | Telegram channel | Description |
 |------|------------------|-------------|
@@ -22,10 +22,22 @@ The state machine is `PENDING -> PROCESSING -> SUCCESS | RETRY | FAILED`. Backgr
 - **Runtime**: Python 3.12.7, FastAPI 0.115, SQLAlchemy 2.0, Pydantic 2.10
 - **Ingest**: `python-telegram-bot` 21.9 (bot mode only — no phone auth)
 - **AI**: Provider-agnostic `AIService` (`src/services/ai.py`). Supports Anthropic, Ollama Cloud, and any OpenAI-compatible chat-completions endpoint (Grok, Perplexity, OpenRouter, OpenAI, Groq, Together, ...). Currently running on Ollama Cloud with `glm-5.1`.
-- **Storage**: PostgreSQL. Tele-sum owns 9 tables (see [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md)). The DB is shared with a sibling app — tele-sum reads `api_providers` and writes `api_usage_log`, otherwise stays in its own lane.
+- **Extraction profiles**: each channel can use the `grant` profile (one post = one item) or the `digest` profile (one post = many items). See [docs/WIRES_AND_PROFILES.md](docs/WIRES_AND_PROFILES.md).
+- **Storage**: PostgreSQL. Tele-sum owns 10 tables (see [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md)). The DB is shared with a sibling app — tele-sum reads `api_providers` and writes `api_usage_log`, otherwise stays in its own lane.
 - **Deployment**: Railway. Service `web` in project `glorious-prosperity`. See [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md).
 
-## Quick start (local)
+## Quickstart
+
+1. **Postgres** — any instance. `export DATABASE_URL=postgresql://...`
+2. **Telegram bot** — create one with @BotFather, add it as **admin** to each channel you want to capture. `export TELEGRAM_BOT_TOKENS=<token>`
+3. **AI provider** — `export AI_PROVIDER=anthropic AI_API_KEY=...` (or `ollama`, or any OpenAI-compatible endpoint via `AI_BASE_URL`).
+4. **Run** — `alembic upgrade head && uvicorn src.main:app`
+5. **Add a channel** — insert a `channel_configs` row with the channel's numeric Telegram id (or `@username` as a placeholder — the bot will resolve it to the real id on the first incoming post). Pick a **wire** (any slug — your vertical label) and an **extraction profile**: `grant` (single-item funding posts) or `digest` (posts that list many items). See [docs/WIRES_AND_PROFILES.md](docs/WIRES_AND_PROFILES.md).
+6. **Optional: Notion** — see [docs/NOTION_SYNC.md](docs/NOTION_SYNC.md) to land digest items in your own Notion databases.
+
+Tele-sum runs standalone: the shared-table integrations some deployments use (`api_providers`, `seen_urls`, `distribution_logs`) are all optional and fail open when absent.
+
+## Local dev
 
 ```bash
 git clone https://github.com/SovereignSignal/tele-sum.git
@@ -79,6 +91,12 @@ BOT_POLLING_INTERVAL=2
 APP_ENV=production
 ```
 
+Optional integrations:
+
+```bash
+NOTION_API_KEY=ntn_...               # enables Notion sync for digest channels
+```
+
 ## Operating
 
 - **Manual sync**: `POST /api/trigger-sync` (auth required)
@@ -102,8 +120,10 @@ ORDER BY m.timestamp DESC;
 | Doc | Purpose |
 |-----|---------|
 | [CLAUDE.md](CLAUDE.md) | Authoritative architecture reference for AI assistants and contributors |
-| [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) | The 9 tele-sum tables + cross-app integration points |
+| [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) | The tele-sum tables + cross-app integration points |
 | [PROCESSING.md](PROCESSING.md) | State machine, scheduler jobs, troubleshooting |
+| [docs/WIRES_AND_PROFILES.md](docs/WIRES_AND_PROFILES.md) | Wire slugs and extraction profiles (grant vs digest) |
+| [docs/NOTION_SYNC.md](docs/NOTION_SYNC.md) | Notion integration for digest channels |
 | [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md) | Deployment topology and env vars |
 | [VISION.md](VISION.md) | Product goals |
 
