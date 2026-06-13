@@ -31,6 +31,7 @@ from sqlalchemy.orm import Session
 from src.config import settings
 from src.models.models import Category
 from src.schemas.entities import AIAnalysis, EntitiesPayload, SourceInfo
+from src.schemas.digest import DigestAnalysis
 from src.utils.url_extractor import is_twitter_url
 
 logger = logging.getLogger(__name__)
@@ -231,6 +232,52 @@ def _normalize_category(name: Optional[str], categories: List[Category]) -> Opti
     return by_lower.get(name.lower().strip(), None)
 
 
+def _build_digest_prompt(
+    message_content: str,
+    urls: List[str],
+    url_contents: Dict[str, str],
+    prompt_hint: Optional[str],
+) -> str:
+    parts: List[str] = [
+        "You are extracting structured items from a Telegram channel digest post. "
+        "One post typically lists SEVERAL distinct items — return one entry per item.",
+    ]
+    if prompt_hint:
+        parts.append(f"\n## About this channel\n{prompt_hint}")
+    parts.append(f"\n## The post\n{message_content}")
+    if urls:
+        parts.append("\n## Linked content")
+        for url in urls:
+            parts.append(f"- {url}")
+            content = url_contents.get(url)
+            if content:
+                parts.append(f"  Preview: {content[:1500]}")
+    parts.append(
+        "\n## Your task\n"
+        "Return ONLY a JSON object, no prose, shaped exactly like:\n"
+        '{"title": "post title, 4-6 words", "summary": "1-2 sentence overview of the post",\n'
+        ' "confidence": "confident" or "uncertain",\n'
+        ' "items": [{"title": "item name", "url": "item link or null", "note": "what it is / why it matters, 1-2 lines",\n'
+        '            "category": "the section label the post itself uses, or null", "tags": ["short", "tags"], "org": "org/author or null"}]}\n'
+        "Rules: one items[] entry per distinct item in the post. Use the post's own links "
+        "(prefer the item's primary link). Never invent URLs. Keep notes factual."
+    )
+    return "\n".join(parts)
+
+
+def _parse_digest_response(content: str) -> Optional[dict]:
+    """Validate a raw model response against DigestAnalysis. None on any failure."""
+    parsed = _extract_json(content)
+    if parsed is None:
+        return None
+    try:
+        analysis = DigestAnalysis(**parsed)
+    except Exception as e:
+        logger.error(f"Digest response failed validation: {e} | head: {content[:300]}")
+        return None
+    return analysis.model_dump()
+
+
 class AIService:
     def __init__(self, db_for_init: Optional[Session] = None):
         # Try env override first; fall back to DB lookup at request time if needed
@@ -333,6 +380,43 @@ class AIService:
             "source": analysis.source.model_dump(exclude_none=False),
             "entities": analysis.entities.model_dump(),
         }
+
+    async def analyze_digest(
+        self,
+        message_content: str,
+        urls: List[str],
+        url_contents: Dict[str, str],
+        prompt_hint: Optional[str] = None,
+        db: Optional[Session] = None,
+        wire: Optional[str] = None,
+    ) -> Optional[dict]:
+        """Digest profile: explode one post into a validated item list.
+        Returns DigestAnalysis.model_dump() or None (caller's state machine retries)."""
+        cfg = self._ensure_config(db) if db else self._config
+        if not cfg or not cfg.api_key:
+            logger.info("AI not configured — skipping digest analysis")
+            return None
+        if not self.rate_limiter.can_request():
+            logger.warning(f"AI rate limit reached. Remaining: {self.rate_limiter.remaining()}")
+            return None
+
+        prompt = _build_digest_prompt(message_content, urls, url_contents, prompt_hint)
+        try:
+            if cfg.provider == "anthropic":
+                content, tokens_in, tokens_out, duration_ms = await self._call_anthropic(cfg, prompt)
+            elif cfg.provider == "ollama":
+                content, tokens_in, tokens_out, duration_ms = await self._call_ollama(cfg, prompt)
+            else:
+                content, tokens_in, tokens_out, duration_ms = await self._call_openai_compat(cfg, prompt)
+        except Exception as e:
+            logger.error(f"AI call failed ({cfg.provider}): {e}")
+            self._log_usage(db, cfg, success=False, error=str(e)[:500], wire=wire)
+            return None
+
+        self.rate_limiter.record()
+        self._log_usage(db, cfg, success=True, tokens_in=tokens_in,
+                        tokens_out=tokens_out, duration_ms=duration_ms, wire=wire)
+        return _parse_digest_response(content)
 
     # ---------- providers ----------
 
