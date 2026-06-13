@@ -24,6 +24,8 @@ def _extract_entity_links(msg) -> list:
         fn = getattr(msg, attr, None)
         if fn is None:
             continue
+        if attr == "parse_caption_entities" and not getattr(msg, "caption", None):
+            continue
         try:
             for ent, text in fn(types=["text_link", "url"]).items():
                 url = getattr(ent, "url", None) if ent.type == "text_link" else text
