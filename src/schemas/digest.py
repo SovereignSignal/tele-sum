@@ -19,6 +19,11 @@ class DigestItem(BaseModel):
     tags: List[str] = Field(default_factory=list)
     org: Optional[str] = None
 
+    @field_validator("title", mode="before")
+    @classmethod
+    def strip_title(cls, v):
+        return str(v).strip() if v is not None else v
+
     @field_validator("url", mode="before")
     @classmethod
     def blank_url_is_none(cls, v):
@@ -46,3 +51,20 @@ class DigestAnalysis(BaseModel):
     summary: str = ""
     items: List[DigestItem] = Field(default_factory=list)
     confidence: ConfidenceStr = "confident"
+
+    @field_validator("items", mode="before")
+    @classmethod
+    def coerce_items(cls, v):
+        if v is None:
+            return []
+        if isinstance(v, list):
+            return v
+        if isinstance(v, dict):
+            return [v]
+        return []
+
+    @field_validator("confidence", mode="before")
+    @classmethod
+    def coerce_confidence(cls, v):
+        v = str(v or "").lower().strip()
+        return "confident" if v == "confident" else "uncertain"

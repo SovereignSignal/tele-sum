@@ -37,3 +37,25 @@ def test_items_without_title_are_rejected():
 def test_empty_digest_is_valid_but_has_no_items():
     parsed = DigestAnalysis(title="Quiet day", summary="", items=[])
     assert parsed.items == []
+
+
+# Fix 1 — items coercion
+def test_items_single_dict_is_wrapped_and_null_is_empty():
+    assert DigestAnalysis(items={"title": "Solo"}).items[0].title == "Solo"
+    assert DigestAnalysis(items=None).items == []
+
+
+# Fix 4 — confidence case coercion
+def test_confidence_coercion():
+    assert DigestAnalysis(confidence="Confident").confidence == "confident"
+    assert DigestAnalysis(confidence="WILD").confidence == "uncertain"
+
+
+# Fix 5 — DigestItem title strip
+def test_title_strip():
+    assert DigestItem(title="  X  ").title == "X"
+
+
+def test_whitespace_only_title_raises():
+    with pytest.raises(ValidationError):
+        DigestItem(title="   ")

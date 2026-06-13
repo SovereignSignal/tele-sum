@@ -401,27 +401,28 @@ class AIService:
             return None
 
         prompt = _build_digest_prompt(message_content, urls, url_contents, prompt_hint)
+        # digests list many items; the grant-sized 800-token cap would truncate mid-JSON
         try:
             if cfg.provider == "anthropic":
-                content, tokens_in, tokens_out, duration_ms = await self._call_anthropic(cfg, prompt)
+                content, tokens_in, tokens_out, duration_ms = await self._call_anthropic(cfg, prompt, max_tokens=2500)
             elif cfg.provider == "ollama":
-                content, tokens_in, tokens_out, duration_ms = await self._call_ollama(cfg, prompt)
+                content, tokens_in, tokens_out, duration_ms = await self._call_ollama(cfg, prompt, max_tokens=2500)
             else:
-                content, tokens_in, tokens_out, duration_ms = await self._call_openai_compat(cfg, prompt)
+                content, tokens_in, tokens_out, duration_ms = await self._call_openai_compat(cfg, prompt, max_tokens=2500)
         except Exception as e:
             logger.error(f"AI call failed ({cfg.provider}): {e}")
-            self._log_usage(db, cfg, success=False, error=str(e)[:500], wire=wire)
+            self._log_usage(db, cfg, success=False, error=str(e)[:500], wire=wire, purpose="digest")
             return None
 
         self.rate_limiter.record()
         self._log_usage(db, cfg, success=True, tokens_in=tokens_in,
-                        tokens_out=tokens_out, duration_ms=duration_ms, wire=wire)
+                        tokens_out=tokens_out, duration_ms=duration_ms, wire=wire, purpose="digest")
         return _parse_digest_response(content)
 
     # ---------- providers ----------
 
     async def _call_openai_compat(
-        self, cfg: ProviderConfig, prompt: str
+        self, cfg: ProviderConfig, prompt: str, max_tokens: int = 800
     ) -> Tuple[str, int, int, int]:
         if not cfg.base_url:
             raise ValueError(f"Provider '{cfg.provider}' requires base_url")
@@ -433,7 +434,7 @@ class AIService:
                 {"role": "user", "content": prompt},
             ],
             "temperature": 0.3,
-            "max_tokens": 800,
+            "max_tokens": max_tokens,
         }
         headers = {"Authorization": f"Bearer {cfg.api_key}", "Content-Type": "application/json"}
         t0 = time.monotonic()
@@ -448,7 +449,7 @@ class AIService:
         return content, int(usage.get("prompt_tokens") or 0), int(usage.get("completion_tokens") or 0), duration_ms
 
     async def _call_ollama(
-        self, cfg: ProviderConfig, prompt: str
+        self, cfg: ProviderConfig, prompt: str, max_tokens: int = 800
     ) -> Tuple[str, int, int, int]:
         """Ollama Cloud native /api/chat endpoint. Different shape from OpenAI-compat."""
         if not cfg.base_url:
@@ -461,7 +462,7 @@ class AIService:
                 {"role": "user", "content": prompt},
             ],
             "stream": False,
-            "options": {"temperature": 0.3, "num_predict": 800},
+            "options": {"temperature": 0.3, "num_predict": max_tokens},
             "format": "json",  # ask the server to constrain to JSON
         }
         headers = {"Authorization": f"Bearer {cfg.api_key}", "Content-Type": "application/json"}
@@ -481,14 +482,14 @@ class AIService:
         )
 
     async def _call_anthropic(
-        self, cfg: ProviderConfig, prompt: str
+        self, cfg: ProviderConfig, prompt: str, max_tokens: int = 800
     ) -> Tuple[str, int, int, int]:
         url = (cfg.base_url.rstrip('/') if cfg.base_url else "https://api.anthropic.com") + "/v1/messages"
         payload = {
             "model": cfg.model,
             "system": SYSTEM_PROMPT,
             "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": 800,
+            "max_tokens": max_tokens,
             "temperature": 0.3,
         }
         headers = {
@@ -520,6 +521,7 @@ class AIService:
         duration_ms: int = 0,
         wire: Optional[str] = None,
         error: Optional[str] = None,
+        purpose: str = "summarize",
     ) -> None:
         """Write to the shared api_usage_log table. Never block the caller on failure."""
         if db is None:
@@ -536,7 +538,7 @@ class AIService:
                 {
                     "provider": cfg.provider,
                     "model": cfg.model,
-                    "purpose": "summarize",
+                    "purpose": purpose,
                     "tin": tokens_in,
                     "tout": tokens_out,
                     "wire": wire,
