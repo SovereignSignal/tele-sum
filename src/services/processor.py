@@ -147,7 +147,7 @@ class MessageProcessor:
 
         # DEDUP: any URL already in seen_urls (per-wire scoped)? If yes, skip AI.
         urls = message.extracted_urls or []
-        wire_value = message.wire.value if message.wire else None
+        wire_value = message.wire
         seen = _check_seen(db, urls, wire_value)
         if seen:
             summary.entities = {"duplicate_of": seen, "urls": urls}

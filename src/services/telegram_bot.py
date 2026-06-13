@@ -174,7 +174,7 @@ class TelegramBotService:
         # Posts published to this channel by wire-room-ops already exist in
         # summaries via its approve write-through — importing them again would
         # duplicate the entry and burn an AI call (the round-trip loop).
-        wire_value = channel_config.wire.value if channel_config.wire else None
+        wire_value = channel_config.wire
         if is_distribution_post(db, msg.message_id, wire_value):
             logger.info(
                 f"⏭️ Skipping wire-room-ops distribution post TG#{msg.message_id} "

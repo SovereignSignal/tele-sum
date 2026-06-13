@@ -15,7 +15,7 @@ import io
 import json
 
 from src.models.database import get_db
-from src.models.models import Message, Summary, Category, ChannelConfig, ProcessingStatus, ConfidenceLevel, Wire
+from src.models.models import Message, Summary, Category, ChannelConfig, ProcessingStatus, ConfidenceLevel
 
 router = APIRouter()
 
@@ -70,11 +70,8 @@ def build_query(
         query = query.filter(Message.channel_id == channel_id)
     
     if wire:
-        try:
-            wire_enum = Wire(wire.lower())
-            query = query.join(Summary, isouter=True).filter(Summary.wire == wire_enum)
-        except ValueError:
-            pass  # Invalid wire value, ignore filter
+        wire_slug = wire.lower().strip()
+        query = query.join(Summary, isouter=True).filter(Summary.wire == wire_slug)
     
     if category_id:
         query = query.join(Summary).filter(Summary.category_id == category_id)
@@ -354,11 +351,7 @@ async def export_rss(
         query = query.filter(Message.channel_id == channel_id)
 
     if wire:
-        try:
-            wire_enum = Wire(wire.lower())
-            query = query.filter(Summary.wire == wire_enum)
-        except ValueError:
-            pass
+        query = query.filter(Summary.wire == wire.lower().strip())
 
     if category:
         query = query.join(Category).filter(Category.name.ilike(category))
@@ -432,11 +425,7 @@ async def export_atom(
         query = query.filter(Message.channel_id == channel_id)
 
     if wire:
-        try:
-            wire_enum = Wire(wire.lower())
-            query = query.filter(Summary.wire == wire_enum)
-        except ValueError:
-            pass
+        query = query.filter(Summary.wire == wire.lower().strip())
 
     if category:
         query = query.join(Category).filter(Category.name.ilike(category))
@@ -512,11 +501,7 @@ async def export_production_csv(
         query = query.filter(Message.channel_id == channel_id)
 
     if wire:
-        try:
-            wire_enum = Wire(wire.lower())
-            query = query.filter(Summary.wire == wire_enum)
-        except ValueError:
-            pass
+        query = query.filter(Summary.wire == wire.lower().strip())
 
     if category:
         query = query.join(Category).filter(Category.name.ilike(category))
@@ -611,11 +596,7 @@ async def export_production_json(
         query = query.filter(Message.channel_id == channel_id)
 
     if wire:
-        try:
-            wire_enum = Wire(wire.lower())
-            query = query.filter(Summary.wire == wire_enum)
-        except ValueError:
-            pass
+        query = query.filter(Summary.wire == wire.lower().strip())
 
     if category:
         query = query.join(Category).filter(Category.name.ilike(category))

@@ -5,6 +5,8 @@ Provides endpoints for listing and managing Telegram channels,
 including message counts and channel-filtered queries.
 """
 
+import re
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc, func
@@ -13,7 +15,14 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from src.models.database import get_db
-from src.models.models import Message, Summary, ChannelConfig, ProcessingStatus, Wire
+from src.models.models import Message, Summary, ChannelConfig, ProcessingStatus
+
+_WIRE_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,31}$")
+
+
+def is_valid_wire(value):
+    """Wires are user-defined slugs (lowercase, digits, - _, max 32 chars)."""
+    return bool(value and _WIRE_RE.match(value))
 
 router = APIRouter()
 
@@ -41,7 +50,7 @@ class ChannelResponse(BaseModel):
 
 class SetWireRequest(BaseModel):
     """Request to set wire value on a channel"""
-    wire: str  # 'crypto', 'ai', or 'oss'
+    wire: str  # any configured wire slug, e.g. crypto/ai/oss/repos
 
 
 class ChannelListResponse(BaseModel):
@@ -112,7 +121,7 @@ async def list_channels(
             channel_id=config.channel_id,
             username=config.channel_username,
             title=config.channel_title,
-            wire=config.wire.value if config.wire else None,
+            wire=config.wire,
             is_active=config.is_active,
             total_messages=total_messages,
             complete_entries=complete_entries,
@@ -311,8 +320,8 @@ async def set_channel_wire(
     db: Session = Depends(get_db)
 ):
     """
-    Set the wire vertical (crypto, ai, oss) for a channel.
-    
+    Set the wire vertical for a channel (any configured wire slug).
+
     After setting wire on channels, call /backfill_wire to propagate
     the wire value to existing messages and summaries.
     """
@@ -328,22 +337,21 @@ async def set_channel_wire(
         raise HTTPException(status_code=404, detail=f"Channel not found: {channel_id}")
     
     # Validate and set wire value
-    try:
-        wire_enum = Wire(request.wire.lower())
-        config.wire = wire_enum
-        db.commit()
-        
-        return {
-            "success": True,
-            "channel_id": config.channel_id,
-            "channel_title": config.channel_title,
-            "wire": wire_enum.value
-        }
-    except ValueError:
+    wire_value = (request.wire or "").lower().strip()
+    if not is_valid_wire(wire_value):
         raise HTTPException(
-            status_code=400, 
-            detail=f"Invalid wire value: {request.wire}. Must be 'crypto', 'ai', or 'oss'"
+            status_code=400,
+            detail=f"Invalid wire value: {request.wire}. Use a lowercase slug (a-z, 0-9, -, _), max 32 chars.",
         )
+    config.wire = wire_value
+    db.commit()
+
+    return {
+        "success": True,
+        "channel_id": config.channel_id,
+        "channel_title": config.channel_title,
+        "wire": wire_value
+    }
 
 
 @router.post("/backfill")
@@ -456,37 +464,28 @@ async def backfill_wire_values(db: Session = Depends(get_db)):
     
     # Step 1: Ensure wire columns exist (safe to run multiple times)
     try:
-        # Check if wire enum type exists, create if not
-        db.execute(text("""
-            DO $$ BEGIN
-                CREATE TYPE wire AS ENUM ('crypto', 'ai', 'oss');
-            EXCEPTION
-                WHEN duplicate_object THEN null;
-            END $$;
-        """))
-        
         # Add wire column to messages if not exists
         db.execute(text("""
-            ALTER TABLE messages 
-            ADD COLUMN IF NOT EXISTS wire wire
+            ALTER TABLE messages
+            ADD COLUMN IF NOT EXISTS wire TEXT
         """))
         db.execute(text("""
             CREATE INDEX IF NOT EXISTS ix_messages_wire ON messages(wire)
         """))
-        
+
         # Add wire column to summaries if not exists
         db.execute(text("""
-            ALTER TABLE summaries 
-            ADD COLUMN IF NOT EXISTS wire wire
+            ALTER TABLE summaries
+            ADD COLUMN IF NOT EXISTS wire TEXT
         """))
         db.execute(text("""
             CREATE INDEX IF NOT EXISTS ix_summaries_wire ON summaries(wire)
         """))
-        
+
         # Add wire column to channel_configs if not exists
         db.execute(text("""
-            ALTER TABLE channel_configs 
-            ADD COLUMN IF NOT EXISTS wire wire
+            ALTER TABLE channel_configs
+            ADD COLUMN IF NOT EXISTS wire TEXT
         """))
         db.execute(text("""
             CREATE INDEX IF NOT EXISTS ix_channel_configs_wire ON channel_configs(wire)
@@ -518,7 +517,7 @@ async def backfill_wire_values(db: Session = Depends(get_db)):
             results["channels_processed"].append({
                 "channel_id": config.channel_id,
                 "channel_title": config.channel_title,
-                "wire": config.wire.value,
+                "wire": config.wire,
                 "messages_updated": updated
             })
     

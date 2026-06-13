@@ -21,6 +21,9 @@ Key Enums:
     - DataQuality: COMPLETE (production-ready) or INCOMPLETE (missing URL)
     - ConfidenceLevel: AI classification confidence
 
+Note: Wire is NOT an enum. It is a user-defined string slug (e.g. crypto/ai/oss/repos).
+Any lowercase slug is valid; wire values are deployment config, not schema.
+
 See DATABASE_SCHEMA.md for complete documentation and query examples.
 """
 
@@ -46,13 +49,6 @@ class DataQuality(enum.Enum):
 class ConfidenceLevel(enum.Enum):
     CONFIDENT = "confident"
     UNCERTAIN = "uncertain"
-
-class Wire(enum.Enum):
-    """Grant Wire vertical - crypto, AI, or open source"""
-    # Names must be lowercase to match PostgreSQL enum values
-    crypto = "crypto"
-    ai = "ai"
-    oss = "oss"
 
 class User(Base):
     __tablename__ = "users"
@@ -87,7 +83,7 @@ class Message(Base):
     channel_config_id = Column(Integer, ForeignKey("channel_configs.id"), nullable=True, index=True)  # Link to channel metadata
     bot_id = Column(Integer, ForeignKey("telegram_bots.id"), nullable=True, index=True)  # Track which bot imported
     import_method = Column(String(20), default="phone")  # "phone", "bot", or "file"
-    wire = Column(SQLEnum(Wire), nullable=True, index=True)  # Grant Wire vertical (crypto, ai, oss)
+    wire = Column(String(32), nullable=True, index=True)  # vertical label — user-defined config, e.g. crypto/ai/oss/repos
     timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
     raw_content = Column(Text, nullable=False)
     extracted_urls = Column(JSON, default=list)
@@ -115,7 +111,7 @@ class Summary(Base):
     entities = Column(JSON, default=dict)
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
     confidence = Column(SQLEnum(ConfidenceLevel), nullable=True)
-    wire = Column(SQLEnum(Wire), nullable=True, index=True)  # Grant Wire vertical (crypto, ai, oss)
+    wire = Column(String(32), nullable=True, index=True)  # vertical label — user-defined config, e.g. crypto/ai/oss/repos
     processing_status = Column(SQLEnum(ProcessingStatus), default=ProcessingStatus.PENDING, index=True)
     error_log = Column(Text, nullable=True)
     processing_attempts = Column(Integer, default=0)
@@ -160,7 +156,10 @@ class ChannelConfig(Base):
     channel_id = Column(String(255), unique=True, index=True)
     channel_username = Column(String(100), nullable=True)
     channel_title = Column(String(255), nullable=True)
-    wire = Column(SQLEnum(Wire), nullable=True, index=True)  # Grant Wire vertical (crypto, ai, oss)
+    wire = Column(String(32), nullable=True, index=True)  # vertical label — user-defined config, e.g. crypto/ai/oss/repos
+    extraction_profile = Column(String(32), nullable=False, default="grant", server_default="grant")  # 'grant' | 'digest'
+    prompt_hint = Column(Text, nullable=True)          # free-text hint passed to digest extraction
+    notion_database_id = Column(String(64), nullable=True)  # Notion target; null = Notion sync off
     import_mode = Column(SQLEnum(ImportMode), default=ImportMode.BOT)
     historical_import_complete = Column(Boolean, default=False)
     historical_import_date = Column(DateTime(timezone=True), nullable=True)
@@ -173,6 +172,20 @@ class ChannelConfig(Base):
     bot = relationship("TelegramBot", back_populates="channel_configs")
     messages = relationship("Message", back_populates="channel_config")
     sync_status = relationship("SyncStatus", back_populates="channel_config", uselist=False, cascade="all, delete-orphan")
+
+class NotionPage(Base):
+    """One row per Notion page created from an extracted digest item.
+    (summary_id, item_index) is the idempotency key for the notion_sync job."""
+    __tablename__ = "notion_pages"
+
+    id = Column(Integer, primary_key=True)
+    summary_id = Column(Integer, ForeignKey("summaries.id", ondelete="CASCADE"), nullable=False, index=True)
+    item_index = Column(Integer, nullable=False)
+    page_id = Column(String(64), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (UniqueConstraint("summary_id", "item_index", name="uq_notion_pages_summary_item"),)
+
 
 class SyncStatus(Base):
     __tablename__ = "sync_status"
