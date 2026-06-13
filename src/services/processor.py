@@ -218,6 +218,7 @@ class MessageProcessor:
                         "profile": "digest",
                         "items": result.get("items", []),
                         "urls": urls,
+                        "confidence": result.get("confidence"),
                     }
                     summary.confidence = (
                         ConfidenceLevel.CONFIDENT
