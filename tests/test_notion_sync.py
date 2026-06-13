@@ -6,7 +6,10 @@ from sqlalchemy.orm import sessionmaker
 from src.models.models import (
     Base, ChannelConfig, Message, NotionPage, ProcessingStatus, Summary,
 )
-from src.services.notion import pending_notion_items
+import httpx
+
+from src.services import notion as notion_module
+from src.services.notion import pending_notion_items, sync_pending_to_notion
 
 
 def make_db():
@@ -59,3 +62,51 @@ def test_non_digest_unsuccessful_and_unconfigured_channels_are_excluded():
 def seed_into(db, **kwargs):
     seed(db, **kwargs)
     return db
+
+
+async def test_sync_pending_creates_pages_and_records_idempotency(monkeypatch):
+    db = make_db()
+    s = seed(db)
+    monkeypatch.setenv("NOTION_API_KEY", "tk")
+
+    calls = []
+
+    def handler(request):
+        calls.append(str(request.url))
+        return httpx.Response(200, json={"id": f"pg-{len(calls)}"})
+
+    real_client = notion_module.NotionClient
+
+    def client_factory(api_key):
+        return real_client(api_key, transport=httpx.MockTransport(handler))
+
+    monkeypatch.setattr(notion_module, "NotionClient", client_factory)
+
+    result = await sync_pending_to_notion(db)
+    assert result == {"synced": 2, "failed": 0, "skipped_no_token": False}
+    assert len(calls) == 2
+    # idempotent: second run does nothing
+    result2 = await sync_pending_to_notion(db)
+    assert result2["synced"] == 0
+    assert len(calls) == 2
+
+
+async def test_sync_counts_api_failures_and_leaves_them_pending(monkeypatch):
+    db = make_db()
+    seed(db)
+    monkeypatch.setenv("NOTION_API_KEY", "tk")
+
+    def handler(request):
+        return httpx.Response(400, json={"message": "nope"})
+
+    real_client = notion_module.NotionClient
+    monkeypatch.setattr(
+        notion_module, "NotionClient",
+        lambda api_key: real_client(api_key, transport=httpx.MockTransport(handler)),
+    )
+
+    result = await sync_pending_to_notion(db)
+    assert result["synced"] == 0
+    assert result["failed"] == 2
+    # nothing recorded; items remain pending for next cycle
+    assert len(notion_module.pending_notion_items(db)) == 2

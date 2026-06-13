@@ -206,10 +206,19 @@ async def sync_pending_to_notion(db: Session) -> dict:
         page_id = await client.create_page(w.database_id, props)
         if page_id is None:
             failed += 1
+            logger.warning(
+                f"⚠️ Notion page create failed for summary {w.summary_id} item {w.item_index} "
+                f"(db {w.database_id}) — will retry next cycle"
+            )
             continue
-        db.add(NotionPage(summary_id=w.summary_id, item_index=w.item_index, page_id=page_id))
-        db.commit()
-        synced += 1
+        try:
+            db.add(NotionPage(summary_id=w.summary_id, item_index=w.item_index, page_id=page_id))
+            db.commit()
+            synced += 1
+        except Exception as e:
+            db.rollback()
+            failed += 1
+            logger.warning(f"⚠️ notion_pages insert failed for summary {w.summary_id} item {w.item_index}: {e}")
     if synced or failed:
         logger.info(f"✅ Notion sync: {synced} items created, {failed} failed (will retry)")
     return {"synced": synced, "failed": failed, "skipped_no_token": False}
