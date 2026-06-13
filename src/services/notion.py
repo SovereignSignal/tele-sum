@@ -7,11 +7,14 @@ database is per-channel config. No workspace-specific anything in here.
 
 import logging
 import os
+from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 import httpx
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+
+from src.models.models import ChannelConfig, Message, NotionPage, ProcessingStatus, Summary
 
 logger = logging.getLogger(__name__)
 
@@ -124,3 +127,89 @@ def get_notion_api_key(db: Optional[Session]) -> Optional[str]:
         db.rollback()
         logger.warning(f"⚠️ api_providers lookup failed (standalone mode?): {e}")
         return None
+
+
+# =============================================================================
+# NOTION SYNC — selection logic + per-cycle runner
+# =============================================================================
+
+
+@dataclass
+class NotionWorkItem:
+    summary_id: int
+    item_index: int
+    item: dict
+    database_id: str
+    posted_at: Optional[str]
+    source_link: Optional[str]
+    wire: Optional[str]
+
+
+def _telegram_link(username: Optional[str], telegram_id: Optional[int]) -> Optional[str]:
+    if username and telegram_id:
+        return f"https://t.me/{username.lstrip('@')}/{telegram_id}"
+    return None
+
+
+def pending_notion_items(db: Session, limit: int = 200) -> List[NotionWorkItem]:
+    """Digest items on Notion-enabled channels whose summary is SUCCESS and
+    which have no notion_pages row yet. (summary_id, item_index) idempotency."""
+    rows = (
+        db.query(Summary, Message, ChannelConfig)
+        .join(Message, Summary.message_id == Message.id)
+        .join(ChannelConfig, Message.channel_config_id == ChannelConfig.id)
+        .filter(
+            Summary.processing_status == ProcessingStatus.SUCCESS,
+            ChannelConfig.extraction_profile == "digest",
+            ChannelConfig.notion_database_id.isnot(None),
+        )
+        .order_by(Summary.id)
+        .limit(limit)
+        .all()
+    )
+    work: List[NotionWorkItem] = []
+    for summary, message, cc in rows:
+        entities = summary.entities or {}
+        items = entities.get("items") or []
+        if not items:
+            continue
+        synced = {
+            np.item_index
+            for np in db.query(NotionPage).filter(NotionPage.summary_id == summary.id).all()
+        }
+        for idx, item in enumerate(items):
+            if idx in synced:
+                continue
+            work.append(NotionWorkItem(
+                summary_id=summary.id,
+                item_index=idx,
+                item=item,
+                database_id=cc.notion_database_id,
+                posted_at=message.timestamp.date().isoformat() if message.timestamp else None,
+                source_link=_telegram_link(cc.channel_username, message.telegram_id),
+                wire=summary.wire,
+            ))
+    return work
+
+
+async def sync_pending_to_notion(db: Session) -> dict:
+    """One notion_sync cycle. Never raises; failures stay unsynced and are
+    retried next cycle. Returns counters for logging."""
+    api_key = get_notion_api_key(db)
+    if not api_key:
+        return {"synced": 0, "failed": 0, "skipped_no_token": True}
+
+    client = NotionClient(api_key)
+    synced = failed = 0
+    for w in pending_notion_items(db):
+        props = build_item_properties(w.item, w.posted_at, w.source_link, w.wire)
+        page_id = await client.create_page(w.database_id, props)
+        if page_id is None:
+            failed += 1
+            continue
+        db.add(NotionPage(summary_id=w.summary_id, item_index=w.item_index, page_id=page_id))
+        db.commit()
+        synced += 1
+    if synced or failed:
+        logger.info(f"✅ Notion sync: {synced} items created, {failed} failed (will retry)")
+    return {"synced": synced, "failed": failed, "skipped_no_token": False}

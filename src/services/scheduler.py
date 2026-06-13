@@ -10,6 +10,7 @@ from src.config import settings
 from src.models import database
 from src.models.models import Summary, ProcessingStatus
 from src.services.processor import MessageProcessor
+from src.services.notion import sync_pending_to_notion
 
 logger = logging.getLogger(__name__)
 
@@ -151,6 +152,27 @@ async def log_daily_stats():
     finally:
         db.close()
 
+async def notion_sync_job():
+    """
+    Push unsynced digest items to their Notion databases.
+
+    Runs every 5 minutes. Each (summary_id, item_index) pair is idempotent:
+    already-created pages are tracked in notion_pages and skipped on re-runs.
+    Failures are left unsynced and retried on the next cycle.
+    """
+    database.get_engine()
+    db = database.SessionLocal()
+    try:
+        result = await sync_pending_to_notion(db)
+        if result.get("synced", 0) > 0:
+            logger.info(f"✅ Notion sync job: {result['synced']} items pushed to Notion")
+    except Exception as e:
+        logger.error(f"❌ Error in notion_sync_job: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+
 def start_scheduler():
     """
     Start the APScheduler with all background jobs.
@@ -208,6 +230,15 @@ def start_scheduler():
         trigger=CronTrigger(hour=0, minute=0),
         id="daily_stats",
         name="Log Daily Statistics",
+        replace_existing=True
+    )
+
+    # JOB 6: Notion sync - push unsynced digest items to Notion databases
+    scheduler.add_job(
+        notion_sync_job,
+        trigger=IntervalTrigger(minutes=5),
+        id="notion_sync",
+        name="Notion Sync",
         replace_existing=True
     )
 
