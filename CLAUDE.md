@@ -72,7 +72,7 @@ src/
 └── utils/
     └── url_extractor.py
 templates/                 # base, index, login, categories, settings
-migrations/versions/       # 3 alembic migrations (head: backfill_protocols_to_orgs)
+migrations/versions/       # 4 alembic migrations (head: 20260612_0001)
 tests/                     # pytest; run `python3 -m pytest tests/` (conftest.py at repo root)
 ```
 
@@ -183,6 +183,6 @@ APP_ENV=production
 1. **Filter production queries by `data_quality = 'complete'` AND `processing_status = 'SUCCESS'`.**
 2. Provider config lives in the `api_providers` DB row by default. Don't hardcode keys.
 3. AI responses must validate against `AIAnalysis` (grant profile) or `DigestAnalysis` (digest profile) — if validation fails, return None and let the state machine retry.
-4. Don't write to sibling-app tables (anything outside the 9 listed under "tele-sum's tables").
+4. Don't write to sibling-app tables (anything outside the 10 listed under "tele-sum's tables").
 5. Telemetry: every AI call writes to `api_usage_log`. The `wire` column is critical for cross-app cost analysis.
 6. State machine transitions live in `src/services/processor.py` — preserve PENDING → PROCESSING → SUCCESS/RETRY/FAILED semantics.

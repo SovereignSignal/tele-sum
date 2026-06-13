@@ -2,7 +2,7 @@
 
 Reference for the 10 tables tele-sum owns, plus the two integration points it shares with the sibling app on the same Postgres.
 
-The full ORM is in [`src/models/models.py`](src/models/models.py). Migrations live in [`migrations/versions/`](migrations/versions/) — current head is `backfill_protocols_to_orgs`.
+The full ORM is in [`src/models/models.py`](src/models/models.py). Migrations live in [`migrations/versions/`](migrations/versions/) — current head is `20260612_0001`.
 
 ## Shared database
 
@@ -13,7 +13,7 @@ The Postgres instance lives in the `wire-room-db` Railway project and is shared 
 | `api_providers` | sibling app | **read-only** — `AIService._resolve_config_from_db()` looks up the active provider row when no `AI_*` env override is set |
 | `api_usage_log` | sibling app | **write-only** — every `AIService.analyze_content()` call inserts one row (provider, model, purpose='summarize', tokens_in, tokens_out, wire, duration_ms, success, error_message) |
 
-Tele-sum never reads or writes any other tables outside the 9 listed below.
+Tele-sum never reads or writes any other tables outside the 10 listed below.
 
 ## Production query pattern
 
