@@ -87,6 +87,7 @@ class Message(Base):
     timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
     raw_content = Column(Text, nullable=False)
     extracted_urls = Column(JSON, default=list)
+    entity_links = Column(JSON, nullable=True)  # [{text, url}] from Telegram hyperlink entities
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     

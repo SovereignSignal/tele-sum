@@ -216,6 +216,7 @@ class MessageProcessor:
                     prompt_hint=prompt_hint,
                     db=db,
                     wire=wire_value,
+                    links=message.entity_links,
                 )
                 if result is not None:
                     summary.title = result.get("title")

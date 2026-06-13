@@ -15,6 +15,25 @@ from src.utils.url_extractor import extract_urls
 
 logger = logging.getLogger(__name__)
 
+
+def _extract_entity_links(msg) -> list:
+    """Telegram hyperlink entities as [{"text": anchor, "url": href}].
+    Uses parse_entities/parse_caption_entities (UTF-16-safe). Fails open to []."""
+    links = []
+    for attr in ("parse_entities", "parse_caption_entities"):
+        fn = getattr(msg, attr, None)
+        if fn is None:
+            continue
+        try:
+            for ent, text in fn(types=["text_link", "url"]).items():
+                url = getattr(ent, "url", None) if ent.type == "text_link" else text
+                if url:
+                    links.append({"text": text, "url": url})
+        except Exception:
+            continue
+    return links
+
+
 class TelegramBotService:
     """Service for handling bot-based Telegram message collection with proper session management"""
     
@@ -190,7 +209,8 @@ class TelegramBotService:
         
         # Extract URLs
         urls = extract_urls(message_text)
-        
+        entity_links = _extract_entity_links(msg)
+
         # Create message record (inherit wire from channel config)
         message = Message(
             telegram_id=msg.message_id,
@@ -202,6 +222,7 @@ class TelegramBotService:
             timestamp=msg.date,
             raw_content=message_text,
             extracted_urls=urls,
+            entity_links=entity_links,
         )
 
         db.add(message)

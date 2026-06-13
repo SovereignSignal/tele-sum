@@ -237,6 +237,7 @@ def _build_digest_prompt(
     urls: List[str],
     url_contents: Dict[str, str],
     prompt_hint: Optional[str],
+    links: Optional[List[dict]] = None,
 ) -> str:
     parts: List[str] = [
         "You are extracting structured items from a Telegram channel digest post. "
@@ -252,6 +253,10 @@ def _build_digest_prompt(
             content = url_contents.get(url)
             if content:
                 parts.append(f"  Preview: {content[:1500]}")
+    if links:
+        parts.append("\n## Links in the post (anchor text → URL) — use these to fill each item's url")
+        for l in links[:50]:
+            parts.append(f"- {l.get('text','')} → {l.get('url','')}")
     parts.append(
         "\n## Your task\n"
         "Return ONLY a JSON object, no prose, shaped exactly like:\n"
@@ -260,7 +265,8 @@ def _build_digest_prompt(
         ' "items": [{"title": "item name", "url": "item link or null", "note": "what it is / why it matters, 1-2 lines",\n'
         '            "category": "the section label the post itself uses, or null", "tags": ["short", "tags"], "org": "org/author or null"}]}\n'
         "Rules: one items[] entry per distinct item in the post. Use the post's own links "
-        "(prefer the item's primary link). Never invent URLs. Keep notes factual."
+        "(prefer the item's primary link). Never invent URLs. Keep notes factual. "
+        "Attach each item's url by matching the links above to the item — the link's anchor text is usually the item's title."
     )
     return "\n".join(parts)
 
@@ -276,6 +282,34 @@ def _parse_digest_response(content: str) -> Optional[dict]:
         logger.error(f"Digest response failed validation: {e} | head: {content[:300]}")
         return None
     return analysis.model_dump()
+
+
+def attach_entity_urls(items: List[dict], links: List[dict]) -> List[dict]:
+    """Fill missing item URLs from Telegram entity links by matching the link's
+    anchor text to the item title — exact (case-insensitive) first, then containment.
+    Producers wrap each item's title in its link, so anchor text == title."""
+    if not links:
+        return items
+    by_text = {}
+    for l in links:
+        t = (l.get("text") or "").strip().lower()
+        u = l.get("url")
+        if t and u and t not in by_text:
+            by_text[t] = u
+    for item in items:
+        if item.get("url"):
+            continue
+        title = (item.get("title") or "").strip().lower()
+        if not title:
+            continue
+        if title in by_text:
+            item["url"] = by_text[title]
+            continue
+        for t, u in by_text.items():
+            if title in t or t in title:
+                item["url"] = u
+                break
+    return items
 
 
 class AIService:
@@ -389,6 +423,7 @@ class AIService:
         prompt_hint: Optional[str] = None,
         db: Optional[Session] = None,
         wire: Optional[str] = None,
+        links: Optional[List[dict]] = None,
     ) -> Optional[dict]:
         """Digest profile: explode one post into a validated item list.
         Returns DigestAnalysis.model_dump() or None (caller's state machine retries)."""
@@ -400,7 +435,7 @@ class AIService:
             logger.warning(f"AI rate limit reached. Remaining: {self.rate_limiter.remaining()}")
             return None
 
-        prompt = _build_digest_prompt(message_content, urls, url_contents, prompt_hint)
+        prompt = _build_digest_prompt(message_content, urls, url_contents, prompt_hint, links=links)
         # digests list many items; the grant-sized 800-token cap would truncate mid-JSON
         try:
             if cfg.provider == "anthropic":
@@ -417,7 +452,10 @@ class AIService:
         self.rate_limiter.record()
         self._log_usage(db, cfg, success=True, tokens_in=tokens_in,
                         tokens_out=tokens_out, duration_ms=duration_ms, wire=wire, purpose="digest")
-        return _parse_digest_response(content)
+        result = _parse_digest_response(content)
+        if result is not None:
+            result["items"] = attach_entity_urls(result.get("items", []), links or [])
+        return result
 
     # ---------- providers ----------
 
