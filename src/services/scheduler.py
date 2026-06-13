@@ -19,12 +19,13 @@ scheduler = AsyncIOScheduler()
 # =============================================================================
 # BACKGROUND JOBS
 #
-# The scheduler runs 5 jobs to keep the system processing:
+# The scheduler runs 6 jobs to keep the system processing:
 #   1. sync_and_process    - Full Telegram sync + batch processing (every N hours)
 #   2. process_pending_only - Process pending messages only (every 2 min)
 #   3. retry_failed_messages - Re-queue failed messages for retry (every 15 min)
 #   4. cleanup_stale_processing - Reset stuck PROCESSING status (every 1 hour)
 #   5. log_daily_stats     - Log statistics at midnight
+#   6. notion_sync_job     - Push unsynced digest items to Notion (every 5 min)
 #
 # See PROCESSING.md for full documentation.
 # =============================================================================
@@ -183,6 +184,7 @@ def start_scheduler():
     - retry_failed: Re-queue failed messages (every 15 min)
     - cleanup_stale: Reset stuck PROCESSING status (every 1 hour)
     - daily_stats: Log statistics (midnight)
+    - notion_sync: Push unsynced digest items to Notion (every 5 min)
     """
     # Ensure the DB engine/session factory is initialized before any jobs run.
     # This is critical in environments where importing SessionLocal too early would freeze it as None.

@@ -88,18 +88,20 @@ If no provider resolves, processing skips silently — messages stay in `PENDING
 
 ## Triggering manually
 
+Set `URL` to your deployment's base URL (e.g. `export URL=https://your-app.up.railway.app`).
+
 ```bash
 # Full sync + process pass (auth required)
 curl -X POST -H "X-API-Key: $API_KEY" \
-  https://web-production-82642.up.railway.app/api/trigger-sync
+  $URL/api/trigger-sync
 
 # Process-only pass (no Telegram pull)
 curl -X POST -H "X-API-Key: $API_KEY" \
-  https://web-production-82642.up.railway.app/api/trigger-process
+  $URL/api/trigger-process
 
 # Stats
 curl -H "X-API-Key: $API_KEY" \
-  https://web-production-82642.up.railway.app/api/stats
+  $URL/api/stats
 ```
 
 ## Troubleshooting

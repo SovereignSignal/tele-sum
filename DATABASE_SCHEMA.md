@@ -6,7 +6,7 @@ The full ORM is in [`src/models/models.py`](src/models/models.py). Migrations li
 
 ## Shared database
 
-The Postgres instance lives in the `wire-room-db` Railway project and is shared with a sibling app. Tele-sum stays in a tight lane:
+Tele-sum uses a single Postgres instance (`DATABASE_URL`). In the reference deployment it is shared with a sibling grants app; standalone deployments just point at their own database. Tele-sum stays in a tight lane:
 
 | Table | Owner | Tele-sum access |
 |-------|-------|-----------------|
@@ -168,7 +168,7 @@ Tracks summaries that need a human to fix the source URL.
 
 ### channel_configs
 
-One row per Telegram channel tele-sum ingests from. The system currently runs three: `cryptograntwire`, `aigrantwire`, `ossgrantwire`.
+One row per Telegram channel tele-sum ingests from. Each deployment defines its own channels; the reference deployment (Sovereign Signal Grant Wire) runs grant-wire channels (crypto/ai/oss) plus digest channels.
 
 | Column | Type | Notes |
 |--------|------|-------|

@@ -1,6 +1,8 @@
-# Tele-Sum — Grant Wire Archive
+# Tele-Sum
 
-AI-powered Telegram channel summarization for the Sovereign Signal Grant Wire properties. Tele-sum ingests messages from a small set of curated Telegram channels, summarizes the linked content with an LLM, and stores structured rows for search and downstream use.
+AI-powered Telegram channel summarization pipeline. Tele-sum ingests messages from a configurable set of Telegram channels, summarizes the linked content with an LLM, and stores structured rows for search and downstream use.
+
+The reference deployment (Sovereign Signal's Grant Wire) monitors channels such as:
 
 | Wire | Telegram channel | Description |
 |------|------------------|-------------|
@@ -8,9 +10,11 @@ AI-powered Telegram channel summarization for the Sovereign Signal Grant Wire pr
 | `ai`     | [@aigrantwire](https://t.me/aigrantwire)         | AI research grants and fellowships |
 | `oss`    | [@ossgrantwire](https://t.me/ossgrantwire)       | Open source funding |
 
+Any channels and wire labels can be configured for your own deployment.
+
 ## What it does
 
-1. A Telegram bot (`@GrantWireScraper_BOT`) sits in each channel and polls `getUpdates`. New posts are inserted into `messages`.
+1. A Telegram bot (for example `@GrantWireScraper_BOT` in the reference deployment) sits in each channel and polls `getUpdates`. New posts are inserted into `messages`.
 2. A scheduler picks up `PENDING` rows, scrapes any URLs (Twitter via FxTwitter, others via BeautifulSoup), and sends the whole thing to a configured LLM provider.
 3. The provider response is validated against a Pydantic schema (`src/schemas/entities.py`) and written to `summaries` with `wire`, `category`, `source`, and extracted entities.
 4. Each AI call writes one row to the shared `api_usage_log` table for telemetry. Each call is also rate-limited in process (default 100/hour).
@@ -24,7 +28,7 @@ The state machine is `PENDING -> PROCESSING -> SUCCESS | RETRY | FAILED`. Backgr
 - **AI**: Provider-agnostic `AIService` (`src/services/ai.py`). Supports Anthropic, Ollama Cloud, and any OpenAI-compatible chat-completions endpoint (Grok, Perplexity, OpenRouter, OpenAI, Groq, Together, ...). Currently running on Ollama Cloud with `glm-5.1`.
 - **Extraction profiles**: each channel can use the `grant` profile (one post = one item) or the `digest` profile (one post = many items). See [docs/WIRES_AND_PROFILES.md](docs/WIRES_AND_PROFILES.md).
 - **Storage**: PostgreSQL. Tele-sum owns 10 tables (see [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md)). The DB is shared with a sibling app — tele-sum reads `api_providers` and writes `api_usage_log`, otherwise stays in its own lane.
-- **Deployment**: Railway. Service `web` in project `glorious-prosperity`. See [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md).
+- **Deployment**: Railway (reference deployment: service `web` in project `glorious-prosperity`). See [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md).
 
 ## Quickstart
 
