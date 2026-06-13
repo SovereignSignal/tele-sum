@@ -34,6 +34,8 @@ from src.scrapers.twitter_scraper import TwitterScraper
 from src.utils.url_extractor import is_twitter_url, normalize_url
 from src.config import settings
 
+logger = logging.getLogger(__name__)
+
 
 def _check_seen(db: Session, urls: List[str], wire_value: Optional[str]) -> Optional[Dict]:
     """Look up message URLs in the shared seen_urls table (per-wire scoped).
@@ -47,13 +49,19 @@ def _check_seen(db: Session, urls: List[str], wire_value: Optional[str]) -> Opti
         norm = normalize_url(raw)
         if not norm:
             continue
-        row = db.execute(
-            text(
-                "SELECT id, first_seen_entry_id, first_seen_date "
-                "FROM seen_urls WHERE normalized_url = :n AND wire = :w LIMIT 1"
-            ),
-            {"n": norm, "w": wire_value},
-        ).first()
+        try:
+            row = db.execute(
+                text(
+                    "SELECT id, first_seen_entry_id, first_seen_date "
+                    "FROM seen_urls WHERE normalized_url = :n AND wire = :w LIMIT 1"
+                ),
+                {"n": norm, "w": wire_value},
+            ).first()
+        except Exception:
+            # Standalone deployment without the shared seen_urls table — grant
+            # URL dedup is a cross-app feature, not a requirement. Fail open.
+            db.rollback()
+            return None
         if row:
             return {
                 "seen_urls_id": row[0],
@@ -85,8 +93,6 @@ def _record_seen(db: Session, urls: List[str], wire_value: Optional[str]) -> Non
         except Exception as e:
             logger.warning(f"seen_urls insert failed for {norm} (non-fatal): {e}")
             db.rollback()
-
-logger = logging.getLogger(__name__)
 
 KNOWN_PROFILES = {"grant", "digest"}
 
