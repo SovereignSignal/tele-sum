@@ -263,10 +263,16 @@ def _build_digest_prompt(
         '{"title": "post title, 4-6 words", "summary": "1-2 sentence overview of the post",\n'
         ' "confidence": "confident" or "uncertain",\n'
         ' "items": [{"title": "item name", "url": "item link or null", "note": "what it is / why it matters, 1-2 lines",\n'
-        '            "category": "the section label the post itself uses, or null", "tags": ["short", "tags"], "org": "org/author or null"}]}\n'
+        '            "category": "the section label the post itself uses, or null", "tags": ["short", "tags"],\n'
+        '            "org": "the organization or project that owns this item, or null",\n'
+        '            "people": [{"name": "person named in the item", "role": "their role or null", "handle": "@handle or profile url or null"}]}]}\n'
         "Rules: one items[] entry per distinct item in the post. Use the post's own links "
         "(prefer the item's primary link). Never invent URLs. Keep notes factual. "
-        "Attach each item's url by matching the links above to the item — the link's anchor text is usually the item's title."
+        "Attach each item's url by matching the links above to the item — the link's anchor text is usually the item's title.\n"
+        "org = the organization, project, or repo OWNER behind the item — never a person, never a section "
+        "label (e.g. 'Releases'), never a generic word; use null when unclear. "
+        "people = named human individuals (authors, founders, maintainers) tied to the item; "
+        "put a person in people[], NEVER in org. Use [] when no person is named. Do not invent people."
     )
     return "\n".join(parts)
 

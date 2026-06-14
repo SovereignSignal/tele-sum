@@ -34,3 +34,28 @@ def test_digest_prompt_lists_entity_links():
         links=[{"text": "Ratty Terminal", "url": "https://github.com/orhun/ratty"}],
     )
     assert "Ratty Terminal" in prompt and "https://github.com/orhun/ratty" in prompt
+
+
+# --- people extraction (Task A) ---
+def test_digest_prompt_separates_org_from_people_and_guards_junk_orgs():
+    prompt = _build_digest_prompt(
+        message_content="post", urls=[], url_contents={}, prompt_hint=None, links=[],
+    )
+    # org is disambiguated from people
+    assert '"people"' in prompt
+    assert "org/author" not in prompt          # the overloaded phrasing is gone
+    # org now means an organization/project, never a person
+    assert "organization or project" in prompt
+    # junk-org guidance (folded item D)
+    assert "never a person" in prompt
+    # people carries name/role/handle
+    assert "role" in prompt and "handle" in prompt
+
+
+def test_parse_digest_response_carries_people():
+    raw = ('{"title":"T","summary":"S","confidence":"confident",'
+           '"items":[{"title":"A","url":"https://a.dev","note":"n","org":"Acme",'
+           '"people":[{"name":"Jo","role":"founder","handle":"@jo"}]}]}')
+    parsed = _parse_digest_response(raw)
+    assert parsed["items"][0]["org"] == "Acme"
+    assert parsed["items"][0]["people"][0]["name"] == "Jo"

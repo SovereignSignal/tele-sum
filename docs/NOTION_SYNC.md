@@ -34,6 +34,12 @@ Only channels using the `digest` extraction profile and with `notion_database_id
 - A missing or invalid token disables sync with a warning — ingestion is never blocked.
 - Sync is one-way: Postgres is the source of truth. Edits made directly in Notion do not flow back.
 
+## Schema changes
+
+The digest DB schema is defined by `DIGEST_DB_PROPERTIES` in `src/services/notion.py`. Notion **ignores unknown properties when a database is *created*** but **rejects writes (400) to a property that doesn't exist** on the target DB. So when a property is added to the template, **databases created before it must get that property added once by hand** (or via `PATCH /databases/{id}`) — re-running `scripts/create_notion_databases.py` only creates missing DBs, it never alters existing ones.
+
+- **`People` (multi_select)** — added with the people-extraction change. The three pre-existing digest DBs (**clawbytes, modelbytes, interestingrepos**) need a `People` multi_select column added by hand in Notion, or item writes that include people will 400. New DBs created via the script get it automatically.
+
 ## Troubleshooting
 
 **No items appearing in Notion** — check the app logs for `⚠️ Notion` lines. Common causes: `NOTION_API_KEY` not set or invalid; the integration has not been shared with the parent page; `channel_configs.notion_database_id` is null or wrong; the channel's `extraction_profile` is not `digest`.

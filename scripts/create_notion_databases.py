@@ -7,6 +7,11 @@ Usage:
 Each arg is <channel_username>:<Database Title>. Idempotent: channels that
 already have notion_database_id are skipped. The Notion token may come from
 NOTION_API_KEY or, if absent, the enabled 'notion' row in api_providers.
+
+Note: databases created BEFORE the "People" property was added (clawbytes,
+modelbytes, interestingrepos) need "People" (multi_select) added by hand in
+Notion once, or item writes that include people will be rejected (400). Re-running
+this script does NOT alter existing DBs — it only creates missing ones.
 """
 
 import asyncio

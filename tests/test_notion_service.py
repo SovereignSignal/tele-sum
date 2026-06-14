@@ -68,4 +68,25 @@ def test_build_item_properties_omits_empty_optionals():
     props = build_item_properties({"title": "Bare"}, posted_at=None, source_link=None, wire=None)
     assert "URL" not in props and "Category" not in props and "Org" not in props
     assert "Posted" not in props and "Source post" not in props and "Wire" not in props
+    assert "People" not in props
     assert props["Note"]["rich_text"] == []
+
+
+# --- people surfacing (Task A — Notion) ---
+def test_digest_db_template_has_people_property():
+    assert "People" in DIGEST_DB_PROPERTIES
+    assert DIGEST_DB_PROPERTIES["People"] == {"multi_select": {}}
+
+
+def test_build_item_properties_emits_people_names():
+    item = {"title": "ratty", "org": "Ratatui",
+            "people": [{"name": "Orhun", "role": "maintainer", "handle": "@orhun"},
+                       {"name": ""}]}            # blank name dropped
+    props = build_item_properties(item, posted_at=None, source_link=None, wire=None)
+    names = [o["name"] for o in props["People"]["multi_select"]]
+    assert names == ["Orhun (maintainer)"]      # role folded into the option label
+
+
+def test_build_item_properties_omits_people_when_absent():
+    props = build_item_properties({"title": "x"}, None, None, None)
+    assert "People" not in props

@@ -29,6 +29,7 @@ DIGEST_DB_PROPERTIES: Dict[str, dict] = {
     "Category": {"select": {}},
     "Tags": {"multi_select": {}},
     "Org": {"select": {}},
+    "People": {"multi_select": {}},
     "Posted": {"date": {}},
     "Source post": {"url": {}},
     "Wire": {"select": {}},
@@ -100,6 +101,18 @@ def build_item_properties(
         props["Tags"] = {"multi_select": [{"name": str(t)[:100]} for t in tags[:10]]}
     if item.get("org"):
         props["Org"] = {"select": {"name": str(item["org"])[:100]}}
+    # People: flatten each Person to a "name (role)" multi_select option (names are
+    # required + non-empty upstream, but guard here too; Notion option names cap at 100).
+    options = []
+    for p in (item.get("people") or [])[:10]:
+        name = str((p or {}).get("name") or "").strip()
+        if not name:
+            continue
+        role = str((p or {}).get("role") or "").strip()
+        label = f"{name} ({role})" if role else name
+        options.append({"name": label[:100]})
+    if options:
+        props["People"] = {"multi_select": options}
     if posted_at:
         props["Posted"] = {"date": {"start": posted_at}}
     if source_link:
