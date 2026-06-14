@@ -13,7 +13,7 @@ Wire is pure deployment config — no code or schema changes are needed to add a
 | Profile | For | AI schema | Output shape |
 |---------|-----|-----------|-------------|
 | `grant` (default) | Channels where one post = one fundable item | `AIAnalysis` | `title`, `summary`, `category`, `confidence`, `entities` (orgs, amounts, deadlines, key_terms, source) |
-| `digest` | Channels where one post lists many items (news roundups, repo digests, release notes, model drops) | `DigestAnalysis` | post-level `title`/`summary` + `items[]` (title, url, note, category, tags, org) |
+| `digest` | Channels where one post lists many items (news roundups, repo digests, release notes, model drops) | `DigestAnalysis` | post-level `title`/`summary` + `items[]` (title, url, note, category, tags, org, `people[]` of `{name, role, handle}`) |
 
 Unknown profile values fall back to `grant` so a misconfigured row can never stall ingestion (see `resolve_profile()` in `src/services/processor.py`).
 

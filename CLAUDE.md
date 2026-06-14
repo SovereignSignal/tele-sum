@@ -93,6 +93,17 @@ tests/                     # pytest; run `python3 -m pytest tests/` (conftest.py
 
 Other tables on the same Postgres instance (e.g. `api_providers`, `api_usage_log`, `model_pricing`, `feeds`, `monitored_accounts`, `scan_*`, `org_profiles`, `grant_entries`, etc.) are owned by **the sibling app**. Tele-sum reads from `api_providers` and `distribution_logs`, and writes to `api_usage_log`; otherwise stays out of those lanes.
 
+### Producer contract & sibling-owned tables
+
+Tele-sum is the **producer**. Its job ends at writing `summaries` (`title`/`summary`/`category`/`confidence`) plus a validated `entities` JSONB blob. It **never reads back** CRM/org/contact state. The contract surface is `summaries.entities`, consumed by the sibling app (wire-room-ops) directly via SQL — no API.
+
+- **Discriminator:** grant rows have no `entities.profile`; digest rows set `entities.profile = 'digest'`.
+- **Grant shape:** `{ source, orgs:[str], amounts:[str], deadlines:[str], key_terms:[str], urls:[str] }` — read `entities->>'orgs'` (the `protocols` key was removed).
+- **Digest shape:** `{ profile:'digest', items:[item...], urls:[str], confidence }` where each item is `{ title, url, note, category, tags, org, people:[{name, role, handle}] }`. `org` = an organization/project (**never** a person). `people` = named individuals (author/founder/maintainer); **optional and backward-compatible** — pre-existing rows have no `people` key, so consumers MUST treat it as optional. This `people` field is the cheap source for wire-room-ops contact sourcing (CRM Phase 3): read it instead of re-deriving contacts via web search.
+- **Positional key:** consumers link items by `(summary_id, item_index)`. Do not reorder or split `entities.items` — it breaks that mapping (it is also `notion_pages`' idempotency key).
+
+**Sibling-owned (wire-room-ops) — do NOT read or write from tele-sum:** `org_profiles`, `digest_item_orgs`, `discovered_contacts`, `monitored_accounts`, `scan_entries`, `grant_entries`, and the SimpleCRM Notion sync. Cross-lane touch points are unchanged: tele-sum READS `api_providers` and `distribution_logs`, WRITES `api_usage_log`, nothing else.
+
 **Round-trip guard:** wire-room-ops publishes approved entries to the same wire channels this app monitors, and write-through inserts them into `summaries` (rows with `message_id IS NULL`). On import, `src/services/distribution_guard.py` checks `distribution_logs` (`channel='telegram' AND status='success'`, matched on `external_id` = Telegram message id + `wire`) and skips those posts — otherwise every approval would be stored twice and re-summarized for nothing. The guard fails open if the table is missing.
 
 ### Key enums
