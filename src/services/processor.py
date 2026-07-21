@@ -29,6 +29,7 @@ from sqlalchemy.orm import Session
 
 from src.models.models import Message, Summary, Category, ProcessingStatus, ConfidenceLevel
 from src.services.ai import AIService
+from src.services.distribution_guard import is_distribution_post
 from src.scrapers.content_scraper import ContentScraper
 from src.scrapers.twitter_scraper import TwitterScraper
 from src.utils.url_extractor import is_twitter_url, normalize_url
@@ -156,6 +157,24 @@ class MessageProcessor:
             summary.error_log = f"Max retries ({self.max_retries}) exceeded"
             db.commit()
             return False
+
+        # ROUND-TRIP GUARD, processor-time: the bot-time check races
+        # wire-room-ops' post-send log write — Telegram delivers the channel
+        # post to our long-poll before the sibling app commits its
+        # distribution_logs success row, so fresh echoes slip past import.
+        # By processing time (>=2 min later) the row exists; re-check here
+        # before spending an AI call.
+        if is_distribution_post(db, message.telegram_id, message.wire):
+            summary.entities = {"distribution_echo": True, "urls": message.extracted_urls or []}
+            summary.data_quality = "duplicate"
+            summary.processing_status = ProcessingStatus.SUCCESS
+            summary.error_log = None
+            db.commit()
+            logger.info(
+                f"Message {message.id} (TG#{message.telegram_id}, {message.wire} wire) "
+                f"is a wire-room-ops distribution echo; skipping AI"
+            )
+            return True
 
         # STATE TRANSITION: PENDING/RETRY -> PROCESSING
         # Increment attempt counter and update timestamp for tracking
