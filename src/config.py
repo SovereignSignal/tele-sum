@@ -41,6 +41,17 @@ import logging
 import os
 
 logging.basicConfig(level=logging.INFO)
+
+# httpx logs every request line at INFO, and the Telegram Bot API carries the
+# bot token in the URL path -- so INFO httpx logging writes
+#   HTTP Request: POST https://api.telegram.org/bot<TOKEN>/getUpdates
+# into the platform log on every poll, roughly every 20 seconds, forever.
+# WARNING keeps real failures visible and drops the request lines.
+# Applies to every entrypoint: src.config is imported before any of them
+# configure logging themselves.
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+
 logger = logging.getLogger(__name__)
 
 class Settings(BaseSettings):
