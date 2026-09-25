@@ -53,7 +53,10 @@ async def sync_and_process():
         for _ in range(max_batches):
             batch_processed = await processor.process_batch(db, limit=batch_size, include_retries=True)
             processed += batch_processed
-            if batch_processed < batch_size:
+            # Another worker may claim part of a batch. Partial progress does
+            # not mean the queue is empty; stop when no further work succeeds
+            # (including when the processor reaches its request limit).
+            if batch_processed == 0:
                 break
             await asyncio.sleep(5)
         logger.info(f"Drained {processed} messages")
