@@ -31,7 +31,9 @@ from src.config import settings
 from src.models.models import Category
 from src.schemas.entities import AIAnalysis, EntitiesPayload, SourceInfo
 from src.schemas.digest import DigestAnalysis
-from src.services.source_validation import source_metadata, validate_digest_count, validate_source_urls
+from src.services.source_validation import (
+    funding_application_evidence, source_metadata, validate_digest_count, validate_source_urls,
+)
 from src.services.ai_rate_limit import AIRequestDeferred, AIRequestLimiter
 from src.utils.url_extractor import is_twitter_url
 
@@ -138,12 +140,14 @@ def _build_prompt(
                 parts.append(f"  Content preview: {content[:2000]}...")
 
     parts.append("\n## Your Task")
-    parts.append("1. **Title**: 4-5 words max, title case, no trailing punctuation. Specific (include protocol/project name when relevant).")
+    parts.append("1. **Title**: 4-5 words max, title case, no trailing punctuation. Specific (include protocol/project name when relevant). Preserve financial roles: a recipient Receives or Is Awarded a grant; only the funder Awards it. Do not reverse who funded whom.")
     parts.append("2. **Summary**: 3-4 factual sentences about the LINKED CONTENT. Include specific amounts/dates/percentages. Never use the word 'blockchain' — say 'crypto', 'onchain', or name the chain. Distinguish LAUNCHES vs CLOSURES/RESULTS carefully.")
+    parts.append("For opportunities, preserve the program duration and whether compensation is annualized or a total payment, as well as eligibility, location and the current deadline.")
     parts.append("Publication dates are supplied separately by the pipeline: do not infer or include a publication date in your response. Preserve explicit event dates and deadlines, but do not borrow dates from neighboring news items or invent a year for a partial date.")
+    parts.append("Web excerpts preserve paragraph and heading breaks. Keep timeline updates separate: a date introducing the next headline belongs to that next update. Omit ambiguous dates.")
 
     if categories:
-        parts.append("\n3. **Classification**: Pick exactly ONE of:")
+        parts.append("\n3. **Classification**: Pick ONE of these categories, or null if none fits:")
         for cat in categories:
             keywords = f" (keywords: {', '.join(cat.keywords)})" if cat.keywords else ""
             desc = f" — {cat.description}" if cat.description else ""
@@ -153,13 +157,15 @@ def _build_prompt(
         parts.append("\n3. **Classification**: Suggest a general category.")
         parts.append("4. **Confidence**: Mark 'uncertain' since no categories are defined.")
 
+    parts.append("Funding Opportunities requires an explicit invitation to apply, submit or register in the current source. A partnership, award, deadline alone, unavailable source, or older quoted announcement is insufficient. Otherwise choose a different category or null.")
+
     parts.append("\n## Response Format")
     parts.append("Respond with valid JSON only, using these EXACT field names:")
     parts.append("""```json
 {
   "title": "Short 4-5 Word Title",
   "summary": "Your 3-4 sentence summary",
-  "category": "Exactly one of the listed category names",
+  "category": "One listed category name, or null if none fits",
   "confidence": "confident OR uncertain",
   "source": {
     "name": "Descriptive source name",
@@ -408,6 +414,17 @@ class AIService:
         category_name = _normalize_category(analysis.category, categories)
         if analysis.category and category_name is None:
             logger.warning(f"AI selected unknown category: {analysis.category}")
+
+        analysis.entities.application_evidence = None
+        if category_name and category_name.lower() == "funding opportunities":
+            evidence = funding_application_evidence(message_content, urls, url_contents)
+            if evidence:
+                analysis.entities.application_evidence = evidence
+            else:
+                # Retain the summary without advertising an unsupported open round.
+                category_name = None
+                analysis.confidence = "uncertain"
+                logger.info("Funding classification withheld: no supported current application invitation")
 
         return {
             "title": analysis.title,

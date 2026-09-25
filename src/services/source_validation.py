@@ -9,6 +9,48 @@ from src.utils.url_extractor import is_twitter_url
 
 _URL = re.compile(r'''https?://[^\s<>"'`\[\]]+''', re.IGNORECASE)
 
+_APPLICATION_INVITATION = re.compile(
+    r"\b(?:apply\s*(?:[:→]|\b(?:now|today|here|at|via|by|for|to)\b)"
+    r"|submit\s+(?:(?:your|an?|the)\s+)?(?:application|proposal|project|entry)\b"
+    r"|(?:accepting|invites?|inviting)\s+(?:\w+\s+){0,3}(?:applications?|proposals?|submissions?)\b"
+    r"|(?:applications?|submissions?|registration|RFPs?)(?:\s+(?:are|is|now|currently))*\s+open\b"
+    r"|open\s+(?:RFP|call\s+for\s+(?:applications|proposals|submissions))\b"
+    r"|opens\b[^.!?\n]{0,200}\brequests?\s+for\s+proposals\b"
+    r"|register\s*(?:[:→]|\b(?:now|today|here|at|via|by|for)\b))",
+    re.IGNORECASE,
+)
+_APPLICATION_CLOSED = re.compile(
+    r"\b(?:not|never|no\s+longer|cannot|can't|do\s+not|don't)\s+(?:\w+\s+){0,3}"
+    r"(?:apply|submit|accepting|inviting|register|open)\b"
+    r"|\b(?:applications?|submissions?|registration|round|call|program|programme)\b"
+    r"(?:\W+\w+){0,4}\W+(?:closed|paused|ended|suspended|not\s+open)\b"
+    r"|\b(?:will\s+open|opening\s+soon|open\s+next)\b",
+    re.IGNORECASE,
+)
+
+
+def funding_application_evidence(message_content, urls, url_contents):
+    """Require a current, source-backed invitation before labeling an open round.
+
+    This conservative gate can leave an ambiguous item unclassified. It never
+    drops the summary or spends another model call trying to force a category.
+    """
+    sources = [
+        (url_contents.get(url) or "").split("--- Quoted Tweet ---", 1)[0]
+        if is_twitter_url(url) else (url_contents.get(url) or "")[:2000]
+        for url in urls
+    ] if urls else [message_content]
+    for source in sources:
+        if _APPLICATION_CLOSED.search(" ".join(source.split())):
+            continue
+        # Extract the evidence ourselves: the model may paraphrase a quote or
+        # merge a real invitation with an older quoted announcement.
+        for paragraph in source.splitlines():
+            paragraph = " ".join(paragraph.split())
+            if _APPLICATION_INVITATION.search(paragraph):
+                return paragraph
+    return None
+
 
 def _text_urls(text):
     for match in _URL.finditer(text):

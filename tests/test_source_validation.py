@@ -1,4 +1,5 @@
 import json
+from types import SimpleNamespace
 
 import pytest
 from pydantic import ValidationError
@@ -6,7 +7,9 @@ from pydantic import ValidationError
 from src.config import Settings
 from src.services.ai import AIService, ProviderConfig, _build_prompt, _parse_digest_response
 from src.scrapers.content_scraper import ContentScraper
-from src.services.source_validation import source_metadata, validate_digest_count, validate_source_urls
+from src.services.source_validation import (
+    funding_application_evidence, source_metadata, validate_digest_count, validate_source_urls,
+)
 
 
 @pytest.mark.parametrize('raw,expected', [('false', False), ('true', True), ('low', 'low'), ('medium', 'medium'), ('high', 'high'), ('max', 'max')])
@@ -124,3 +127,73 @@ def test_grant_prompt_excludes_unverified_wrapper_when_source_is_available():
     fallback = _build_prompt('Unverified program announcement', [url], {}, [])
     assert 'Unverified program announcement' in fallback
     assert 'linked source is unavailable' in fallback
+
+
+def test_webpage_preserves_update_boundaries_and_inline_evidence():
+    html = '''<main><!-- Old draft: grants awarded in August --><div><div><span>Sept 2026</span><span>Funding</span></div>
+      <h3>Awarded <strong>$1.6M</strong> in grants</h3><p>Build forecasting tools.</p></div>
+      <div><div>August 28, 2026 Research</div><h3>A forecasting paper</h3></div>
+      <p>Apply <a href="/apply">here</a> by
+      September 30.</p></main>'''
+    text = ContentScraper().extract_text(html)
+    assert 'Old draft' not in text
+    assert 'Sept 2026 Funding\n\nAwarded $1.6M in grants\n\nBuild forecasting tools.' in text
+    assert 'tools.\n\nAugust 28, 2026 Research\n\nA forecasting paper' in text
+    assert 'Apply here by September 30.' in text
+
+
+@pytest.mark.parametrize('source,expected', [
+    ('Applications are now open.', True),
+    ('Apply today', True),
+    ('Apply here: https://example.org/apply', True),
+    ('Submit your proposal by September 30.', True),
+    ('An open RFP category for infrastructure.', True),
+    ('Register for the hackathon.', True),
+    ('The foundation invites innovative research proposals.', True),
+    ('The fund opens a security round featuring requests for proposals.', True),
+    ('A new partnership supports voice infrastructure.', False),
+    ('Deadline: September 30.', False),
+    ('We are not accepting applications.', False),
+    ('Do not apply here.', False),
+    ('Applications are closed. The old notice said: Apply now.', False),
+    ('Applications are not open. Apply here when we reopen.', False),
+    ('Applications open next month.', False),
+])
+def test_funding_requires_supported_current_invitation(source, expected):
+    url = 'https://example.org/program'
+    evidence = funding_application_evidence('Apply now.', [url], {url: source})
+    assert bool(evidence) is expected
+    if expected:
+        assert evidence in source
+
+
+def test_wrapper_quoted_tweet_and_unseen_page_tail_cannot_supply_application_evidence():
+    tweet = 'https://x.com/example/status/123'
+    page = 'https://example.org/program'
+    assert not funding_application_evidence('Apply now.', [tweet], {})
+    assert not funding_application_evidence('', [tweet], {
+        tweet: 'The round is over.\n--- Quoted Tweet ---\nApply now.',
+    })
+    assert not funding_application_evidence('', [page], {page: 'x' * 2001 + 'Apply now.'})
+    assert funding_application_evidence('Apply here.', [], {}) == 'Apply here.'
+
+
+@pytest.mark.parametrize('source,expected', [('A partnership.', None), ('Apply here.', 'Funding Opportunities')])
+async def test_unsupported_funding_label_retains_summary_without_retry(monkeypatch, source, expected):
+    service = AIService()
+    service._config = ProviderConfig('ollama', 'test', 'test', 'https://example.org')
+    monkeypatch.setattr(service.rate_limiter, 'reserve', lambda db: None)
+
+    async def response(*args, **kwargs):
+        return json.dumps({'title': 'Program Update', 'summary': 'A partnership.',
+            'category': 'Funding Opportunities', 'confidence': 'confident', 'source': {},
+            'entities': {'application_evidence': 'An invented application quote'}}), 10, 10, 1
+
+    monkeypatch.setattr(service, '_call_ollama', response)
+    url = 'https://example.org/program'
+    categories = [SimpleNamespace(name='Funding Opportunities', description='', keywords=[])]
+    result = await service.analyze_content('', [url], {url: source}, categories)
+    assert result['summary'] == 'A partnership.'
+    assert result['category'] == expected
+    assert result['confidence'] == ('confident' if expected else 'uncertain')
+    assert result['entities']['application_evidence'] == (source if expected else None)

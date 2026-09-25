@@ -2,7 +2,7 @@ import httpx
 import logging
 from datetime import date
 from typing import Optional, Dict, List
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Comment
 from urllib.parse import urlparse
 
 from src.utils.url_extractor import is_twitter_url
@@ -57,21 +57,25 @@ class ContentScraper:
             for script in soup(["script", "style", "nav", "header", "footer"]):
                 script.decompose()
             
-            article = soup.find("article")
-            if article:
-                text = article.get_text(separator=" ", strip=True)
-            else:
-                main = soup.find("main")
-                if main:
-                    text = main.get_text(separator=" ", strip=True)
+            content = soup.find("article") or soup.find("main") or soup.find("body") or soup
+            # Keep headings, dates and neighboring updates on separate lines.
+            # Flattening the page can attach the next timeline date to this item.
+            # Inline markup stays inline so amounts and application quotes survive.
+            for node in content.find_all(string=True):
+                if isinstance(node, Comment):
+                    node.extract()
                 else:
-                    body = soup.find("body")
-                    if body:
-                        text = body.get_text(separator=" ", strip=True)
-                    else:
-                        text = soup.get_text(separator=" ", strip=True)
-            
-            text = " ".join(text.split())
+                    node.replace_with(" ".join(node.split()))
+            for block in content.find_all([
+                "div", "section", "article", "p", "h1", "h2", "h3", "h4",
+                "h5", "h6", "li", "ul", "ol", "tr", "blockquote", "br",
+            ]):
+                block.insert_before("\n\n")
+                block.insert_after("\n\n")
+            text = "\n\n".join(
+                line for raw in content.get_text(separator=" ", strip=False).splitlines()
+                if (line := " ".join(raw.split()))
+            )
             
             if len(text) > self.max_content_length:
                 text = text[:self.max_content_length] + "..."

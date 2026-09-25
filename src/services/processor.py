@@ -297,6 +297,7 @@ class MessageProcessor:
 
                     # Match category
                     category_name = result.get("category")
+                    summary.category_id = None
                     if category_name:
                         category = db.query(Category).filter(
                             Category.user_id == 1,

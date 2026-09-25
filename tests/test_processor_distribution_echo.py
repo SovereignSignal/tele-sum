@@ -16,11 +16,12 @@ created manually (it is the sibling app's table, not in our metadata).
 
 import asyncio
 from datetime import datetime, timezone
+from unittest.mock import AsyncMock
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-from src.models.models import Base, ChannelConfig, Message, ProcessingStatus, Summary
+from src.models.models import Base, Category, ChannelConfig, Message, ProcessingStatus, Summary
 from src.services.processor import MessageProcessor
 
 
@@ -115,3 +116,27 @@ def test_organic_post_still_reaches_ai():
     asyncio.run(processor.process_message(msg, db))
 
     assert len(processor.ai_service.content_calls) == 1
+
+
+def test_retry_clears_stale_category_when_application_evidence_is_missing():
+    db = make_db()
+    msg = make_message(db, telegram_id=557)
+    category = Category(user_id=1, name="Funding Opportunities")
+    db.add(category)
+    db.flush()
+    summary = Summary(message_id=msg.id, processing_status=ProcessingStatus.RETRY,
+                      processing_attempts=1, category_id=category.id)
+    db.add(summary)
+    db.commit()
+    processor = MessageProcessor()
+    processor.ai_service.analyze_content = AsyncMock(return_value={
+        "title": "Foundation Partnership", "summary": "A partnership, with no application call.",
+        "category": None, "confidence": "uncertain", "source": {}, "entities": {},
+    })
+
+    assert asyncio.run(processor.process_message(msg, db)) is True
+    db.refresh(summary)
+    assert summary.processing_status == ProcessingStatus.SUCCESS
+    assert summary.category_id is None
+    assert summary.title == "Foundation Partnership"
+    processor.ai_service.analyze_content.assert_awaited_once()
