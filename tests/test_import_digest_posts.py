@@ -62,3 +62,16 @@ def test_dry_run_reports_would_import_but_writes_nothing(db_session, repos_chann
                         text="would import", url_text=None, dry_run=True)
     assert r == "imported"                       # passes every gate
     assert db_session.query(Message).filter_by(telegram_id=2001).first() is None  # no write
+
+
+def test_backfill_preserves_hidden_links_and_original_post_time(db_session, repos_channel):
+    from datetime import datetime, timezone
+    posted = datetime(2026, 4, 1, tzinfo=timezone.utc)
+    links = [{"text": "Repo A", "url": "https://example.com/a"},
+             {"text": "Repo B", "url": "https://example.com/b"}]
+    import_one_post(db_session, repos_channel, 2002, "Repo A and Repo B",
+                    "https://example.com/a", posted_at=posted, entity_links=links)
+    msg = db_session.query(Message).filter_by(telegram_id=2002).one()
+    assert msg.extracted_urls == ["https://example.com/a", "https://example.com/b"]
+    assert msg.entity_links == links
+    assert msg.timestamp.replace(tzinfo=timezone.utc) == posted

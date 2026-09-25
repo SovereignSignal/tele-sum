@@ -83,6 +83,7 @@ class Settings(BaseSettings):
     run_sync_on_startup: bool = Field(default=True, alias='RUN_SYNC_ON_STARTUP')
     max_processing_retries: int = Field(default=3, alias='MAX_PROCESSING_RETRIES')
     processing_batch_size: int = Field(default=10, alias='PROCESSING_BATCH_SIZE')
+    enable_notion_sync: bool = Field(default=True, alias='ENABLE_NOTION_SYNC')
 
     @field_validator('secret_key', mode='before')
     @classmethod

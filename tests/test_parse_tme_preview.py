@@ -27,4 +27,12 @@ def test_parse_extracts_fields():
     assert row["telegram_id"] == 8
     assert "Open Design Platform" in row["text"]
     assert row["url"] == "https://github.com/nexu-io/open-design"
+    assert row["entity_links"] == [{"text": "repo", "url": "https://github.com/nexu-io/open-design"}]
     assert row["posted_at"] == "2026-05-27T10:00:00+00:00"
+
+
+def test_parse_ignores_telegram_hashtag_search_links():
+    html = HTML.replace('Open Design Platform', '<a href="?q=%23Repo">#Repo</a> Open Design Platform')
+    row = parse_preview(html)[0]
+    assert row["url"] == "https://github.com/nexu-io/open-design"
+    assert len(row["entity_links"]) == 1

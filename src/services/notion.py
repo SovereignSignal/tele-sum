@@ -14,6 +14,7 @@ import httpx
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from src.config import settings
 from src.models.models import ChannelConfig, Message, NotionPage, ProcessingStatus, Summary
 
 logger = logging.getLogger(__name__)
@@ -208,6 +209,8 @@ def pending_notion_items(db: Session, limit: int = 200) -> List[NotionWorkItem]:
 async def sync_pending_to_notion(db: Session) -> dict:
     """One notion_sync cycle. Never raises; failures stay unsynced and are
     retried next cycle. Returns counters for logging."""
+    if not settings.enable_notion_sync:
+        return {"synced": 0, "failed": 0, "skipped_disabled": True}
     api_key = get_notion_api_key(db)
     if not api_key:
         return {"synced": 0, "failed": 0, "skipped_no_token": True}

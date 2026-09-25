@@ -29,12 +29,15 @@ def parse_preview(html: str):
         text = text_el.get_text("\n", strip=True) if text_el else ""
         if not text.strip():
             continue
-        link_el = text_el.select_one("a[href]") if text_el else None
+        links = [{"text": a.get_text(" ", strip=True), "url": a["href"]}
+                 for a in text_el.select("a[href]")
+                 if a["href"].startswith(("https://", "http://"))] if text_el else []
         time_el = w.select_one("time[datetime]")
         rows.append({
             "telegram_id": int(tid),
             "text": text,
-            "url": link_el["href"] if link_el else None,
+            "url": links[0]["url"] if links else None,
+            "entity_links": links,
             "posted_at": time_el["datetime"] if time_el else None,
         })
     return rows

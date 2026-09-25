@@ -29,7 +29,7 @@ from src.utils.url_extractor import extract_urls  # noqa: E402
 
 def import_one_post(db: Session, channel: ChannelConfig, telegram_id: int,
                     text: str, url_text, posted_at: Optional[datetime] = None,
-                    dry_run: bool = False):
+                    dry_run: bool = False, entity_links=None):
     """Insert one backfilled post as a Message + PENDING Summary. Returns a status
     string: 'empty' | 'duplicate' | 'distribution' | 'imported'. With dry_run=True
     it runs every gate read-only and returns 'imported' for posts that WOULD import,
@@ -47,7 +47,13 @@ def import_one_post(db: Session, channel: ChannelConfig, telegram_id: int,
         return "distribution"      # guard fails open if distribution_logs missing
     if dry_run:
         return "imported"          # passes every gate; no write
-    urls = extract_urls(text)
+    links = [link for link in (entity_links or [])
+             if isinstance(link, dict) and isinstance(link.get("url"), str)
+             and link["url"].startswith(("https://", "http://"))]
+    urls = list(dict.fromkeys(extract_urls(text) +
+                            ([url_text] if isinstance(url_text, str) and
+                             url_text.startswith(("https://", "http://")) else []) +
+                            [link["url"] for link in links if link.get("url")]))
     msg = Message(
         telegram_id=telegram_id,
         channel_id=channel.channel_id,
@@ -59,7 +65,7 @@ def import_one_post(db: Session, channel: ChannelConfig, telegram_id: int,
         timestamp=posted_at or datetime.now(timezone.utc),
         raw_content=text,
         extracted_urls=urls,
-        entity_links=[],
+        entity_links=links,
     )
     db.add(msg)
     db.flush()
@@ -89,7 +95,8 @@ def main() -> int:
                              if row.get("posted_at") else None)
                 r = import_one_post(db, channel, int(row["telegram_id"]),
                                     row.get("text", ""), row.get("url"),
-                                    posted_at=posted_at, dry_run=dry_run)
+                                    posted_at=posted_at, dry_run=dry_run,
+                                    entity_links=row.get("entity_links"))
                 # Commit per imported row. is_distribution_post() fails open with
                 # db.rollback() on ANY error; a single end-of-loop commit would let
                 # one transient guard error discard every prior uncommitted row.

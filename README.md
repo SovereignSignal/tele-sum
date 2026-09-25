@@ -99,6 +99,7 @@ Optional integrations:
 
 ```bash
 NOTION_API_KEY=ntn_...               # enables Notion sync for digest channels
+ENABLE_NOTION_SYNC=false            # disable Notion sync; retain PostgreSQL processing
 ```
 
 ## Operating

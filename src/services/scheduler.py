@@ -236,13 +236,16 @@ def start_scheduler():
     )
 
     # JOB 6: Notion sync - push unsynced digest items to Notion databases
-    scheduler.add_job(
-        notion_sync_job,
-        trigger=IntervalTrigger(minutes=5),
-        id="notion_sync",
-        name="Notion Sync",
-        replace_existing=True
-    )
+    if settings.enable_notion_sync:
+        scheduler.add_job(
+            notion_sync_job,
+            trigger=IntervalTrigger(minutes=5),
+            id="notion_sync",
+            name="Notion Sync",
+            replace_existing=True
+        )
+    elif scheduler.get_job("notion_sync"):
+        scheduler.remove_job("notion_sync")
 
     # Only start if not already running (prevents issues on container restarts)
     if not scheduler.running:
