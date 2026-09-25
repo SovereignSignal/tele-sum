@@ -249,6 +249,14 @@ class ReviewQueue(Base):
     )
 
 
+class AIRequestReservation(Base):
+    """Pre-request budget slots; shared across workers and retained for one hour."""
+    __tablename__ = "ai_request_reservations"
+
+    id = Column(Integer, primary_key=True)
+    reserved_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
+
+
 class GrokUsage(Base):
     """Track Grok API usage for rate limiting and cost monitoring"""
     __tablename__ = "grok_usage"

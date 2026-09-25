@@ -37,7 +37,7 @@ async def test_rate_limited_batch_preserves_pending_attempts():
         s = Summary(message_id=msg.id, processing_status=ProcessingStatus.PENDING, processing_attempts=0)
         db.add(s); db.commit()
         processor = MessageProcessor()
-        processor.ai_service.rate_limiter = SimpleNamespace(can_request=lambda: False)
+        processor.ai_service.rate_limiter = SimpleNamespace(can_request=lambda db: False)
         processor.process_message = AsyncMock()
         assert await processor.process_batch(db) == 0
         processor.process_message.assert_not_called()

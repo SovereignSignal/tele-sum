@@ -29,6 +29,7 @@ from sqlalchemy.orm import Session
 
 from src.models.models import Message, Summary, Category, ProcessingStatus, ConfidenceLevel
 from src.services.ai import AIService
+from src.services.ai_rate_limit import AIRequestDeferred
 from src.services.distribution_guard import is_distribution_post
 from src.scrapers.content_scraper import ContentScraper
 from src.scrapers.twitter_scraper import TwitterScraper
@@ -181,6 +182,9 @@ class MessageProcessor:
 
         # STATE TRANSITION: PENDING/RETRY -> PROCESSING
         # Increment attempt counter and update timestamp for tracking
+        previous_status = summary.processing_status
+        previous_processed_at = summary.last_processed_at
+        previous_error = summary.error_log
         claimed = db.query(Summary).filter(
             Summary.id == summary.id,
             Summary.processing_status.in_([ProcessingStatus.PENDING, ProcessingStatus.RETRY]),
@@ -323,6 +327,17 @@ class MessageProcessor:
                 logger.warning(f"Message {message.id} queued for retry (attempt {summary.processing_attempts})")
                 return False
 
+        except AIRequestDeferred as e:
+            # Another worker may take the last slot after the batch precheck.
+            # No request was sent, so restore the original queue state and budget.
+            summary.processing_status = previous_status
+            summary.processing_attempts -= 1
+            summary.last_processed_at = previous_processed_at
+            summary.error_log = previous_error
+            db.commit()
+            logger.info("Message %s deferred: %s", message.id, e)
+            return False
+
         except Exception as e:
             logger.error(f"Error processing message {message.id}: {e}")
 
@@ -394,8 +409,12 @@ class MessageProcessor:
         
         processed = 0
         for message in messages_to_process[:limit]:
-            if not self.ai_service.rate_limiter.can_request():
-                logger.info("Pausing batch at the AI request limit; pending work keeps its attempts")
+            try:
+                if not self.ai_service.rate_limiter.can_request(db):
+                    logger.info("Pausing batch at the AI request limit; pending work keeps its attempts")
+                    break
+            except AIRequestDeferred as e:
+                logger.warning("Pausing batch: %s", e)
                 break
             # Refresh message to get updated summary
             db.refresh(message)
@@ -470,7 +489,7 @@ class MessageProcessor:
             Summary.processing_status == ProcessingStatus.RETRY
         ).count()
         
-        ai_status = self.ai_service.get_status()
+        ai_status = self.ai_service.get_status(db)
 
         return {
             "total_messages": total,

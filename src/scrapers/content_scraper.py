@@ -1,5 +1,6 @@
 import httpx
 import logging
+from datetime import date
 from typing import Optional, Dict, List
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
@@ -45,6 +46,13 @@ class ContentScraper:
     def extract_text(self, html: str) -> str:
         try:
             soup = BeautifulSoup(html, 'lxml')
+            published_at = None
+            published = soup.find('meta', attrs={'property': 'article:published_time'})
+            if published and published.get('content'):
+                try:
+                    published_at = date.fromisoformat(published['content'][:10]).isoformat()
+                except ValueError:
+                    pass
             
             for script in soup(["script", "style", "nav", "header", "footer"]):
                 script.decompose()
@@ -68,6 +76,8 @@ class ContentScraper:
             if len(text) > self.max_content_length:
                 text = text[:self.max_content_length] + "..."
             
+            if published_at:
+                text = f"Source published: {published_at}\n\n{text}"
             return text
             
         except Exception as e:

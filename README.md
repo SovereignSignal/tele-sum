@@ -89,6 +89,10 @@ Use a thinking value supported by the selected model. GLM-5.3 Flash requires
 not present in the supplied input and digest counts that contradict an explicit
 source total. Rejected responses follow the existing bounded retry path. Source
 types come from known URL hosts, with `other` for unknown types.
+For grant posts with retrieved sources, the Telegram wrapper is excluded from
+the model input. When retrieval fails, wrapper claims are explicitly unverified.
+Publication dates come from tweet metadata or a webpage's `article:published_time`
+metadata, never an inferred date from neighboring content. Missing dates stay null.
 
 Optional tuning (defaults shown):
 
@@ -101,6 +105,14 @@ RUN_SYNC_ON_STARTUP=true
 BOT_POLLING_INTERVAL=2
 APP_ENV=production
 ```
+
+`MAX_AI_REQUESTS_PER_HOUR` is a rolling-hour cap shared by every TeleSum worker
+using this database. A committed reservation precedes each inference request,
+including failed calls. Restarts and retries cannot reset the counter. Set it to
+`0` to pause inference. Exhausted or unavailable accounting leaves messages
+queued without consuming processing attempts. Startup creates the small
+`ai_request_reservations` table; PostgreSQL advisory locks serialize reservations.
+This cap covers TeleSum, not other applications sharing `api_usage_log`.
 
 Optional integrations:
 

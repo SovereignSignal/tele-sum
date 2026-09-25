@@ -216,6 +216,24 @@ Tracks Notion pages created from digest items. One row per `(summary_id, item_in
 
 Unique constraint: `uq_notion_pages_summary_item` on `(summary_id, item_index)` — the idempotency key used by the `notion_sync` job to skip already-created pages.
 
+### ai_request_reservations
+
+TeleSum's shared rolling-hour AI budget. A worker atomically reserves a slot before
+calling a provider. Failed calls and interrupted workers still consume their slot.
+Reservations commit independently of message transactions. Expired slots are removed
+when a new slot is requested. The indexed `reserved_at` timestamp uses database time.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | INTEGER PK | Reservation identifier |
+| reserved_at | TIMESTAMPTZ | Indexed; counts against the cap for one hour |
+
+PostgreSQL workers serialize the count-and-insert transaction with a transaction-scoped
+advisory lock. SQLite uses `BEGIN IMMEDIATE`. No lock is held during inference.
+Startup creates this table through the existing model initialization path. Existing
+`api_usage_log` records remain telemetry; other apps sharing that log do not spend
+TeleSum's budget. The legacy `grok_usage` table is unchanged.
+
 ### grok_usage *(read-only, legacy)*
 
 Pre-`api_usage_log` telemetry table. Tele-sum no longer writes to it; new telemetry goes to the shared `api_usage_log` (see top of doc). The model is retained for historical queries — see [`src/models/models.py:238`](src/models/models.py:238).

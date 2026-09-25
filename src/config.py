@@ -82,7 +82,7 @@ class Settings(BaseSettings):
 
     # Sync / processing
     sync_interval_hours: int = Field(default=6, alias='SYNC_INTERVAL_HOURS')
-    max_ai_requests_per_hour: int = Field(default=100, alias='MAX_AI_REQUESTS_PER_HOUR')
+    max_ai_requests_per_hour: int = Field(default=100, ge=0, alias='MAX_AI_REQUESTS_PER_HOUR')
     run_sync_on_startup: bool = Field(default=True, alias='RUN_SYNC_ON_STARTUP')
     max_processing_retries: int = Field(default=3, alias='MAX_PROCESSING_RETRIES')
     processing_batch_size: int = Field(default=10, alias='PROCESSING_BATCH_SIZE')

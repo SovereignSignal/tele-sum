@@ -21,7 +21,6 @@ import json
 import logging
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
 import httpx
@@ -33,6 +32,7 @@ from src.models.models import Category
 from src.schemas.entities import AIAnalysis, EntitiesPayload, SourceInfo
 from src.schemas.digest import DigestAnalysis
 from src.services.source_validation import source_metadata, validate_digest_count, validate_source_urls
+from src.services.ai_rate_limit import AIRequestDeferred, AIRequestLimiter
 from src.utils.url_extractor import is_twitter_url
 
 logger = logging.getLogger(__name__)
@@ -44,29 +44,6 @@ class ProviderConfig:
     api_key: str
     model: str
     base_url: Optional[str] = None  # None for anthropic; required for OpenAI-compat
-
-
-class _RateLimiter:
-    """Hourly request cap. In-memory only; resets on process restart."""
-
-    def __init__(self, max_per_hour: int):
-        self.max = max_per_hour
-        self.timestamps: List[datetime] = []
-
-    def _prune(self):
-        cutoff = datetime.utcnow() - timedelta(hours=1)
-        self.timestamps = [t for t in self.timestamps if t > cutoff]
-
-    def can_request(self) -> bool:
-        self._prune()
-        return len(self.timestamps) < self.max
-
-    def record(self):
-        self.timestamps.append(datetime.utcnow())
-
-    def remaining(self) -> int:
-        self._prune()
-        return max(0, self.max - len(self.timestamps))
 
 
 def _resolve_config_from_env() -> Optional[ProviderConfig]:
@@ -127,7 +104,12 @@ def _build_prompt(
             "You are analyzing content shared via a Telegram channel. "
             "The Telegram message itself is just a pointer — focus on the LINKED CONTENT, not the wrapper."
         )
-        parts.append(f"\n## Telegram Message (context only)\n{message_content}")
+        if any(url_contents.get(url) for url in urls):
+            # Exclude an unverified wrapper rather than asking the model to reconcile it.
+            parts.append("\nUse only the retrieved linked content below as factual evidence.")
+        else:
+            parts.append(f"\n## Unverified Telegram Message\n{message_content}")
+            parts.append("\nThe linked source is unavailable. Mark uncertainty and explicitly attribute any claims to this unverified Telegram post.")
     else:
         parts.append(
             "You are analyzing pre-summarized governance/grants content. "
@@ -158,6 +140,7 @@ def _build_prompt(
     parts.append("\n## Your Task")
     parts.append("1. **Title**: 4-5 words max, title case, no trailing punctuation. Specific (include protocol/project name when relevant).")
     parts.append("2. **Summary**: 3-4 factual sentences about the LINKED CONTENT. Include specific amounts/dates/percentages. Never use the word 'blockchain' — say 'crypto', 'onchain', or name the chain. Distinguish LAUNCHES vs CLOSURES/RESULTS carefully.")
+    parts.append("Publication dates are supplied separately by the pipeline: do not infer or include a publication date in your response. Preserve explicit event dates and deadlines, but do not borrow dates from neighboring news items or invent a year for a partial date.")
 
     if categories:
         parts.append("\n3. **Classification**: Pick exactly ONE of:")
@@ -181,7 +164,6 @@ def _build_prompt(
   "source": {
     "name": "Descriptive source name",
     "type": "forum | twitter | blog | governance | news | substack | mirror | medium | github | discord | other",
-    "original_date": "YYYY-MM-DD (the source publication date, NOT today)",
     "url": "the source URL or null"
   },
   "entities": {
@@ -204,6 +186,9 @@ SYSTEM_PROMPT = (
     "- Preserve every distinct named digest item, including footer lists such as ALSO TRACKED even when details or links are missing. Deduplicate repeated mentions of the same item, not separate products sharing a URL.\n"
     "- Copy each URL exactly from the supplied sources. Never reconstruct, correct, abbreviate or invent a URL. Use null if no URL is supplied for that item.\n"
     "- Center the current message's actual update. Clearly distinguish an outer post from an older quoted announcement. Keep exclusions, eligibility limits and negative statements explicit.\n"
+    "- For linked grant posts, the current update is the outer LINKED SOURCE post, not the Telegram wrapper. When a source excerpt is available, wrapper-only assertions are unverified. Do not promote them into facts.\n"
+    "- Funding Opportunities requires an explicit open application, submission or participation route in the source. Partnerships, research announcements and infrastructure launches alone do not qualify.\n"
+    "- In entities.amounts, include only quantified monetary or token values with units; omit headcounts, durations and unquantified benefits. entities.orgs contains organizations and projects, not individual people or their handles.\n"
     "- Do not invent application routes. An email or DM offered for questions, referrals or introductions is not an application method unless explicitly stated.\n"
     "- Preserve financial status precisely: requested, offered, approved, allocated, awarded, paid and received are different. Do not claim disbursement from an allocation or award.\n"
     "- Missing publication dates stay null; do not turn a year into January 1. Record only the current, unsuperseded application deadline. Keep total pools separate from per-recipient awards.\n"
@@ -333,7 +318,7 @@ class AIService:
         # Try env override first; fall back to DB lookup at request time if needed
         self._config: Optional[ProviderConfig] = _resolve_config_from_env()
         self._db_lookup_attempted = False
-        self.rate_limiter = _RateLimiter(settings.max_ai_requests_per_hour)
+        self.rate_limiter = AIRequestLimiter(settings.max_ai_requests_per_hour)
         if self._config:
             logger.info(f"AI provider (env): {self._config.provider} / {self._config.model}")
         else:
@@ -356,13 +341,18 @@ class AIService:
     def is_configured(self) -> bool:
         return self._config is not None and bool(self._config.api_key)
 
-    def get_status(self) -> dict:
+    def get_status(self, db: Optional[Session] = None) -> dict:
+        try:
+            remaining = self.rate_limiter.remaining(db)
+        except AIRequestDeferred:
+            remaining = None
         return {
             "is_configured": self.is_configured,
             "provider": self._config.provider if self._config else None,
             "model": self._config.model if self._config else None,
-            "rate_limit_remaining": self.rate_limiter.remaining(),
+            "rate_limit_remaining": remaining,
             "rate_limit_max": self.rate_limiter.max,
+            "rate_limit_available": remaining is not None,
         }
 
     async def analyze_content(
@@ -381,11 +371,8 @@ class AIService:
             logger.info("AI not configured — skipping content analysis")
             return None
 
-        if not self.rate_limiter.can_request():
-            logger.warning(f"AI rate limit reached. Remaining: {self.rate_limiter.remaining()}")
-            return None
-
         prompt = _build_prompt(message_content, urls, url_contents, categories)
+        self.rate_limiter.reserve(db)
 
         try:
             if cfg.provider == "anthropic":
@@ -399,7 +386,6 @@ class AIService:
             self._log_usage(db, cfg, success=False, error=str(e)[:500], wire=wire)
             return None
 
-        self.rate_limiter.record()
         self._log_usage(
             db, cfg, success=True,
             tokens_in=tokens_in, tokens_out=tokens_out,
@@ -448,11 +434,8 @@ class AIService:
         if not cfg or not cfg.api_key:
             logger.info("AI not configured — skipping digest analysis")
             return None
-        if not self.rate_limiter.can_request():
-            logger.warning(f"AI rate limit reached. Remaining: {self.rate_limiter.remaining()}")
-            return None
-
         prompt = _build_digest_prompt(message_content, urls, url_contents, prompt_hint, links=links)
+        self.rate_limiter.reserve(db)
         # digests list many items; the grant-sized 800-token cap would truncate mid-JSON
         try:
             if cfg.provider == "anthropic":
@@ -466,7 +449,6 @@ class AIService:
             self._log_usage(db, cfg, success=False, error=str(e)[:500], wire=wire, purpose="digest")
             return None
 
-        self.rate_limiter.record()
         self._log_usage(db, cfg, success=True, tokens_in=tokens_in,
                         tokens_out=tokens_out, duration_ms=duration_ms, wire=wire, purpose="digest")
         result = _parse_digest_response(content)

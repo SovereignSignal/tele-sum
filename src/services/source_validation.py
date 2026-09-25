@@ -1,6 +1,7 @@
 """Check generated links and derive source metadata from supplied evidence."""
 
 import re
+from datetime import date
 from email.utils import parsedate_to_datetime
 from urllib.parse import urlsplit
 
@@ -76,4 +77,14 @@ def source_metadata(source, urls, url_contents):
         result['type'] = 'substack'
     else:
         result['type'] = 'other'
+    if not is_twitter_url(url):
+        # Emitted only from explicit publication metadata by ContentScraper.
+        # Arbitrary dates in a page body may belong to another news item.
+        header = re.match(r'Source published: (\d{4}-\d{2}-\d{2})\n', url_contents.get(url, ''))
+        result['original_date'] = None
+        if header:
+            try:
+                result['original_date'] = date.fromisoformat(header[1]).isoformat()
+            except ValueError:
+                pass
     return result

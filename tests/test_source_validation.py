@@ -4,7 +4,8 @@ import pytest
 from pydantic import ValidationError
 
 from src.config import Settings
-from src.services.ai import AIService, ProviderConfig, _parse_digest_response
+from src.services.ai import AIService, ProviderConfig, _build_prompt, _parse_digest_response
+from src.scrapers.content_scraper import ContentScraper
 from src.services.source_validation import source_metadata, validate_digest_count, validate_source_urls
 
 
@@ -67,6 +68,7 @@ def test_tweet_metadata_comes_from_scraper_header_not_quoted_post():
 async def test_digest_service_rejects_valid_json_with_wrong_link(monkeypatch):
     service = AIService()
     service._config = ProviderConfig('ollama', 'test', 'test', 'https://example.org')
+    monkeypatch.setattr(service.rate_limiter, 'reserve', lambda db: None)
 
     async def response(*args, **kwargs):
         return json.dumps({'title': 'Repos', 'summary': 'One repo', 'confidence': 'confident', 'items': [
@@ -79,6 +81,7 @@ async def test_digest_service_rejects_valid_json_with_wrong_link(monkeypatch):
 async def test_grant_service_returns_grounded_source_metadata(monkeypatch):
     service = AIService()
     service._config = ProviderConfig('ollama', 'test', 'test', 'https://example.org')
+    monkeypatch.setattr(service.rate_limiter, 'reserve', lambda db: None)
 
     async def response(*args, **kwargs):
         return json.dumps({'title': 'Grants', 'summary': 'No link supplied.', 'category': None,
@@ -87,3 +90,37 @@ async def test_grant_service_returns_grounded_source_metadata(monkeypatch):
     monkeypatch.setattr(service, '_call_ollama', response)
     result = await service.analyze_content('No link supplied.', [], {}, [])
     assert result['source']['type'] == 'other'
+
+
+@pytest.mark.parametrize('evidence', ['Mar 17. Results from 2025.', '2026 results', '', 'Published March 17, 2025'])
+def test_non_tweet_date_cannot_supply_a_missing_or_different_year(evidence):
+    url = 'https://example.org/news'
+    source = source_metadata({'original_date': '2026-03-17'}, [url], {url: evidence})
+    assert source['original_date'] is None
+
+
+@pytest.mark.parametrize('evidence', ['Published March 17, 2026', 'Research: 17 March 2026', 'Next item Mar. 17th, 2026', 'Published 2026-03-17'])
+def test_page_body_dates_cannot_supply_publication_metadata(evidence):
+    url = 'https://example.org/news'
+    source = source_metadata({'original_date': '2026-03-17'}, [url], {url: evidence})
+    assert source['original_date'] is None
+
+
+@pytest.mark.parametrize('value,expected', [('2026-03-17T12:00:00Z', '2026-03-17'), ('2026-02-30', None), ('March 2026', None)])
+def test_webpage_publication_metadata_is_validated_and_overrides_model(value, expected):
+    html = f'<html><head><meta property="article:published_time" content="{value}"></head><body><article>Grant awarded. Next news item: August 28, 2026.</article></body></html>'
+    evidence = ContentScraper().extract_text(html)
+    url = 'https://example.org/news'
+    source = source_metadata({'original_date': '2026-08-28'}, [url], {url: evidence})
+    assert source['original_date'] == expected
+
+
+def test_grant_prompt_excludes_unverified_wrapper_when_source_is_available():
+    url = 'https://example.org/news'
+    prompt = _build_prompt('Unsupported prize of $900,000', [url], {url: 'A prototype hackathon.'}, [])
+    assert '$900,000' not in prompt
+    assert 'A prototype hackathon.' in prompt
+    assert '"original_date"' not in prompt
+    fallback = _build_prompt('Unverified program announcement', [url], {}, [])
+    assert 'Unverified program announcement' in fallback
+    assert 'linked source is unavailable' in fallback

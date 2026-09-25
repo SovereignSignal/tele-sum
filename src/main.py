@@ -342,6 +342,7 @@ async def get_stats():
     """Get processing statistics"""
     from src.models.models import Message, Summary, ProcessingStatus
     from src.models import database
+    from src.services.ai import AIService
 
     db = database.SessionLocal()
     try:
@@ -355,6 +356,7 @@ async def get_stats():
             "processed": success,
             "pending": pending,
             "failed": failed,
+            "ai": AIService().get_status(db),
             "success_rate": round(success / total * 100, 1) if total > 0 else 0,
             "scheduler": get_scheduler_status()
         }
