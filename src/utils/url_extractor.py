@@ -105,6 +105,22 @@ def is_twitter_url(url: str) -> bool:
     except:
         return False
 
+def embedded_urls(links) -> List[str]:
+    """Recover exact HTTP links already stored as Telegram text entities."""
+    result = []
+    for link in links or []:
+        url = link.get("url") if isinstance(link, dict) else None
+        if not isinstance(url, str):
+            continue
+        try:
+            parsed = urlparse(url)
+            if parsed.scheme in ("http", "https") and parsed.hostname and url not in result:
+                result.append(url)
+        except ValueError:
+            continue
+    return result
+
+
 def clean_url(url: str) -> str:
     if not url:
         return url

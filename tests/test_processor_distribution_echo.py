@@ -140,3 +140,25 @@ def test_retry_clears_stale_category_when_application_evidence_is_missing():
     assert summary.category_id is None
     assert summary.title == "Foundation Partnership"
     processor.ai_service.analyze_content.assert_awaited_once()
+
+
+def test_grant_uses_stored_embedded_link_when_plain_url_list_is_empty(monkeypatch):
+    db = make_db()
+    msg = make_message(db, telegram_id=558)
+    url = 'https://example.org/Apply?Track=AI'
+    msg.extracted_urls = []
+    msg.entity_links = [{'text': 'Source', 'url': url}, {'url': 'javascript:alert(1)'}]
+    db.commit()
+    monkeypatch.setattr('src.services.processor._check_seen', lambda *a: None)
+    monkeypatch.setattr('src.services.processor._record_seen', lambda *a: None)
+    processor = MessageProcessor()
+    processor.content_scraper.scrape_multiple_urls = AsyncMock(return_value={url: 'Apply today.'})
+    processor.ai_service.analyze_content = AsyncMock(return_value={
+        'title': 'Program', 'summary': 'Applications open.', 'category': None,
+        'confidence': 'confident', 'entities': {}, 'source': {},
+    })
+    assert asyncio.run(processor.process_message(msg, db)) is True
+    processor.content_scraper.scrape_multiple_urls.assert_awaited_once_with([url])
+    assert processor.ai_service.analyze_content.await_args.args[1] == [url]
+    assert msg.summary.entities['source']['url'] == url
+    assert msg.summary.entities['urls'] == [url]

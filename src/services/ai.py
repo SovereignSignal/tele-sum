@@ -32,8 +32,10 @@ from src.models.models import Category
 from src.schemas.entities import AIAnalysis, EntitiesPayload, SourceInfo
 from src.schemas.digest import DigestAnalysis
 from src.services.source_validation import (
-    funding_application_evidence, source_metadata, validate_digest_count, validate_source_urls,
+    clean_grant_entities, funding_application_evidence, restore_source_urls,
+    source_metadata, validate_digest_count, validate_source_urls,
 )
+from src.utils.source_text import source_excerpt
 from src.services.ai_rate_limit import AIRequestDeferred, AIRequestLimiter
 from src.utils.url_extractor import is_twitter_url
 
@@ -126,9 +128,12 @@ def _build_prompt(
             parts.append(f"- {url}")
             tweet = url_contents.get(url)
             if tweet:
-                parts.append(f"  Tweet content:\n{tweet}")
+                current, _, quoted = tweet.partition("--- Quoted Tweet ---")
+                parts.append(f"  CURRENT SOURCE UPDATE (lead the title and first sentence with this):\n{current}")
+                if quoted:
+                    parts.append(f"  QUOTED BACKGROUND (supporting context only; not the current announcement):\n{quoted}")
             else:
-                parts.append("  (Could not scrape — try reading directly if possible)")
+                parts.append("  (Source unavailable. You cannot fetch it; do not infer its contents.)")
         parts.append("\nIMPORTANT: Base your summary on the ACTUAL tweet content shown above. Do not guess.")
 
     if other_urls:
@@ -137,12 +142,14 @@ def _build_prompt(
             parts.append(f"- {url}")
             content = url_contents.get(url)
             if content:
-                parts.append(f"  Content preview: {content[:2000]}...")
+                parts.append(f"  Source excerpt:\n{source_excerpt(content)}")
 
     parts.append("\n## Your Task")
     parts.append("1. **Title**: 4-5 words max, title case, no trailing punctuation. Specific (include protocol/project name when relevant). Preserve financial roles: a recipient Receives or Is Awarded a grant; only the funder Awards it. Do not reverse who funded whom.")
     parts.append("2. **Summary**: 3-4 factual sentences about the LINKED CONTENT. Include specific amounts/dates/percentages. Never use the word 'blockchain' — say 'crypto', 'onchain', or name the chain. Distinguish LAUNCHES vs CLOSURES/RESULTS carefully.")
     parts.append("For opportunities, preserve the program duration and whether compensation is annualized or a total payment, as well as eligibility, location and the current deadline.")
+    parts.append("The first summary sentence must describe the CURRENT SOURCE UPDATE. Introduce an older quoted post only afterward as background. entities.people contains identifiable human individuals, including human authors/reviewers. An @handle alone does not prove a person: organizational accounts belong only in orgs. Keep noncash benefits and durations under key_terms, not amounts. Copy application URLs in full, including their original scheme and path.")
+    parts.append("Preserve the source's financial verb for each amount separately: funds managed or a budget run are not necessarily funds deployed. Prioritize the current application deadline; omit contradictory secondary timeline dates and do not invent a corrected year. Notification of awards is distinct from the program start date.")
     parts.append("Publication dates are supplied separately by the pipeline: do not infer or include a publication date in your response. Preserve explicit event dates and deadlines, but do not borrow dates from neighboring news items or invent a year for a partial date.")
     parts.append("Web excerpts preserve paragraph and heading breaks. Keep timeline updates separate: a date introducing the next headline belongs to that next update. Omit ambiguous dates.")
 
@@ -174,6 +181,7 @@ def _build_prompt(
   },
   "entities": {
     "orgs": ["organizations/projects mentioned"],
+    "people": ["individual people and their handles, including authors or reviewers"],
     "amounts": ["funding amounts with currency"],
     "deadlines": ["YYYY-MM-DD deadlines"],
     "key_terms": ["important terms"]
@@ -405,6 +413,8 @@ class AIService:
         # Pydantic-validate. Drop into legacy dict shape that processor.py expects.
         try:
             analysis = AIAnalysis(**parsed)
+            analysis.summary = restore_source_urls(analysis.summary, prompt)
+            clean_grant_entities(analysis.entities)
             validate_source_urls(analysis.model_dump(), prompt)
         except Exception as e:
             logger.error(f"AI response failed validation: {e}")
@@ -426,12 +436,18 @@ class AIService:
                 analysis.confidence = "uncertain"
                 logger.info("Funding classification withheld: no supported current application invitation")
 
+        source = source_metadata(analysis.source.model_dump(), urls, url_contents)
+        missing = sum(not url_contents.get(url) for url in urls)
+        if missing:
+            analysis.confidence = "uncertain"
+            source["note"] = f"Linked source retrieval incomplete: {missing} of {len(urls)} unavailable. Claims from an unavailable source are unverified."
+
         return {
             "title": analysis.title,
             "summary": analysis.summary,
             "category": category_name,
             "confidence": analysis.confidence,  # str: "confident" | "uncertain"
-            "source": source_metadata(analysis.source.model_dump(), urls, url_contents),
+            "source": source,
             "entities": analysis.entities.model_dump(),
         }
 

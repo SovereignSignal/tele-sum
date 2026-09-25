@@ -3,16 +3,17 @@ import logging
 from datetime import date
 from typing import Optional, Dict, List
 from bs4 import BeautifulSoup, Comment
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlsplit
 
 from src.utils.url_extractor import is_twitter_url
+from src.utils.source_text import MAX_SOURCE_CHARS, source_excerpt
 
 logger = logging.getLogger(__name__)
 
 class ContentScraper:
     def __init__(self):
         self.timeout = 10.0
-        self.max_content_length = 5000
+        self.max_content_length = MAX_SOURCE_CHARS
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
         }
@@ -34,7 +35,7 @@ class ContentScraper:
                     logger.info(f"Skipping non-HTML content from {url}")
                     return None
                 
-                return self.extract_text(response.text)
+                return self.extract_text(response.text, base_url=str(response.url))
                 
         except httpx.TimeoutException:
             logger.warning(f"Timeout fetching {url}")
@@ -43,7 +44,7 @@ class ContentScraper:
             logger.error(f"Error fetching {url}: {e}")
             return None
     
-    def extract_text(self, html: str) -> str:
+    def extract_text(self, html: str, base_url: Optional[str] = None) -> str:
         try:
             soup = BeautifulSoup(html, 'lxml')
             published_at = None
@@ -58,6 +59,11 @@ class ContentScraper:
                 script.decompose()
             
             content = soup.find("article") or soup.find("main") or soup.find("body") or soup
+            # Retain actual link targets, including relative application links.
+            for link in content.find_all("a", href=True):
+                target = urljoin(base_url or "", link["href"])
+                if urlsplit(target).scheme in ("https", "http") and target not in link.get_text():
+                    link.append(f" ({target})")
             # Keep headings, dates and neighboring updates on separate lines.
             # Flattening the page can attach the next timeline date to this item.
             # Inline markup stays inline so amounts and application quotes survive.
@@ -77,8 +83,7 @@ class ContentScraper:
                 if (line := " ".join(raw.split()))
             )
             
-            if len(text) > self.max_content_length:
-                text = text[:self.max_content_length] + "..."
+            text = source_excerpt(text, self.max_content_length)
             
             if published_at:
                 text = f"Source published: {published_at}\n\n{text}"

@@ -33,7 +33,7 @@ from src.services.ai_rate_limit import AIRequestDeferred
 from src.services.distribution_guard import is_distribution_post
 from src.scrapers.content_scraper import ContentScraper
 from src.scrapers.twitter_scraper import TwitterScraper
-from src.utils.url_extractor import is_twitter_url, normalize_url
+from src.utils.url_extractor import embedded_urls, is_twitter_url, normalize_url
 from src.config import settings
 
 logger = logging.getLogger(__name__)
@@ -203,7 +203,7 @@ class MessageProcessor:
 
         # DEDUP: any URL already in seen_urls (per-wire scoped)? If yes, skip AI.
         # Digest channels are not part of the grants seen-URL space; skip the check for them.
-        urls = message.extracted_urls or []
+        urls = message.extracted_urls or embedded_urls(message.entity_links)
         wire_value = message.wire
         if profile == "grant":
             seen = _check_seen(db, urls, wire_value)
@@ -281,7 +281,6 @@ class MessageProcessor:
                     summary.summary = result.get("summary")
                     entities = result.get("entities", {}) or {}
                     source = result.get("source", {}) or {}
-                    urls = message.extracted_urls or []
                     if urls:
                         source["url"] = urls[0]
                     elif not source.get("url") or source.get("url") == "null":

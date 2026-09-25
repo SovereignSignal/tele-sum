@@ -6,12 +6,16 @@ from email.utils import parsedate_to_datetime
 from urllib.parse import urlsplit
 
 from src.utils.url_extractor import is_twitter_url
+from src.utils.source_text import source_excerpt
 
 _URL = re.compile(r'''https?://[^\s<>"'`\[\]]+''', re.IGNORECASE)
 
 _APPLICATION_INVITATION = re.compile(
     r"\b(?:apply\s*(?:[:→]|\b(?:now|today|here|at|via|by|for|to)\b)"
-    r"|submit\s+(?:(?:your|an?|the)\s+)?(?:application|proposal|project|entry)\b"
+    r"|submit\s+(?:(?:your|an?|the)\s+)?(?:application|proposal|project|entry|idea|work)\b"
+    r"|(?:send|email)\s+(?:us\s+)?(?:(?:your|an?|the)\s+)?(?:application|proposal|submission)\b"
+    r"|(?:call|request)\s+for\s+(?:applications|proposals|submissions)\b"
+    r"|(?:applications?|proposals?|submissions?)(?:\s+(?:are|is|now|currently))*\s+(?:welcome|accepted)\b"
     r"|(?:accepting|invites?|inviting)\s+(?:\w+\s+){0,3}(?:applications?|proposals?|submissions?)\b"
     r"|(?:applications?|submissions?|registration|RFPs?)(?:\s+(?:are|is|now|currently))*\s+open\b"
     r"|open\s+(?:RFP|call\s+for\s+(?:applications|proposals|submissions))\b"
@@ -27,6 +31,13 @@ _APPLICATION_CLOSED = re.compile(
     r"|\b(?:will\s+open|opening\s+soon|open\s+next)\b",
     re.IGNORECASE,
 )
+_CLOSED_CALL_STATUS = re.compile(
+    r"\b(?:applications?|submissions?|registration|round|call|program|programme)\b"
+    r"(?:\W+\w+){0,4}\W+(?:closed|paused|ended|suspended|not\s+open)\b"
+    r"|\b(?:not|no\s+longer)\s+(?:currently\s+)?(?:accepting|inviting)\s+(?:\w+\s+){0,3}(?:applications?|proposals?|submissions?)\b"
+    r"|\b(?:applications?|submissions?|registration|round|call|program|programme)\b[^.!?\n]{0,80}\b(?:will\s+open|opening\s+soon|open\s+next)\b",
+    re.I,
+)
 
 
 def funding_application_evidence(message_content, urls, url_contents):
@@ -37,19 +48,81 @@ def funding_application_evidence(message_content, urls, url_contents):
     """
     sources = [
         (url_contents.get(url) or "").split("--- Quoted Tweet ---", 1)[0]
-        if is_twitter_url(url) else (url_contents.get(url) or "")[:2000]
+        if is_twitter_url(url) else source_excerpt(url_contents.get(url) or "")
         for url in urls
     ] if urls else [message_content]
     for source in sources:
-        if _APPLICATION_CLOSED.search(" ".join(source.split())):
+        flattened = " ".join(source.split())
+        if _CLOSED_CALL_STATUS.search(source) or re.search(
+            r"\b(?:no|not\s+an?|not\s+issuing)\s+(?:open\s+)?(?:call|request)\s+for\s+(?:applications|proposals|submissions)\b",
+            flattened, re.I,
+        ):
             continue
         # Extract the evidence ourselves: the model may paraphrase a quote or
         # merge a real invitation with an older quoted announcement.
         for paragraph in source.splitlines():
             paragraph = " ".join(paragraph.split())
-            if _APPLICATION_INVITATION.search(paragraph):
+            if _APPLICATION_INVITATION.search(paragraph) and not _APPLICATION_CLOSED.search(paragraph):
                 return paragraph
     return None
+
+
+def restore_source_urls(value, source_text):
+    """Restore a missing scheme only when an exact supplied URL is unambiguous."""
+    candidates = {}
+    for url in _text_urls(source_text):
+        bare = url.split("://", 1)[1]
+        candidates.setdefault(bare, set()).add(url)
+    for bare, urls in sorted(candidates.items(), key=lambda item: -len(item[0])):
+        if len(urls) == 1:
+            value = re.sub(
+                r"(?<![\w/@:.-])" + re.escape(bare) + r"(?![\w/?#=&%-]|\.[\w])",
+                lambda _: next(iter(urls)), value,
+            )
+    return value
+
+
+_NUMBER = r"\d[\d,.]*(?:\s*(?:[kKmMbB](?![A-Za-z])|million\b|billion\b|thousand\b))?"
+_SYMBOL_AMOUNT = re.compile(r"[$€£¥₹₩₽₺₴₪₦₱₫₿]\s*" + _NUMBER)
+_UNIT_AMOUNT = re.compile(
+    _NUMBER + r"\s*([A-Z][A-Z0-9]{1,5}|dollars?|euros?|pounds?|yen|bitcoin|ether)\b",
+)
+_CODE_AMOUNT = re.compile(r"\b(?:USD|EUR|GBP|JPY|CAD|AUD|CHF|INR|USDC|USDT|DAI|ETH|BTC)\s*" + _NUMBER)
+_NON_CURRENCY_UNITS = {
+    "AI", "API", "OSS", "TVL", "APR", "APY", "STEM", "PHD", "GRANTS",
+    "DAY", "DAYS", "WEEK", "WEEKS", "MONTH", "MONTHS", "YEAR", "YEARS", "HOURS",
+    "JAN", "FEB", "MAR", "APRIL", "MAY", "JUN", "JUL", "AUG", "SEP", "SEPT", "OCT", "NOV", "DEC",
+}
+
+
+def monetary_amount(value):
+    """Retain quantified cash/token values; preserve other benefits elsewhere."""
+    return bool(_SYMBOL_AMOUNT.search(value) or _CODE_AMOUNT.search(value) or any(
+        match[1] not in _NON_CURRENCY_UNITS for match in _UNIT_AMOUNT.finditer(value)
+    ))
+
+
+def clean_grant_entities(entities):
+    def identities(value):
+        parts = [value, *re.findall(r"@([\w]+)|\(([^)]+)\)", value)]
+        names = set()
+        for part in parts:
+            for item in part if isinstance(part, tuple) else [part]:
+                if item:
+                    names.add(item.strip().lstrip("@").casefold())
+        # A combined "Full Name (@handle)" supplies both identities.
+        names.add(value.split("(", 1)[0].strip().lstrip("@").casefold())
+        return names - {""}
+
+    people = set().union(*(identities(person) for person in entities.people)) if entities.people else set()
+    entities.orgs = [org for org in entities.orgs if not identities(org) & people]
+    kept = []
+    for amount in entities.amounts:
+        if monetary_amount(amount):
+            kept.append(amount)
+        elif amount not in entities.key_terms:
+            entities.key_terms.append(amount)
+    entities.amounts = kept
 
 
 def _text_urls(text):
