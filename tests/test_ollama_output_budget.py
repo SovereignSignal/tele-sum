@@ -6,7 +6,7 @@ from src.services import ai
 from src.services.ai import AIService, ProviderConfig
 
 
-@pytest.mark.parametrize("think", [None, False, True])
+@pytest.mark.parametrize("think", [None, False, True, "low", "medium", "high", "max"])
 async def test_ollama_thinking_override_preserves_output_budget(monkeypatch, think):
     captured = {}
     def handler(request):
@@ -21,7 +21,7 @@ async def test_ollama_thinking_override_preserves_output_budget(monkeypatch, thi
     if think is None:
         assert "think" not in captured
     else:
-        assert captured["think"] is think
+        assert captured["think"] == think
 
 
 async def test_ollama_truncation_is_explicit_even_if_content_looks_valid(monkeypatch):

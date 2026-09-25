@@ -80,9 +80,15 @@ SECRET_KEY=<random_string>           # session cookie; auto-generated if unset
 AI_PROVIDER=ollama                   # anthropic | ollama | grok | openai | perplexity | ...
 AI_API_KEY=<provider_key>
 AI_BASE_URL=https://ollama.com/api   # required for ollama / OpenAI-compat; omit for anthropic
-AI_MODEL=glm-5.1
-AI_OLLAMA_THINK=false               # optional Ollama override for JSON extraction
+AI_MODEL=glm-5.3-flash
+AI_OLLAMA_THINK=low                 # boolean or supported level: low/medium/high/max
 ```
+
+Use a thinking value supported by the selected model. GLM-5.3 Flash requires
+`low`, `high`, or `max`; it does not support `false`. Extraction rejects links
+not present in the supplied input and digest counts that contradict an explicit
+source total. Rejected responses follow the existing bounded retry path. Source
+types come from known URL hosts, with `other` for unknown types.
 
 Optional tuning (defaults shown):
 
