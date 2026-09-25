@@ -72,6 +72,7 @@ class Settings(BaseSettings):
     ai_api_key: Optional[str] = Field(default=None, alias='AI_API_KEY')
     ai_base_url: Optional[str] = Field(default=None, alias='AI_BASE_URL')
     ai_model: Optional[str] = Field(default=None, alias='AI_MODEL')
+    ai_ollama_think: Optional[bool] = Field(default=None, alias='AI_OLLAMA_THINK')
 
     # App
     app_env: str = Field(default="production", alias='APP_ENV')

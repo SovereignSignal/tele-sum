@@ -145,10 +145,13 @@ class MessageProcessor:
             db.commit()
         
         summary = message.summary
+        db.refresh(summary)
 
         # STATE CHECK: Already processed successfully - skip
         if summary.processing_status == ProcessingStatus.SUCCESS:
             return True
+        if summary.processing_status == ProcessingStatus.PROCESSING:
+            return False
 
         # STATE TRANSITION: Check if max retries exceeded -> FAILED
         # This prevents infinite retry loops for persistently failing messages
@@ -178,10 +181,18 @@ class MessageProcessor:
 
         # STATE TRANSITION: PENDING/RETRY -> PROCESSING
         # Increment attempt counter and update timestamp for tracking
-        summary.processing_status = ProcessingStatus.PROCESSING
-        summary.processing_attempts += 1
-        summary.last_processed_at = datetime.utcnow()
+        claimed = db.query(Summary).filter(
+            Summary.id == summary.id,
+            Summary.processing_status.in_([ProcessingStatus.PENDING, ProcessingStatus.RETRY]),
+        ).update({
+            Summary.processing_status: ProcessingStatus.PROCESSING,
+            Summary.processing_attempts: Summary.processing_attempts + 1,
+            Summary.last_processed_at: datetime.utcnow(),
+        }, synchronize_session=False)
         db.commit()
+        db.refresh(summary)
+        if not claimed:
+            return summary.processing_status == ProcessingStatus.SUCCESS
 
         # Resolve per-channel extraction profile BEFORE seen_urls dedup.
         profile, prompt_hint = resolve_profile(message.channel_config)
@@ -383,6 +394,9 @@ class MessageProcessor:
         
         processed = 0
         for message in messages_to_process[:limit]:
+            if not self.ai_service.rate_limiter.can_request():
+                logger.info("Pausing batch at the AI request limit; pending work keeps its attempts")
+                break
             # Refresh message to get updated summary
             db.refresh(message)
             

@@ -509,6 +509,8 @@ class AIService:
             "options": {"temperature": 0.3, "num_predict": max_tokens},
             "format": "json",  # ask the server to constrain to JSON
         }
+        if settings.ai_ollama_think is not None:
+            payload["think"] = settings.ai_ollama_think
         headers = {"Authorization": f"Bearer {cfg.api_key}", "Content-Type": "application/json"}
         t0 = time.monotonic()
         async with httpx.AsyncClient(timeout=120.0) as client:  # bigger models can be slow
@@ -517,6 +519,8 @@ class AIService:
         if r.status_code != 200:
             raise RuntimeError(f"ollama HTTP {r.status_code}: {r.text[:300]}")
         data = r.json()
+        if data.get("done_reason") == "length":
+            raise RuntimeError(f"ollama response truncated at {max_tokens} output tokens")
         content = (data.get("message") or {}).get("content", "")
         return (
             content,

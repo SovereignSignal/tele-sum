@@ -81,6 +81,7 @@ AI_PROVIDER=ollama                   # anthropic | ollama | grok | openai | perp
 AI_API_KEY=<provider_key>
 AI_BASE_URL=https://ollama.com/api   # required for ollama / OpenAI-compat; omit for anthropic
 AI_MODEL=glm-5.1
+AI_OLLAMA_THINK=false               # optional Ollama override for JSON extraction
 ```
 
 Optional tuning (defaults shown):
