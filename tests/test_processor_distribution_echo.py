@@ -150,7 +150,6 @@ def test_grant_uses_stored_embedded_link_when_plain_url_list_is_empty(monkeypatc
     msg.entity_links = [{'text': 'Source', 'url': url}, {'url': 'javascript:alert(1)'}]
     db.commit()
     monkeypatch.setattr('src.services.processor._check_seen', lambda *a: None)
-    monkeypatch.setattr('src.services.processor._record_seen', lambda *a: None)
     processor = MessageProcessor()
     processor.content_scraper.scrape_multiple_urls = AsyncMock(return_value={url: 'Apply today.'})
     processor.ai_service.analyze_content = AsyncMock(return_value={
@@ -162,3 +161,33 @@ def test_grant_uses_stored_embedded_link_when_plain_url_list_is_empty(monkeypatc
     assert processor.ai_service.analyze_content.await_args.args[1] == [url]
     assert msg.summary.entities['source']['url'] == url
     assert msg.summary.entities['urls'] == [url]
+
+
+def test_grant_processing_never_writes_seen_urls(monkeypatch):
+    """seen_urls belongs to wire-room-ops. A row it writes carries the owning
+    scan_entries id; a row with no owner is treated over there as permanent
+    "seed history" and parks the next submission of that URL invisibly. From
+    2026-04-27 to 2026-09-30 this processor wrote an ownerless row for every
+    summarized URL, which parked 55 of 57 bridged entries in Aug-Sep 2026.
+    tele-sum may read the table (_check_seen) but must never insert into it."""
+    db = make_db()
+    msg = make_message(db, telegram_id=559)
+    url = 'https://example.org/grants/open-call'
+    msg.extracted_urls = [url]
+    db.commit()
+    monkeypatch.setattr('src.services.processor._check_seen', lambda *a: None)
+    executed = []
+    real_execute = db.execute
+    def spy(statement, *args, **kwargs):
+        executed.append(str(getattr(statement, 'text', statement)))
+        return real_execute(statement, *args, **kwargs)
+    monkeypatch.setattr(db, 'execute', spy)
+    processor = MessageProcessor()
+    processor.content_scraper.scrape_multiple_urls = AsyncMock(return_value={url: 'Apply today.'})
+    processor.ai_service.analyze_content = AsyncMock(return_value={
+        'title': 'Open Call', 'summary': 'Applications open.', 'category': None,
+        'confidence': 'confident', 'entities': {}, 'source': {},
+    })
+    assert asyncio.run(processor.process_message(msg, db)) is True
+    assert msg.summary.processing_status == ProcessingStatus.SUCCESS
+    assert not [s for s in executed if 'seen_urls' in s.lower()], executed
