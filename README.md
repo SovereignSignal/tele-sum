@@ -39,7 +39,7 @@ The state machine is `PENDING -> PROCESSING -> SUCCESS | RETRY | FAILED`. Backgr
 5. **Add a channel** — insert a `channel_configs` row with the channel's numeric Telegram id (or `@username` as a placeholder — the bot will resolve it to the real id on the first incoming post). Pick a **wire** (any slug — your vertical label) and an **extraction profile**: `grant` (single-item funding posts) or `digest` (posts that list many items). See [docs/WIRES_AND_PROFILES.md](docs/WIRES_AND_PROFILES.md).
 6. **Optional: Notion** — see [docs/NOTION_SYNC.md](docs/NOTION_SYNC.md) to land digest items in your own Notion databases.
 
-Tele-sum runs standalone: the shared-table integrations some deployments use (`api_providers`, `seen_urls`, `distribution_logs`) are all optional and fail open when absent.
+Tele-sum runs standalone: the shared-table integrations some deployments use (`api_providers`, `seen_urls`, `distribution_logs`) are all optional and fail open when absent. `seen_urls` is read-only here: it is owned by wire-room-ops, whose registrar treats a row without an owning entry id as permanent seed history.
 
 ## Local dev
 

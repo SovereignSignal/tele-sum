@@ -75,27 +75,6 @@ def _check_seen(db: Session, urls: List[str], wire_value: Optional[str]) -> Opti
     return None
 
 
-def _record_seen(db: Session, urls: List[str], wire_value: Optional[str]) -> None:
-    """Insert message URLs into seen_urls (idempotent via unique index)."""
-    if not urls or not wire_value:
-        return
-    for raw in urls:
-        norm = normalize_url(raw)
-        if not norm:
-            continue
-        try:
-            db.execute(
-                text(
-                    "INSERT INTO seen_urls (url, normalized_url, wire, first_seen_date) "
-                    "VALUES (:url, :norm, :wire, CURRENT_DATE) "
-                    "ON CONFLICT (normalized_url, wire) DO NOTHING"
-                ),
-                {"url": raw, "norm": norm, "wire": wire_value},
-            )
-        except Exception as e:
-            logger.warning(f"seen_urls insert failed for {norm} (non-fatal): {e}")
-            db.rollback()
-
 KNOWN_PROFILES = {"grant", "digest"}
 
 
@@ -312,10 +291,10 @@ class MessageProcessor:
                 summary.error_log = None
                 db.commit()
 
-                # Register URLs in the shared seen_urls table for cross-app dedup (grant only).
-                if profile == "grant":
-                    _record_seen(db, urls, wire_value)
-                    db.commit()
+                # seen_urls is wire-room-ops's registry: every row it writes carries
+                # the owning scan_entries id, and its registrar treats a row with
+                # no owner as permanent seed history that parks the next submission
+                # of that URL invisibly. This app only reads the table (_check_seen).
 
                 logger.info(f"Successfully processed message {message.id}")
                 return True

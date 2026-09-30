@@ -8,9 +8,9 @@ Verifies that a message on a digest-profile channel:
 Uses in-memory SQLite + the real ORM models. The processor's ai_service is
 replaced post-construction with a stub — no network calls are made.
 
-seen_urls is NOT created: the digest profile gates both _check_seen and
-_record_seen on `profile == "grant"`, so the test passing without that table
-also proves the gating works correctly.
+seen_urls is NOT created: the digest profile gates _check_seen on
+`profile == "grant"` (and this app never writes the table), so the test
+passing without that table also proves the gating works correctly.
 """
 
 import asyncio
