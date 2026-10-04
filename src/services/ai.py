@@ -146,7 +146,7 @@ def _build_prompt(
 
     parts.append("\n## Your Task")
     parts.append("1. **Title**: 4-5 words max, title case, no trailing punctuation. Specific (include protocol/project name when relevant). Preserve financial roles: a recipient Receives or Is Awarded a grant; only the funder Awards it. Do not reverse who funded whom.")
-    parts.append("2. **Summary**: 3-4 factual sentences about the LINKED CONTENT. Include specific amounts/dates/percentages. Never use the word 'blockchain' — say 'crypto', 'onchain', or name the chain. Distinguish LAUNCHES vs CLOSURES/RESULTS carefully.")
+    parts.append("2. **Summary**: 3-4 factual sentences about the LINKED CONTENT. Include amounts and dates exactly as stated; no derived percentages or totals. Commentary must be attributed to the speaker. Never use the word 'blockchain' — say 'crypto', 'onchain', or name the chain. Distinguish LAUNCHES vs CLOSURES/RESULTS carefully.")
     parts.append("For opportunities, preserve the program duration and whether compensation is annualized or a total payment, as well as eligibility, location and the current deadline.")
     parts.append("The first summary sentence must describe the CURRENT SOURCE UPDATE. Introduce an older quoted post only afterward as background. entities.people contains identifiable human individuals, including human authors/reviewers. An @handle alone does not prove a person: organizational accounts belong only in orgs. Keep noncash benefits and durations under key_terms, not amounts. Copy application URLs in full, including their original scheme and path.")
     parts.append("Preserve the source's financial verb for each amount separately: funds managed or a budget run are not necessarily funds deployed. Prioritize the current application deadline; omit contradictory secondary timeline dates and do not invent a corrected year. Notification of awards is distinct from the program start date.")
@@ -271,7 +271,7 @@ def _build_digest_prompt(
         "Return ONLY a JSON object, no prose, shaped exactly like:\n"
         '{"title": "post title, 4-6 words", "summary": "1-2 sentence overview of the post",\n'
         ' "confidence": "confident" or "uncertain",\n'
-        ' "items": [{"title": "item name", "url": "item link or null", "note": "what it is / why it matters, 1-2 lines",\n'
+        ' "items": [{"title": "item name", "url": "item link or null", "note": "what it is, facts only, 1-2 lines",\n'
         '            "category": "the section label the post itself uses, or null", "tags": ["short", "tags"],\n'
         '            "org": "the organization or project that owns this item, or null",\n'
         '            "people": [{"name": "person named in the item", "role": "their role or null", "handle": "@handle or profile url or null"}]}]}\n'
