@@ -59,6 +59,13 @@ def test_late_application_table_and_real_link_survive_bounded_scraping():
     assert source_excerpt(evidence) == evidence
 
 
+def test_grant_prompt_quotes_amounts_and_attributes_commentary():
+    prompt = _build_prompt("A grant post", [], {}, [])
+    assert "Include amounts and dates exactly as stated; no derived percentages or totals." in prompt
+    assert "Commentary must be attributed to the speaker." in prompt
+    assert "Include specific amounts/dates/percentages" not in prompt
+
+
 def test_quoted_tweet_is_labelled_as_background_and_retains_eligibility():
     url = 'https://x.com/example/status/123'
     prompt = _build_prompt('', [url], {url: 'Current update.\n--- Quoted Tweet ---\nOlder update. Only eligible maintainers qualify.'}, [])

@@ -1,6 +1,15 @@
 from src.services.ai import _build_digest_prompt, _parse_digest_response
 
 
+def test_digest_prompt_notes_are_facts_only():
+    prompt = _build_digest_prompt(
+        message_content="post", urls=[], url_contents={}, prompt_hint=None, links=[],
+    )
+    assert 'note": "what it is, facts only' in prompt
+    assert "why it matters" not in prompt
+    assert "what it is / why it matters" not in prompt
+
+
 def test_digest_prompt_includes_hint_content_and_json_contract():
     prompt = _build_digest_prompt(
         message_content="🦀 ClawBytes Daily ...",
