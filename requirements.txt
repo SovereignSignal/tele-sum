@@ -1,7 +1,7 @@
 # Core
 fastapi==0.115.6
 uvicorn[standard]==0.32.1
-python-dotenv==1.0.1
+python-dotenv==1.2.2
 pydantic==2.10.4
 pydantic-settings==2.7.1
 
@@ -22,8 +22,8 @@ lxml==5.3.0
 apscheduler==3.10.4
 
 # Web UI
-jinja2==3.1.5
-python-multipart==0.0.20
+jinja2==3.1.6
+python-multipart==0.0.31
 itsdangerous==2.2.0
 
 # Utils
